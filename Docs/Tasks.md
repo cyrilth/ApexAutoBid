@@ -25,18 +25,18 @@
   - [ ] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
   - [ ] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
   - [ ] 2.5. `AuctionFinished` event contract — `dotnet-service-builder`
-- [ ] 3. Create the Auction Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 4. Define entities — `dotnet-service-builder`
+- [ ] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [ ] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
   - [ ] 4.1. `Auction` entity — `dotnet-service-builder`
   - [ ] 4.2. `Item` entity — `dotnet-service-builder`
-  - [ ] 4.3. `Status` enum — `dotnet-service-builder`
-- [ ] 5. Define DTOs — `dotnet-service-builder`
+  - [ ] 4.3. `Status` enum in `AuctionService.Domain/Enums/` — `dotnet-service-builder`
+- [ ] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
   - [ ] 5.1. `AuctionDto` — `dotnet-service-builder`
   - [ ] 5.2. `CreateAuctionDto` — `dotnet-service-builder`
   - [ ] 5.3. `UpdateAuctionDto` — `dotnet-service-builder`
-- [ ] 6. Set up PostgreSQL with Entity Framework (DbContext, migrations) — `dotnet-service-builder`
-- [ ] 7. Configure AutoMapper profiles (Entity ↔ DTO) — `dotnet-service-builder`
-- [ ] 8. Implement API endpoints — `dotnet-service-builder`
+- [ ] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
+- [ ] 7. Configure AutoMapper profiles in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
+- [ ] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
   - [ ] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
   - [ ] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
   - [ ] 8.3. `GET api/auctions?date=` — get auctions updated from a given date — `dotnet-service-builder`
@@ -44,12 +44,12 @@
   - [ ] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
   - [ ] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
 - [ ] 9. Add seed data (10 auction items) — `dotnet-service-builder`
-- [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) — `dotnet-service-builder`
+- [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
 - [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
-- [ ] 12. Add event consumers — `dotnet-service-builder`
+- [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
   - [ ] 12.2. `AuctionFinished` consumer — `dotnet-service-builder`
-- [ ] 13. Dockerize the Auction Service — `docker-validator`
+- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
 - [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
   - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
   - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
@@ -80,19 +80,19 @@
 
 ### Tasks
 
-- [ ] 1. Create the Search Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 2. Define the `Item` model (MongoDB document mirroring AuctionDto fields) — `dotnet-service-builder`
-- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` — `dotnet-service-builder`
-- [ ] 4. Implement event consumers — `dotnet-service-builder`
+- [ ] 1. Create the Search Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [ ] 2. Define the `Item` entity in `SearchService.Domain/Entities/` (MongoDB document mirroring AuctionDto fields) — `dotnet-service-builder`
+- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` in `SearchService.Infrastructure/Data/` — `dotnet-service-builder`
+- [ ] 4. Implement event consumers in `SearchService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 4.1. `AuctionCreated` — insert item into MongoDB — `dotnet-service-builder`
   - [ ] 4.2. `AuctionUpdated` — update item fields — `dotnet-service-builder`
   - [ ] 4.3. `AuctionDeleted` — remove item — `dotnet-service-builder`
   - [ ] 4.4. `BidPlaced` — update current high bid — `dotnet-service-builder`
   - [ ] 4.5. `AuctionFinished` — update status, winner, sold amount — `dotnet-service-builder`
-- [ ] 5. Implement `GET api/search` endpoint (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
-- [ ] 6. Add HTTP polling fallback to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
+- [ ] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
+- [ ] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [ ] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
-- [ ] 8. Dockerize the Search Service — `docker-validator`
+- [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
 - [ ] 9. Write unit tests (SearchService.UnitTests) — `dotnet-service-builder`
   - [ ] 9.1. Search — returns paged results — `dotnet-service-builder`
   - [ ] 9.2. Search — filters by searchTerm — `dotnet-service-builder`
@@ -200,18 +200,18 @@
 
 ### Tasks
 
-- [ ] 1. Create the Bidding Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 2. Define models — `dotnet-service-builder`
-  - [ ] 2.1. `Bid` model — `dotnet-service-builder`
-  - [ ] 2.2. `BidStatus` enum — `dotnet-service-builder`
-  - [ ] 2.3. Local `Auction` model — `dotnet-service-builder`
-- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` — `dotnet-service-builder`
+- [ ] 1. Create the Bidding Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [ ] 2. Define models in `BiddingService.Domain/` — `dotnet-service-builder`
+  - [ ] 2.1. `Bid` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
+  - [ ] 2.2. `BidStatus` enum in `BiddingService.Domain/Enums/` — `dotnet-service-builder`
+  - [ ] 2.3. Local `Auction` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
+- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` in `BiddingService.Infrastructure/Data/` — `dotnet-service-builder`
 - [ ] 4. Configure MassTransit with Outbox pattern — `dotnet-service-builder`
-- [ ] 5. Implement event consumer for `AuctionCreated` (store local auction record) — `dotnet-service-builder`
-- [ ] 6. Implement gRPC client to call Auction Service (fallback for missing auction data) — `dotnet-service-builder`
-- [ ] 7. Configure Polly retry policies for gRPC calls — `dotnet-service-builder`
+- [ ] 5. Implement event consumer for `AuctionCreated` in `BiddingService.Application/Consumers/` (store local auction record) — `dotnet-service-builder`
+- [ ] 6. Implement gRPC client in `BiddingService.Infrastructure/` to call Auction Service (fallback for missing auction data) — `dotnet-service-builder`
+- [ ] 7. Configure Polly retry policies for gRPC calls in `BiddingService.Infrastructure/` — `dotnet-service-builder`
 - [ ] 8. Implement gRPC server endpoint in Auction Service (`GetAuction`) — `dotnet-service-builder`
-- [ ] 9. Implement API endpoints — `dotnet-service-builder`
+- [ ] 9. Implement API endpoints in `BiddingService.API/Controllers/` — `dotnet-service-builder`
   - [ ] 9.1. `POST api/bids` — place bid (Auth) — `dotnet-service-builder`
   - [ ] 9.2. `GET api/bids/{auctionId}` — get bids for auction (Anon) — `dotnet-service-builder`
 - [ ] 10. Implement bid status logic — `dotnet-service-builder`
@@ -222,7 +222,7 @@
 - [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
 - [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished`) — `dotnet-service-builder`
 - [ ] 13. Add JWT bearer authentication — `dotnet-service-builder`
-- [ ] 14. Dockerize the Bidding Service — `docker-validator`
+- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
 - [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
   - [ ] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
   - [ ] 15.2. PlaceBid — bid below reserve returns AcceptedBelowReserve — `dotnet-service-builder`

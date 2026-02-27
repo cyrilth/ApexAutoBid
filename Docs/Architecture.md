@@ -184,39 +184,79 @@ Resource-level authorization (e.g., only the seller can update/delete their auct
 
 ## 7. Repository Structure
 
+### Clean Architecture Layer Rules
+
+AuctionService, SearchService, and BiddingService use Clean Architecture with 4 projects each. Dependency direction is strictly enforced:
+
+```
+API → Application → Domain
+Infrastructure → Application → Domain
+```
+
+- **Domain** has zero external NuGet dependencies. Contains entities, enums, value objects, and domain interfaces.
+- **Application** depends only on Domain. Contains DTOs, AutoMapper profiles, MassTransit consumers, application services, and RequestHelpers. NuGet: AutoMapper, MassTransit, Contracts project ref.
+- **Infrastructure** depends only on Application (and transitively Domain). Contains DbContext, migrations, repository implementations, gRPC clients/servers, HTTP clients. NuGet: EF Core, Npgsql, MongoDB.Entities, Grpc.Net.Client, Polly.
+- **API** depends on Application and Infrastructure. Contains controllers, Program.cs, Dockerfile, middleware. NuGet: Microsoft.AspNetCore.Authentication.JwtBearer.
+
+IdentityService, GatewayService, and NotificationService remain flat (single project) due to minimal domain logic.
+
 ```
 ApexAutoBid/
 ├── backend/
 │   ├── AuctionService/
-│   │   ├── Controllers/
-│   │   ├── Data/
-│   │   ├── DTOs/
-│   │   ├── Entities/
-│   │   ├── Consumers/
-│   │   ├── Services/                  # gRPC service implementation
-│   │   ├── RequestHelpers/
-│   │   ├── Program.cs
-│   │   ├── Dockerfile
-│   │   └── AuctionService.csproj
+│   │   ├── AuctionService.Domain/
+│   │   │   ├── Entities/
+│   │   │   ├── Enums/
+│   │   │   └── Interfaces/
+│   │   ├── AuctionService.Application/
+│   │   │   ├── DTOs/
+│   │   │   ├── Consumers/
+│   │   │   ├── Mappings/
+│   │   │   ├── Services/
+│   │   │   └── RequestHelpers/
+│   │   ├── AuctionService.Infrastructure/
+│   │   │   └── Data/                  # DbContext, migrations, repos
+│   │   └── AuctionService.API/
+│   │       ├── Controllers/
+│   │       ├── Middleware/
+│   │       ├── Services/              # gRPC service implementation
+│   │       ├── Program.cs
+│   │       └── Dockerfile
 │   │
 │   ├── SearchService/
-│   │   ├── Controllers/
-│   │   ├── Data/
-│   │   ├── Models/
-│   │   ├── Consumers/
-│   │   ├── RequestHelpers/
-│   │   ├── Program.cs
-│   │   ├── Dockerfile
-│   │   └── SearchService.csproj
+│   │   ├── SearchService.Domain/
+│   │   │   ├── Entities/
+│   │   │   └── Interfaces/
+│   │   ├── SearchService.Application/
+│   │   │   ├── DTOs/
+│   │   │   ├── Consumers/
+│   │   │   ├── Mappings/
+│   │   │   ├── Services/
+│   │   │   └── RequestHelpers/
+│   │   ├── SearchService.Infrastructure/
+│   │   │   └── Data/                  # MongoDB connection, repos
+│   │   └── SearchService.API/
+│   │       ├── Controllers/
+│   │       ├── Program.cs
+│   │       └── Dockerfile
 │   │
 │   ├── BiddingService/
-│   │   ├── Controllers/
-│   │   ├── Models/
-│   │   ├── Consumers/
-│   │   ├── Services/                  # Background service for auction finish check
-│   │   ├── Program.cs
-│   │   ├── Dockerfile
-│   │   └── BiddingService.csproj
+│   │   ├── BiddingService.Domain/
+│   │   │   ├── Entities/
+│   │   │   ├── Enums/
+│   │   │   └── Interfaces/
+│   │   ├── BiddingService.Application/
+│   │   │   ├── DTOs/
+│   │   │   ├── Consumers/
+│   │   │   ├── Mappings/
+│   │   │   └── Services/
+│   │   ├── BiddingService.Infrastructure/
+│   │   │   └── Data/                  # MongoDB connection, repos
+│   │   └── BiddingService.API/
+│   │       ├── Controllers/
+│   │       ├── Services/              # Background service for auction finish check
+│   │       ├── Program.cs
+│   │       └── Dockerfile
 │   │
 │   ├── IdentityService/
 │   │   ├── Data/
@@ -296,10 +336,14 @@ ApexAutoBid/
 │       └── deploy-webapp.yml
 │
 ├── tests/
-│   ├── AuctionService.UnitTests/
+│   ├── AuctionService.UnitTests/         # References AuctionService.Application
 │   │   └── AuctionService.UnitTests.csproj
-│   └── AuctionService.IntegrationTests/
-│       └── AuctionService.IntegrationTests.csproj
+│   ├── AuctionService.IntegrationTests/  # References AuctionService.API
+│   │   └── AuctionService.IntegrationTests.csproj
+│   ├── SearchService.UnitTests/
+│   ├── SearchService.IntegrationTests/
+│   ├── BiddingService.UnitTests/
+│   └── BiddingService.IntegrationTests/
 │
 ├── Docs/
 │   ├── Requirements.md

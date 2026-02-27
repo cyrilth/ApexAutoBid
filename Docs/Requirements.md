@@ -282,7 +282,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 - Google.Protobuf
 - Grpc.Net.Client
 - Grpc.Tools
-- Microsoft.Authentication.JwtBearer
+- Microsoft.AspNetCore.Authentication.JwtBearer
 - Polly
 
 **API Endpoints:**
