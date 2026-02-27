@@ -45,7 +45,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, PostgreSQL, Entity Framework, RabbitMQ (MassTransit)
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependancyInjection
+- AutoMapper.Extensions.Microsoft.DependencyInjection
 - Microsoft.AspNetCore.Authentication.JwtBearer
 - Microsoft.EntityFrameworkCore.Design
 - Npgsql.EntityFrameworkCore.PostgreSQL
@@ -180,7 +180,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, MongoDB, RabbitMQ (MassTransit)
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependancyInjection
+- AutoMapper.Extensions.Microsoft.DependencyInjection
 - Microsoft.Extensions.Http.Polly
 - MongoDB.Entities
 - MassTransit.RabbitMQ
@@ -275,7 +275,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, MongoDB, RabbitMQ (MassTransit), gRPC
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependancyInjection
+- AutoMapper.Extensions.Microsoft.DependencyInjection
 - Microsoft.Extensions.Http.Polly
 - MongoDB.Entities
 - MassTransit.RabbitMQ
