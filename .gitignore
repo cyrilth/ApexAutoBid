@@ -416,3 +416,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+
+#Ignore Initial Planning Folder
+Initial_Planning/
