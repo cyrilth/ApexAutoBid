@@ -2,7 +2,7 @@
 
 ## Project Context
 
-ApexAutoBid is a real-time online car auction platform built with a microservices architecture. Users can browse auctions, place bids, and receive live updates. The project is structured in 10 phases — track progress in `Docs/Tasks.md`.
+ApexAutoBid is a real-time online car auction platform built with a microservices architecture. Users can browse auctions, place bids, and receive live updates. The project is structured in 11 phases — track progress in `Docs/Tasks.md`.
 
 ### Key Documentation
 
@@ -20,6 +20,8 @@ ApexAutoBid is a real-time online car auction platform built with a microservice
 | Identity | Duende IdentityServer + ASP.NET Core Identity (email verification + Google login) |
 | Email (dev) | Mailpit (SMTP catcher container) |
 | Bot Protection | Cloudflare Turnstile (register page) + ASP.NET Core rate limiting (gateway + identity) |
+| Object Storage | MinIO (S3-compatible — auction images, user uploads via presigned PUT; any S3-compatible service in production) |
+| Image Processing | SixLabors.ImageSharp (thumbnail generation in Auction Service) |
 | API Gateway | YARP Reverse Proxy |
 | Messaging | RabbitMQ via MassTransit (Outbox pattern) |
 | Real-time | SignalR |

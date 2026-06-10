@@ -12,6 +12,7 @@
 | Real-time | SignalR | (bundled with .NET 10) |
 | API Documentation | OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar | Latest |
 | Bot Protection | Cloudflare Turnstile + ASP.NET Core rate limiting | Latest |
+| Object Storage | MinIO (S3-compatible — auction images) | Latest |
 | Relational DB | PostgreSQL | Latest |
 | Document DB | MongoDB | Latest |
 | Containerization | Docker / Docker Compose | Latest |
@@ -106,7 +107,20 @@ The **Notification Service** exposes a SignalR hub at `/notifications` that the 
 
 Post-sale contact exchange does **not** go through SignalR: after a sale, the Auction Service's `GET api/auctions/:id` conditionally reveals `WinnerEmail` to the seller and `SellerEmail` to the winner (emails flow `email` claim → `Bid.BidderEmail` → `AuctionFinished.WinnerEmail` → Auction record, and are never stored in the search index or pushed over the hub).
 
-### 3.4 Gateway Routing
+### 3.4 Image Upload (Presigned URLs)
+
+Auction images go directly from the browser to object storage — image bytes never pass through the services:
+
+```
+1. Client ──► POST api/auctions/upload-url (JWT) ──► Auction Service
+2. Auction Service ──► validates content type ──► returns presigned PUT URL (5 min) + object URL
+3. Client ──► PUT image bytes ──► MinIO (auction-images bucket)
+4. Client ──► submits create/edit form with the object URL as ImageUrl
+```
+
+The Auction Service signs uploads with a dedicated MinIO access key scoped to `GetObject`/`PutObject` on the bucket; anonymous access is read-only. An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch the uploaded object, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings and social link previews use the thumbnail, the detail page the full image.
+
+### 3.5 Gateway Routing
 
 The **Gateway** uses **YARP Reverse Proxy** to route client requests to backend services. It handles JWT bearer token validation so that individual services can trust authenticated requests forwarded through the gateway.
 
@@ -171,6 +185,7 @@ Services maintain local projections of data they need from other services, synch
 |-------------|-------------|
 | Auth | Requires valid JWT. User identity extracted from claims. |
 | Anon | No authentication required. Publicly accessible. |
+| Admin | Requires valid JWT with the `admin` role claim (`api/admin/*` endpoints). Enforced at the gateway and again in each service. |
 
 Resource-level authorization (e.g., only the seller can update/delete their auction) is enforced within individual services.
 
@@ -399,6 +414,7 @@ docker-compose.yml
 ├── notification-svc  (port 7004)
 ├── web-app           (port 3000)
 ├── mailpit           (SMTP 1025, web UI 8025 — dev email catcher)
+├── minio             (S3 API 9000, console 9001 — auction images; mc init container seeds the bucket)
 └── nginx             (ports 80/443, SSL via acme-companion)
 ```
 
@@ -418,7 +434,7 @@ docker-compose.yml
 │  │  webapp ─ gateway ─ identity       │  │
 │  │  auction ─ search ─ bid            │  │
 │  │  notification ─ rabbitmq           │  │
-│  │  postgres ─ mongodb                │  │
+│  │  postgres ─ mongodb ─ minio        │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  ┌────────────────────────────────────┐  │
@@ -462,11 +478,14 @@ The `backend/Contracts/` project contains the event contract classes shared acro
 
 | Contract | Properties |
 |----------|-----------|
-| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, Status, ReservePrice, SoldAmount?, CurrentHighBid? |
-| AuctionUpdated | Id, Make, Model, Color, Mileage, Year |
+| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, ThumbnailUrl?, Status, ReservePrice, SoldAmount?, CurrentHighBid? |
+| AuctionUpdated | Id, Make, Model, Color, Mileage, Year, AuctionEnd? |
 | AuctionDeleted | Id |
 | BidPlaced | Id, AuctionId, Bidder, BidTime, Amount, BidStatus |
 | AuctionFinished | ItemSold, AuctionId, Winner?, WinnerEmail?, Seller, Amount? |
+| AuctionCancelled | AuctionId, Seller |
+| BidRemoved | BidId, AuctionId, CurrentHighBid? |
+| BannerPublished | Id, Message, Scope, AuctionId?, ActiveFrom, ActiveUntil |
 
 These contracts are the **single source of truth** for event shapes, ensuring consistency across all publishers and consumers.
 

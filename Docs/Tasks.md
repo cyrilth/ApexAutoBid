@@ -6,17 +6,18 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 0 | 45 | Not started |
+| 1. Auction Service | 0 | 52 | Not started |
 | 2. Search Service | 0 | 28 | Not started |
 | 3. Identity Service | 0 | 40 | Not started |
 | 4. Gateway Service | 0 | 22 | Not started |
-| 5. Bidding Service | 0 | 42 | Not started |
+| 5. Bidding Service | 0 | 43 | Not started |
 | 6. Notification Service | 0 | 18 | Not started |
-| 7. Frontend (Next.js) | 0 | 45 | Not started |
+| 7. Frontend (Next.js) | 0 | 50 | Not started |
 | 8. Docker Compose Deployment | 0 | 10 | Not started |
-| 9. Kubernetes Local Deployment | 0 | 16 | Not started |
+| 9. Kubernetes Local Deployment | 0 | 17 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 10 | Not started |
-| **Overall** | **0** | **276** | **Not started** |
+| 11. Admin Dashboard | 0 | 46 | Not started |
+| **Overall** | **0** | **336** | **Not started** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -64,7 +65,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 8.4. `POST api/auctions` — create auction (Auth) — `dotnet-service-builder`
   - [ ] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
   - [ ] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
-- [ ] 9. Add seed data (10 auction items) — `dotnet-service-builder`
+- [ ] 9. Add seed data — 10 auction items per `Requirements.md` §8.2 (relative `AuctionEnd` offsets, statuses incl. one ReserveNotMet and one sold with Winner/SoldAmount/WinnerEmail, MinIO image URLs) — `dotnet-service-builder`
 - [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
 - [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
 - [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
@@ -84,6 +85,13 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
   - [ ] 15.3. UpdateAuction — valid DTO and invalid user returns 403 — `dotnet-service-builder`
 - [ ] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
+- [ ] 17. Create `docker/docker-compose.infra.yml` for local development — PostgreSQL, MongoDB, RabbitMQ, Mailpit, MinIO (+ `mc` init container creating the `auction-images` bucket and uploading the committed sample images from `docker/seed-images/`) — *main conversation*, validate with `docker-validator`
+- [ ] 18. Implement auction image upload via presigned URLs (see `Requirements.md` §3.1 Image Upload) — `dotnet-service-builder`
+  - [ ] 18.1. `POST api/auctions/upload-url` (Auth): validate content type (jpeg/png/webp), return a 5-minute presigned PUT URL (AWSSDK.S3 → MinIO) + the final object URL; GUID object keys — `dotnet-service-builder`
+  - [ ] 18.2. Dedicated MinIO access key for the Auction Service with a `PutObject`-only policy on `auction-images/*` (created by the `mc` init container; dev key committed, production via env vars) — `dotnet-service-builder`
+  - [ ] 18.3. Unit tests: unauthenticated returns 401; disallowed content type returns 400; response contains a GUID key and expiry — `dotnet-service-builder`
+  - [ ] 18.4. `POST api/auctions/thumbnail` (Auth): resize the uploaded object with SixLabors.ImageSharp (max 400px, WebP) to `thumbs/{key}.webp` and return the URL; add nullable `ThumbnailUrl` to the entity, DTOs, and `AuctionCreated` contract; accept only keys inside `auction-images` (no arbitrary URLs — SSRF guard) — `dotnet-service-builder`
+  - [ ] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
 
 ---
 
@@ -160,9 +168,9 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 3.1. Clients — `dotnet-service-builder`
   - [ ] 3.2. Scopes — `dotnet-service-builder`
   - [ ] 3.3. Resources — `dotnet-service-builder`
-  - [ ] 3.4. Include `username` and `email` claims in access tokens (email is needed for post-sale contact exchange) — `dotnet-service-builder`
+  - [ ] 3.4. Include `username`, `email`, and `role` claims in access tokens (email for post-sale contact exchange; role for the admin dashboard in Phase 11) — `dotnet-service-builder`
 - [ ] 4. Add Razor Pages for login/register UI — `dotnet-service-builder`
-- [ ] 5. Seed default users (bob, alice, tom) with confirmed emails — `dotnet-service-builder`
+- [ ] 5. Seed default users per `Requirements.md` §8.1 (bob, alice, tom + admin with the `admin` role — confirmed emails, shared dev password) — `dotnet-service-builder`
 - [ ] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [ ] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
@@ -299,6 +307,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 19. Implement post-sale contact exchange in the Auction Service — `dotnet-service-builder`
   - [ ] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
   - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
+- [ ] 20. Seed local auction records and bid history per `Requirements.md` §8.3 (bids carry `BidderEmail`; states consistent with the Auction Service seed) — `dotnet-service-builder`
 
 ---
 
@@ -365,10 +374,13 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
   - [ ] 5.3. Bid history list — `frontend-builder`
   - [ ] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
+  - [ ] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
+  - [ ] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from thumbnail with full-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
 - [ ] 6. Implement auction create/edit form — `frontend-builder`
   - [ ] 6.1. `react-hook-form` for form handling — `frontend-builder`
   - [ ] 6.2. `react-datepicker` for auction end date — `frontend-builder`
-  - [ ] 6.3. Image URL input — `frontend-builder`
+  - [ ] 6.3. Image upload — file picker uploading direct to storage via presigned PUT (`upload-url` endpoint), with a plain URL input as fallback — `frontend-builder`
+  - [ ] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail`, previews the result) — `frontend-builder`
 - [ ] 7. Implement auction delete (with confirmation) — `frontend-builder`
 - [ ] 8. Implement bid placement UI — `frontend-builder`
   - [ ] 8.1. Bid input and submit — `frontend-builder`
@@ -377,7 +389,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 9. Set up Zustand store for client-side state management — `frontend-builder`
 - [ ] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
 - [ ] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
-- [ ] 12. Configure Next.js image optimization (`sharp`) — `frontend-builder`
+- [ ] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
 - [ ] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
 - [ ] 14. Set up Playwright test project — `frontend-builder`
 - [ ] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
@@ -397,6 +409,8 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
   - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
   - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
+  - [ ] 15.17. Image upload — create an auction with a file upload; the image lands in storage and renders on the detail page — `frontend-builder`
+  - [ ] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
 - [ ] 16. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
 
 ---
@@ -417,7 +431,7 @@ Status values: `Not started` · `In progress` · `Done`
 ### Tasks
 
 - [ ] 1. Create `docker/docker-compose.yml` — *main conversation*, validate with `docker-validator`
-  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher) — *main conversation*
+  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher), MinIO + `mc` bucket/seed-image init — *main conversation*
   - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
   - [ ] 1.3. Frontend: Next.js web app — *main conversation*
 - [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — *main conversation*, validate with `docker-validator`
@@ -456,6 +470,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 1.10. Deployment + ClusterIP for Notification Service — *main conversation*
   - [ ] 1.11. Deployment + ClusterIP for Web App — *main conversation*
   - [ ] 1.12. Ingress controller configuration — *main conversation*
+  - [ ] 1.13. Deployment + ClusterIP + PersistentVolumeClaim for MinIO, plus a bucket/seed-image init Job — *main conversation*
 - [ ] 2. Deploy to local Kubernetes (Minikube or Docker Desktop K8s) — *main conversation*
 - [ ] 3. Verify all services are running and communicating — *main conversation*
 - [ ] 4. Test full application via ingress endpoint — `playwright-tester`
@@ -486,3 +501,68 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 5. Deploy all services to cloud Kubernetes — *main conversation*
 - [ ] 6. Configure DNS and ingress for public access — *main conversation*
 - [ ] 7. Verify production deployment end-to-end — `playwright-tester`
+
+---
+
+## Phase 11: Admin Dashboard
+
+**Goal:** Build a role-gated admin area for managing users, auctions, bids, and banner messages, with platform statistics.
+
+**Purpose:** Gives operators the tools to run the platform — user administration, auction/bid moderation, and site-wide announcements — using the `admin` role claim seeded in Phase 3. No new service is added; each capability lives in the service that owns the data (see `Requirements.md` §10). Can be built any time after Phase 7; deployment phases (8–10) need no changes for it.
+
+**Acceptance Criteria:**
+- Every `api/admin/*` endpoint returns 403 for non-admin callers
+- Admin can list/search/create users, reset passwords, resend confirmation links, assign roles, and lock accounts
+- Admin can create auctions for any seller, end auctions early, cancel auctions, and remove bids — with all changes propagated to Search/Bidding/Notification via events
+- Banners published by an admin appear on the home/auction pages without a refresh (SignalR)
+- The dashboard shows user, auction, and bid statistics
+- Unit, integration, and Playwright admin tests pass
+
+### Tasks
+
+- [ ] 1. Extend the `Contracts` project: `AuctionCancelled`, `BidRemoved`, `BannerPublished`; add `AuctionEnd?` to `AuctionUpdated` (see `Requirements.md` §10.5) — `dotnet-service-builder`
+- [ ] 2. Identity Service admin API (`Requirements.md` §10.1) — `dotnet-service-builder`
+  - [ ] 2.1. `GET api/admin/users` — list/search users (paged) — `dotnet-service-builder`
+  - [ ] 2.2. `POST api/admin/users` — create user (optionally pre-confirmed) — `dotnet-service-builder`
+  - [ ] 2.3. `POST api/admin/users/{id}/reset-password` — temp password or email reset link — `dotnet-service-builder`
+  - [ ] 2.4. `POST api/admin/users/{id}/resend-confirmation` — generate a new email-validation link — `dotnet-service-builder`
+  - [ ] 2.5. `PUT api/admin/users/{id}/roles` — assign/remove roles — `dotnet-service-builder`
+  - [ ] 2.6. `PUT api/admin/users/{id}/lock` — lock/unlock account — `dotnet-service-builder`
+  - [ ] 2.7. `GET api/admin/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
+  - [ ] 2.8. Document the admin API with OpenAPI + Scalar (Bearer, admin role noted) and add it to the gateway's aggregated docs — `dotnet-service-builder`
+- [ ] 3. Auction Service admin features (`Requirements.md` §10.2–10.3) — `dotnet-service-builder`
+  - [ ] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
+  - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
+  - [ ] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
+  - [ ] 3.4. Auction duration validation on create/update (`Auction:MinDuration`/`Auction:MaxDuration` config, defaults 1 hour–90 days; admins exempt) — `dotnet-service-builder`
+  - [ ] 3.5. `Banner` entity + admin CRUD (`api/admin/banners`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
+  - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
+  - [ ] 3.7. `GET api/admin/stats` — auction counts by status — `dotnet-service-builder`
+- [ ] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
+- [ ] 5. Bidding Service admin features — `dotnet-service-builder`
+  - [ ] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
+  - [ ] 5.2. Consume `AuctionCancelled` — mark local auction finished; refuse further bids; never emit `AuctionFinished` — `dotnet-service-builder`
+  - [ ] 5.3. Apply `AuctionUpdated.AuctionEnd` to local auction records — `dotnet-service-builder`
+  - [ ] 5.4. `GET api/admin/stats` — total bid count — `dotnet-service-builder`
+- [ ] 6. Notification Service: consume `AuctionCancelled` (broadcast + targeted to seller) and `BannerPublished` (broadcast) — `dotnet-service-builder`
+- [ ] 7. Gateway: route `api/admin/*` paths and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
+- [ ] 8. Frontend admin area (`/admin`, role-gated) — `frontend-builder`
+  - [ ] 8.1. Role-based route protection (role claim from the session; non-admins redirected) — `frontend-builder`
+  - [ ] 8.2. Dashboard page — stats cards from the per-service `api/admin/stats` endpoints — `frontend-builder`
+  - [ ] 8.3. Users page — list/search, create, reset password, resend confirmation, roles, lock — `frontend-builder`
+  - [ ] 8.4. Auctions page — create with seller assignment, end now, cancel, remove bid from the bid history — `frontend-builder`
+  - [ ] 8.5. Banners page — CRUD with scope (global/home/auction) and active window — `frontend-builder`
+  - [ ] 8.6. Render active banners on the home page and auction detail pages, live-updating on `BannerPublished` — `frontend-builder`
+- [ ] 9. Write unit tests — `dotnet-service-builder`
+  - [ ] 9.1. Admin endpoints return 403 for non-admin callers (each service) — `dotnet-service-builder`
+  - [ ] 9.2. RemoveBid — recalculates the high bid and emits `BidRemoved` — `dotnet-service-builder`
+  - [ ] 9.3. PlaceBid — cancelled auction refuses bids — `dotnet-service-builder`
+  - [ ] 9.4. CreateAuction — `AuctionEnd` outside the configured duration bounds returns 400 (non-admin) — `dotnet-service-builder`
+  - [ ] 9.5. CreateAuction — non-admin passing an explicit `Seller` is ignored/rejected — `dotnet-service-builder`
+- [ ] 10. Write Playwright admin e2e tests — `frontend-builder`, run with `playwright-tester`
+  - [ ] 10.1. Admin sees `/admin`; a regular user is redirected away — `frontend-builder`
+  - [ ] 10.2. Create a user and reset their password — `frontend-builder`
+  - [ ] 10.3. Create an auction with an assigned seller — `frontend-builder`
+  - [ ] 10.4. End an auction now; cancel an auction — `frontend-builder`
+  - [ ] 10.5. Publish a banner — it appears on the home page without a refresh — `frontend-builder`
+- [ ] 11. Verify end-to-end admin flows (moderation events propagate to Search/Bidding/Notification) — `test-runner`
