@@ -1,5 +1,25 @@
 # ApexAutoBid - Task Tracker
 
+## Progress Summary
+
+> Maintained by the `task-manager` agent — update the matching row whenever tasks are checked off below. Counts include subtasks.
+
+| Phase | Done | Total | Status |
+|-------|------|-------|--------|
+| 1. Auction Service | 0 | 45 | Not started |
+| 2. Search Service | 0 | 28 | Not started |
+| 3. Identity Service | 0 | 40 | Not started |
+| 4. Gateway Service | 0 | 22 | Not started |
+| 5. Bidding Service | 0 | 42 | Not started |
+| 6. Notification Service | 0 | 18 | Not started |
+| 7. Frontend (Next.js) | 0 | 45 | Not started |
+| 8. Docker Compose Deployment | 0 | 10 | Not started |
+| 9. Kubernetes Local Deployment | 0 | 16 | Not started |
+| 10. CI/CD & Cloud Deployment | 0 | 10 | Not started |
+| **Overall** | **0** | **276** | **Not started** |
+
+Status values: `Not started` · `In progress` · `Done`
+
 ---
 
 ## Phase 1: Auction Service
@@ -279,6 +299,10 @@
 - [ ] 19. Implement post-sale contact exchange in the Auction Service — `dotnet-service-builder`
   - [ ] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
   - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
+
+---
+
+## Phase 6: Notification Service
 
 **Goal:** Build a real-time notification service using SignalR.
 
