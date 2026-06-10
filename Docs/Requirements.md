@@ -45,11 +45,14 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, PostgreSQL, Entity Framework, RabbitMQ (MassTransit)
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependencyInjection
+- Mapster + Mapster.DependencyInjection (chosen over AutoMapper, which is commercially licensed since v15)
 - Microsoft.AspNetCore.Authentication.JwtBearer
 - Microsoft.EntityFrameworkCore.Design
 - Npgsql.EntityFrameworkCore.PostgreSQL
 - MassTransit.RabbitMQ
+- MassTransit.EntityFrameworkCore (transactional outbox)
+- Grpc.AspNetCore (gRPC server called by the Bidding Service)
+- Microsoft.AspNetCore.OpenApi + Scalar.AspNetCore (API documentation)
 
 **API Endpoints:**
 
@@ -59,6 +62,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 | PUT | api/auctions/:id | Update auction | Auth |
 | DELETE | api/auctions/:id | Delete auction | Auth |
 | GET | api/auctions | Get all auctions | Anon |
+| GET | api/auctions?date= | Get auctions updated from a given date | Anon |
 | GET | api/auctions/:id | Get auction by id | Anon |
 
 **Commands:**
@@ -180,10 +184,12 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, MongoDB, RabbitMQ (MassTransit)
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- Microsoft.Extensions.Http.Polly
+- Mapster + Mapster.DependencyInjection (chosen over AutoMapper, which is commercially licensed since v15)
+- Microsoft.Extensions.Http.Resilience (Polly v8)
 - MongoDB.Entities
 - MassTransit.RabbitMQ
+- MassTransit.MongoDb (transactional outbox)
+- Microsoft.AspNetCore.OpenApi + Scalar.AspNetCore (API documentation)
 
 **API Endpoints:**
 
@@ -275,15 +281,17 @@ The application runs inside a **Docker Host** and consists of the following comp
 **Infrastructure:** .NET Web API, MongoDB, RabbitMQ (MassTransit), gRPC
 
 **NuGet Packages:**
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- Microsoft.Extensions.Http.Polly
+- Mapster + Mapster.DependencyInjection (chosen over AutoMapper, which is commercially licensed since v15)
+- Microsoft.Extensions.Http.Resilience (Polly v8)
 - MongoDB.Entities
 - MassTransit.RabbitMQ
+- MassTransit.MongoDb (transactional outbox)
 - Google.Protobuf
 - Grpc.Net.Client
 - Grpc.Tools
 - Microsoft.AspNetCore.Authentication.JwtBearer
 - Polly
+- Microsoft.AspNetCore.OpenApi + Scalar.AspNetCore (API documentation)
 
 **API Endpoints:**
 
@@ -297,7 +305,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 
 **gRPC:** The Bidding Service uses gRPC to directly call the Auction Service as a fallback mechanism when event data is not yet available (e.g., fetching auction details if the `AuctionCreated` event hasn't been consumed yet). Uses Polly for retry/resilience.
 
-**Resilience:** Uses **Polly** via `Microsoft.Extensions.Http.Polly` for retry policies on HTTP/gRPC calls to handle transient failures.
+**Resilience:** Uses **Polly v8** via `Microsoft.Extensions.Http.Resilience` for retry policies on HTTP/gRPC calls to handle transient failures.
 
 **Models:**
 
@@ -346,6 +354,10 @@ The application runs inside a **Docker Host** and consists of the following comp
 
 **Resilience:** Uses **Polly** for retry policies on database connections during startup.
 
+**IdentityServer Clients:**
+- Next.js web app (authorization code flow via next-auth)
+- `scalar` — API docs pages (authorization code + PKCE, public client without secret); requires CORS on the token endpoint for browser-based code exchange
+
 ---
 
 ### 3.5 Gateway Service
@@ -355,6 +367,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 **NuGet Packages:**
 - Microsoft.AspNetCore.Authentication.JwtBearer
 - Yarp.ReverseProxy
+- Scalar.AspNetCore (aggregated API docs UI)
 
 ---
 
@@ -505,6 +518,10 @@ Additionally, the Bidding Service uses **gRPC** for direct service-to-service co
 ## 9. API Testing
 
 A **Postman collection** is available at `Docs/Initial_Planning/CourseAssets/postman/Carsties.postman_collection.json` for testing all API endpoints.
+
+### API Documentation
+
+Each API service (Auction, Search, Bidding) generates an OpenAPI document via the built-in `Microsoft.AspNetCore.OpenApi` package (`/openapi/v1.json`) and serves an interactive **Scalar** reference UI (`/scalar`). The **Gateway** hosts an aggregated Scalar page covering all service documents. Authenticated endpoints are documented with an OAuth2/Bearer security scheme; clicking Authorize runs the real IdentityServer login (authorization code + PKCE via the `scalar` client) and the obtained JWT is automatically attached to all "try it" requests. The Notification Service is excluded (SignalR hub only, no REST API).
 
 ---
 

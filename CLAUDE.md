@@ -21,9 +21,10 @@ ApexAutoBid is a real-time online car auction platform built with a microservice
 | API Gateway | YARP Reverse Proxy |
 | Messaging | RabbitMQ via MassTransit (Outbox pattern) |
 | Real-time | SignalR |
+| API Docs | OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar |
 | Relational DB | PostgreSQL (EF Core, Npgsql) |
 | Document DB | MongoDB (MongoDB.Entities) |
-| Mapping | AutoMapper |
+| Mapping | Mapster |
 | Resilience | Polly |
 | CSS | Tailwind CSS + Flowbite React |
 | State | Zustand |
@@ -60,6 +61,8 @@ ApexAutoBid/
 │   └── web-app/          # Next.js app
 ├── tests/                # Unit and integration tests
 ├── docker/               # Docker Compose files
+├── k8s/                  # Kubernetes manifests (Phase 9)
+├── .github/workflows/    # CI/CD pipelines (Phase 10)
 ├── Docs/                 # Documentation
 └── .claude/agents/       # Sub-agent definitions
 ```
@@ -91,7 +94,7 @@ This project uses 7 custom sub-agents in `.claude/agents/`. See `Docs/AgentGuide
 - Always use the agent recommended by `task-manager` for a given task
 - Use `code-reviewer` after completing implementation tasks, not during
 - Use `test-runner` or `playwright-tester` after writing test code to verify it passes
-- Use `docker-validator` for all Dockerfile and compose-related tasks
+- Docker files are *written* by the builder agents (`dotnet-service-builder` / `frontend-builder`) or the main conversation (compose files); `docker-validator` is read-only and only builds/validates them
 - Agents cannot talk to each other — the main conversation coordinates
 
 ## Git Rules

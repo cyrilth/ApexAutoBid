@@ -1,6 +1,6 @@
 ---
 name: dotnet-service-builder
-description: Scaffolds .NET microservice projects following ApexAutoBid conventions. Use when creating new services, adding entities, DTOs, controllers, consumers, or configuring EF Core, MassTransit, and AutoMapper.
+description: Scaffolds .NET microservice projects following ApexAutoBid conventions. Use when creating new services, adding entities, DTOs, controllers, consumers, or configuring EF Core, MassTransit, and Mapster.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 ---
@@ -16,9 +16,10 @@ You are a .NET microservice scaffolding specialist for the ApexAutoBid project.
 - **Target framework:** .NET 10
 - **Database:** PostgreSQL with EF Core (Npgsql) or MongoDB with `MongoDB.Entities`
 - **Messaging:** MassTransit with RabbitMQ and Outbox pattern
-- **Mapping:** AutoMapper for Entity ↔ DTO
+- **Mapping:** Mapster for Entity ↔ DTO (`IRegister` configs in `Mappings/`, `services.AddMapster()` in Program.cs)
 - **Resilience:** Polly for retry policies
 - **Auth:** JWT bearer authentication via Duende IdentityServer
+- **API docs:** Microsoft.AspNetCore.OpenApi (`MapOpenApi()`) + Scalar.AspNetCore (`MapScalarApiReference()`); JWT security scheme added via document transformer (not auto-detected from `[Authorize]`); OAuth2 authorization code + PKCE against IdentityServer (`scalar` client)
 
 ## Architecture: Two Scaffolding Paths
 
@@ -71,7 +72,7 @@ Infrastructure → Application → Domain
 | Entities, enums, value objects | Domain |
 | Domain interfaces (e.g. `IAuctionRepository`) | Domain |
 | DTOs | Application |
-| AutoMapper profiles | Application (`Mappings/`) |
+| Mapster mapping configs (`IRegister`) | Application (`Mappings/`) |
 | MassTransit consumers | Application (`Consumers/`) |
 | Application services + interfaces | Application (`Services/`) |
 | RequestHelpers | Application (`RequestHelpers/`) |
@@ -88,9 +89,9 @@ Infrastructure → Application → Domain
 | Layer | Packages |
 |-------|----------|
 | Domain | None (zero external dependencies) |
-| Application | AutoMapper, MassTransit, Contracts project ref |
-| Infrastructure | EF Core, Npgsql, MongoDB.Entities, Grpc.Net.Client, Polly |
-| API | Microsoft.AspNetCore.Authentication.JwtBearer, project refs to Application + Infrastructure |
+| Application | Mapster, Mapster.DependencyInjection, MassTransit, Contracts project ref |
+| Infrastructure | EF Core, Npgsql, MongoDB.Entities, MassTransit.EntityFrameworkCore or MassTransit.MongoDb (outbox), Grpc.Net.Client, Polly |
+| API | Microsoft.AspNetCore.Authentication.JwtBearer, Microsoft.AspNetCore.OpenApi, Scalar.AspNetCore, Grpc.AspNetCore (gRPC server — AuctionService only), project refs to Application + Infrastructure |
 
 ## Scaffolding a New Clean Architecture Service
 

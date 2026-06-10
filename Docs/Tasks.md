@@ -14,6 +14,7 @@
 - Events are published to RabbitMQ on create/update/delete
 - Consumers handle incoming `BidPlaced` and `AuctionFinished` events
 - Unit tests (7 cases) and integration tests (3 cases) pass
+- OpenAPI document (`/openapi/v1.json`) and Scalar docs UI (`/scalar`) are served
 - Service runs in Docker
 
 ### Tasks
@@ -35,7 +36,7 @@
   - [ ] 5.2. `CreateAuctionDto` — `dotnet-service-builder`
   - [ ] 5.3. `UpdateAuctionDto` — `dotnet-service-builder`
 - [ ] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
-- [ ] 7. Configure AutoMapper profiles in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
+- [ ] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
 - [ ] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
   - [ ] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
   - [ ] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
@@ -49,7 +50,7 @@
 - [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
   - [ ] 12.2. `AuctionFinished` consumer — `dotnet-service-builder`
-- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
+- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
   - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
   - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
@@ -62,6 +63,7 @@
   - [ ] 15.1. CreateAuction — invalid DTO returns 400 — `dotnet-service-builder`
   - [ ] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
   - [ ] 15.3. UpdateAuction — valid DTO and invalid user returns 403 — `dotnet-service-builder`
+- [ ] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
 
 ---
 
@@ -75,6 +77,7 @@
 - Search API returns paged results with filtering, sorting, and search
 - MongoDB stays in sync with Auction Service via event consumers
 - HTTP polling fallback works for initial data sync
+- OpenAPI document and Scalar docs UI are served
 - Unit tests pass
 - Service runs in Docker
 
@@ -92,7 +95,7 @@
 - [ ] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
 - [ ] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [ ] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
-- [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
+- [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 9. Write unit tests (SearchService.UnitTests) — `dotnet-service-builder`
   - [ ] 9.1. Search — returns paged results — `dotnet-service-builder`
   - [ ] 9.2. Search — filters by searchTerm — `dotnet-service-builder`
@@ -107,6 +110,7 @@
   - [ ] 10.3. AuctionDeleted consumer — removes item — `dotnet-service-builder`
   - [ ] 10.4. Search endpoint — returns filtered results — `dotnet-service-builder`
 - [ ] 11. Verify end-to-end: create auction → appears in Search Service via event — `test-runner`
+- [ ] 12. Add API documentation: OpenAPI generation + Scalar UI (anonymous-only API — no security scheme needed) — `dotnet-service-builder`
 
 ---
 
@@ -121,6 +125,7 @@
 - Login and register pages are functional
 - Auction Service rejects unauthenticated requests to protected endpoints
 - Default users are seeded
+- Scalar docs login flow obtains a JWT via IdentityServer (authorization code + PKCE) and authenticated "try it" requests succeed
 - Unit tests pass
 - Service runs in Docker
 
@@ -137,7 +142,7 @@
 - [ ] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [ ] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
-- [ ] 9. Dockerize the Identity Service — `docker-validator`
+- [ ] 9. Dockerize the Identity Service — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 10. Write unit tests (IdentityService.UnitTests) — `dotnet-service-builder`
   - [ ] 10.1. Login — valid credentials returns token — `dotnet-service-builder`
   - [ ] 10.2. Login — invalid credentials returns 401 — `dotnet-service-builder`
@@ -148,6 +153,10 @@
   - [ ] 11.2. Protected endpoint — rejects request without token — `dotnet-service-builder`
   - [ ] 11.3. Protected endpoint — accepts request with valid token — `dotnet-service-builder`
 - [ ] 12. Verify end-to-end: obtain token → call authenticated Auction Service endpoints — `test-runner`
+- [ ] 13. Enable login-from-docs (Scalar ↔ IdentityServer) — `dotnet-service-builder`
+  - [ ] 13.1. Register a `scalar` client in `Config.cs` (authorization code + PKCE, public client without secret, redirect URIs for the Scalar docs pages) — `dotnet-service-builder`
+  - [ ] 13.2. Enable CORS on the IdentityServer token endpoint for browser-based code exchange from the docs pages — `dotnet-service-builder`
+  - [ ] 13.3. Switch the Auction Service Scalar config to the OAuth2 authorization code flow with PKCE (`AddAuthorizationCodeFlow`) — `dotnet-service-builder`
 
 ---
 
@@ -161,6 +170,7 @@
 - All API routes are proxied correctly to their respective services
 - JWT authentication is validated at the gateway
 - Both authenticated and anonymous endpoints work through the gateway
+- Aggregated Scalar docs page serves all service APIs through the gateway, with one OAuth2 login covering all "try it" requests
 - Integration tests pass
 - Service runs in Docker
 
@@ -173,7 +183,7 @@
   - [ ] 2.3. `/api/bids/*` → Bidding Service (prep for Phase 5) — `dotnet-service-builder`
   - [ ] 2.4. `/notifications` → Notification Service (prep for Phase 6) — `dotnet-service-builder`
 - [ ] 3. Configure JWT bearer authentication on the gateway — `dotnet-service-builder`
-- [ ] 4. Dockerize the Gateway Service — `docker-validator`
+- [ ] 4. Dockerize the Gateway Service — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 5. Write integration tests (GatewayService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 5.1. Route `/api/auctions` — proxies to Auction Service — `dotnet-service-builder`
   - [ ] 5.2. Route `/api/search` — proxies to Search Service — `dotnet-service-builder`
@@ -181,6 +191,10 @@
   - [ ] 5.4. Auth endpoint — accepts request with valid token — `dotnet-service-builder`
   - [ ] 5.5. Anon endpoint — accepts request without token — `dotnet-service-builder`
 - [ ] 6. Verify end-to-end: client → gateway → backend services (auth and anon) — `test-runner`
+- [ ] 7. Aggregate API documentation at the gateway — `dotnet-service-builder`
+  - [ ] 7.1. Proxy each service's `/openapi/v1.json` through YARP — `dotnet-service-builder`
+  - [ ] 7.2. Host a single Scalar UI at the gateway listing all service documents (`AddDocument` per service) — `dotnet-service-builder`
+  - [ ] 7.3. Configure the OAuth2 authorization code flow (PKCE, `scalar` client) against IdentityServer so one login covers all "try it" requests — `dotnet-service-builder`
 
 ---
 
@@ -195,6 +209,7 @@
 - gRPC fallback to Auction Service works for missing auction data
 - Background service detects and finalizes expired auctions
 - `BidPlaced` and `AuctionFinished` events are published
+- OpenAPI document and Scalar docs UI are served with the OAuth2/Bearer security scheme
 - Unit tests and integration tests pass
 - Service runs in Docker
 
@@ -222,7 +237,7 @@
 - [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
 - [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished`) — `dotnet-service-builder`
 - [ ] 13. Add JWT bearer authentication — `dotnet-service-builder`
-- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `docker-validator`
+- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
   - [ ] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
   - [ ] 15.2. PlaceBid — bid below reserve returns AcceptedBelowReserve — `dotnet-service-builder`
@@ -237,6 +252,7 @@
   - [ ] 16.3. AuctionCreated consumer — stores local auction record — `dotnet-service-builder`
   - [ ] 16.4. Background service — finalizes expired auction — `dotnet-service-builder`
 - [ ] 17. Verify end-to-end: place bid → Auction Service updates CurrentHighBid → Search Service updates — `test-runner`
+- [ ] 18. Add API documentation: OpenAPI generation + Scalar UI with the OAuth2/Bearer security scheme (same pattern as Auction Service) — `dotnet-service-builder`
 
 ---
 
@@ -255,13 +271,13 @@
 ### Tasks
 
 - [ ] 1. Create the Notification Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 2. Configure MassTransit with Outbox pattern — `dotnet-service-builder`
+- [ ] 2. Configure MassTransit with RabbitMQ (consumer-only — no outbox; this service has no database and publishes no events) — `dotnet-service-builder`
 - [ ] 3. Create SignalR hub at `/notifications` — `dotnet-service-builder`
 - [ ] 4. Implement event consumers that push to SignalR clients — `dotnet-service-builder`
   - [ ] 4.1. `AuctionCreated` — notify clients of new auction — `dotnet-service-builder`
   - [ ] 4.2. `BidPlaced` — notify clients of new bid — `dotnet-service-builder`
   - [ ] 4.3. `AuctionFinished` — notify clients of auction result — `dotnet-service-builder`
-- [ ] 5. Dockerize the Notification Service — `docker-validator`
+- [ ] 5. Dockerize the Notification Service — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 6. Write integration tests (NotificationService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 6.1. AuctionCreated consumer — pushes notification to SignalR clients — `dotnet-service-builder`
   - [ ] 6.2. BidPlaced consumer — pushes notification to SignalR clients — `dotnet-service-builder`
@@ -309,24 +325,24 @@
 - [ ] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
 - [ ] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
 - [ ] 12. Configure Next.js image optimization (`sharp`) — `frontend-builder`
-- [ ] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `docker-validator`
-- [ ] 14. Set up Playwright test project — `playwright-tester`
-- [ ] 15. Write Playwright e2e tests — `playwright-tester`
-  - [ ] 15.1. Home page — loads auction listings — `playwright-tester`
-  - [ ] 15.2. Search — filters auctions by search term — `playwright-tester`
-  - [ ] 15.3. Pagination — navigates between pages — `playwright-tester`
-  - [ ] 15.4. Filtering — filters by live, endingSoon, finished — `playwright-tester`
-  - [ ] 15.5. Sorting — sorts by make, new, endingSoon — `playwright-tester`
-  - [ ] 15.6. Auth — login flow via IdentityServer — `playwright-tester`
-  - [ ] 15.7. Auth — logout returns to home page — `playwright-tester`
-  - [ ] 15.8. Auth — unauthenticated user cannot access create page — `playwright-tester`
-  - [ ] 15.9. Create auction — fills form and submits successfully — `playwright-tester`
-  - [ ] 15.10. Edit auction — updates auction details — `playwright-tester`
-  - [ ] 15.11. Delete auction — removes auction with confirmation — `playwright-tester`
-  - [ ] 15.12. Auction detail — displays specs, countdown, and bid history — `playwright-tester`
-  - [ ] 15.13. Place bid — submits bid and updates UI — `playwright-tester`
-  - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `playwright-tester`
-  - [ ] 15.15. Toast notifications — displays on success and error actions — `playwright-tester`
+- [ ] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
+- [ ] 14. Set up Playwright test project — `frontend-builder`
+- [ ] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
+  - [ ] 15.1. Home page — loads auction listings — `frontend-builder`
+  - [ ] 15.2. Search — filters auctions by search term — `frontend-builder`
+  - [ ] 15.3. Pagination — navigates between pages — `frontend-builder`
+  - [ ] 15.4. Filtering — filters by live, endingSoon, finished — `frontend-builder`
+  - [ ] 15.5. Sorting — sorts by make, new, endingSoon — `frontend-builder`
+  - [ ] 15.6. Auth — login flow via IdentityServer — `frontend-builder`
+  - [ ] 15.7. Auth — logout returns to home page — `frontend-builder`
+  - [ ] 15.8. Auth — unauthenticated user cannot access create page — `frontend-builder`
+  - [ ] 15.9. Create auction — fills form and submits successfully — `frontend-builder`
+  - [ ] 15.10. Edit auction — updates auction details — `frontend-builder`
+  - [ ] 15.11. Delete auction — removes auction with confirmation — `frontend-builder`
+  - [ ] 15.12. Auction detail — displays specs, countdown, and bid history — `frontend-builder`
+  - [ ] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
+  - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
+  - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
 - [ ] 16. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
 
 ---
@@ -346,15 +362,15 @@
 
 ### Tasks
 
-- [ ] 1. Create `docker/docker-compose.yml` — `docker-validator`
-  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ — `docker-validator`
-  - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — `docker-validator`
-  - [ ] 1.3. Frontend: Next.js web app — `docker-validator`
-- [ ] 2. Configure environment variables and connection strings for all services — `docker-validator`
-- [ ] 3. Configure inter-service networking — `docker-validator`
-- [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — `docker-validator`
+- [ ] 1. Create `docker/docker-compose.yml` — *main conversation*, validate with `docker-validator`
+  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ — *main conversation*
+  - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
+  - [ ] 1.3. Frontend: Next.js web app — *main conversation*
+- [ ] 2. Configure environment variables and connection strings for all services — *main conversation*, validate with `docker-validator`
+- [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
+- [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
-- [ ] 6. Import and verify Postman collection against all API endpoints — `test-runner`
+- [ ] 6. Import and verify Postman collection against all API endpoints — *main conversation*
 - [ ] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
 
 ---

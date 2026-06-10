@@ -41,8 +41,11 @@ Map tasks to the appropriate agent based on content:
 | .NET project setup, entities, DTOs, controllers, EF Core, MassTransit, NuGet, gRPC, consumers | `dotnet-service-builder` |
 | Next.js, React components, pages, Tailwind, Zustand, forms, SignalR client | `frontend-builder` |
 | Running `dotnet test`, unit tests, integration tests | `test-runner` |
+| Writing Playwright test files | `frontend-builder` |
 | Running Playwright tests, e2e tests | `playwright-tester` |
-| Dockerfile, docker-compose, container validation | `docker-validator` |
+| Writing Dockerfiles | `dotnet-service-builder` (backend) / `frontend-builder` (web app) |
+| Writing docker-compose files | none (main conversation) |
+| Validating Docker builds, compose config, running stack | `docker-validator` |
 | Code review, security review | `code-reviewer` |
 | Solution structure, `.sln`, `.editorconfig`, folder creation | `dotnet-service-builder` |
 | Kubernetes manifests, CI/CD, GitHub Actions | none (main conversation) |

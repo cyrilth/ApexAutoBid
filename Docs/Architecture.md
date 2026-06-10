@@ -10,6 +10,7 @@
 | API Gateway | YARP Reverse Proxy | Latest |
 | Message Broker | RabbitMQ (via MassTransit) | Latest |
 | Real-time | SignalR | (bundled with .NET 10) |
+| API Documentation | OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar | Latest |
 | Relational DB | PostgreSQL | Latest |
 | Document DB | MongoDB | Latest |
 | Containerization | Docker / Docker Compose | Latest |
@@ -111,6 +112,7 @@ Client ──► Gateway ──► /api/auctions/*    ──► Auction Service
                    ──► /api/search*       ──► Search Service
                    ──► /api/bids/*        ──► Bidding Service
                    ──► /notifications     ──► Notification Service
+                   ──► /openapi/{svc}     ──► service OpenAPI documents (aggregated docs)
 ```
 
 ---
@@ -176,9 +178,9 @@ Resource-level authorization (e.g., only the seller can update/delete their auct
 |---------|---------|---------|---------|
 | Retry | Polly | Bidding Service | Retry gRPC/HTTP calls to Auction Service on transient failure |
 | Retry | Polly | Identity Service | Retry database connections during startup |
-| Retry | Polly | Search Service | Retry HTTP calls via `Microsoft.Extensions.Http.Polly` |
-| Message Retry | MassTransit | All services | Automatic retry of failed message consumers |
-| Outbox | MassTransit | All services | Ensures messages are published even if the broker is temporarily down |
+| Retry | Polly | Search Service | Retry HTTP calls via `Microsoft.Extensions.Http.Resilience` (Polly v8) |
+| Message Retry | MassTransit | All MassTransit services | Automatic retry of failed message consumers |
+| Outbox | MassTransit | Auction, Search, Bidding | Ensures published messages are not lost if the broker is temporarily down (requires a database — not applicable to Notification, Identity, or Gateway) |
 
 ---
 
@@ -194,7 +196,7 @@ Infrastructure → Application → Domain
 ```
 
 - **Domain** has zero external NuGet dependencies. Contains entities, enums, value objects, and domain interfaces.
-- **Application** depends only on Domain. Contains DTOs, AutoMapper profiles, MassTransit consumers, application services, and RequestHelpers. NuGet: AutoMapper, MassTransit, Contracts project ref.
+- **Application** depends only on Domain. Contains DTOs, Mapster mapping configs (`IRegister`), MassTransit consumers, application services, and RequestHelpers. NuGet: Mapster, MassTransit, Contracts project ref.
 - **Infrastructure** depends only on Application (and transitively Domain). Contains DbContext, migrations, repository implementations, gRPC clients/servers, HTTP clients. NuGet: EF Core, Npgsql, MongoDB.Entities, Grpc.Net.Client, Polly.
 - **API** depends on Application and Infrastructure. Contains controllers, Program.cs, Dockerfile, middleware. NuGet: Microsoft.AspNetCore.Authentication.JwtBearer.
 
@@ -343,11 +345,17 @@ ApexAutoBid/
 │   ├── SearchService.UnitTests/
 │   ├── SearchService.IntegrationTests/
 │   ├── BiddingService.UnitTests/
-│   └── BiddingService.IntegrationTests/
+│   ├── BiddingService.IntegrationTests/
+│   ├── IdentityService.UnitTests/
+│   ├── IdentityService.IntegrationTests/
+│   ├── GatewayService.IntegrationTests/
+│   └── NotificationService.IntegrationTests/
 │
 ├── Docs/
 │   ├── Requirements.md
 │   ├── Architecture.md
+│   ├── Tasks.md
+│   ├── AgentGuide.md
 │   └── Initial_Planning/
 │
 ├── .editorconfig
@@ -375,7 +383,8 @@ docker-compose.yml
 ├── identity-svc      (port 5000)
 ├── gateway-svc       (port 6001)
 ├── notification-svc  (port 7004)
-└── web-app           (port 3000)
+├── web-app           (port 3000)
+└── nginx             (ports 80/443, SSL via acme-companion)
 ```
 
 ### 8.2 Kubernetes (Production)
@@ -412,8 +421,8 @@ docker-compose.yml
 Each service has its own GitHub Actions workflow:
 
 ```
-Push to main (src/AuctionService/**) ──► Build Docker image ──► Push to Docker Hub
-Push to main (src/SearchService/**)  ──► Build Docker image ──► Push to Docker Hub
+Push to main (backend/AuctionService/**) ──► Build Docker image ──► Push to Docker Hub
+Push to main (backend/SearchService/**)  ──► Build Docker image ──► Push to Docker Hub
 ...etc for each service
 ```
 
@@ -432,7 +441,7 @@ Stage 3 (runner)  ──► Copy standalone output, run as non-root user on port
 
 ## 9. Shared Contracts
 
-The `src/Contracts/` project contains the event contract classes shared across all services. Each event is a plain C# record/class with no dependencies, referenced by all services that publish or consume it.
+The `backend/Contracts/` project contains the event contract classes shared across all services. Each event is a plain C# record/class with no dependencies, referenced by all services that publish or consume it.
 
 | Contract | Properties |
 |----------|-----------|
@@ -443,3 +452,21 @@ The `src/Contracts/` project contains the event contract classes shared across a
 | AuctionFinished | ItemSold, AuctionId, Winner?, Seller, Amount? |
 
 These contracts are the **single source of truth** for event shapes, ensuring consistency across all publishers and consumers.
+
+---
+
+## 10. API Documentation
+
+Each API-exposing service generates an OpenAPI document using the built-in `Microsoft.AspNetCore.OpenApi` package and serves an interactive **Scalar** reference UI (`Scalar.AspNetCore`):
+
+| Service | OpenAPI Document | Scalar UI |
+|---------|------------------|-----------|
+| Auction Service | `/openapi/v1.json` | `/scalar` |
+| Search Service | `/openapi/v1.json` | `/scalar` |
+| Bidding Service | `/openapi/v1.json` | `/scalar` |
+| Gateway | aggregates all of the above via YARP | `/scalar` (one page, all documents) |
+
+- JWT-protected endpoints are documented with an OpenAPI **security scheme** added via a document transformer (the built-in generator does not auto-detect `[Authorize]`).
+- The **Gateway** proxies each service's OpenAPI document through YARP and hosts a single aggregated Scalar page (`AddDocument` per service).
+- The docs UI authenticates against **IdentityServer** using the **OAuth2 authorization code flow + PKCE** (dedicated `scalar` public client): clicking Authorize runs the real IdentityServer login, and the obtained JWT is automatically attached to all "try it" requests. The token endpoint allows CORS from the docs origins for the browser-based code exchange.
+- The Notification Service is excluded (SignalR hub only, no REST API).
