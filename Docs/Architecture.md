@@ -121,7 +121,7 @@ Auction images go directly from the browser to object storage — image bytes ne
 4. Client ──► submits create/edit form with the object URL as ImageUrl
 ```
 
-The Auction Service signs uploads with a dedicated MinIO access key scoped to `GetObject`/`PutObject` on the bucket; anonymous access is read-only. An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch the uploaded object, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings and social link previews use the thumbnail, the detail page the full image.
+The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch the uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings and social link previews use the thumbnail, the detail page the full image.
 
 ### 3.5 Gateway Routing
 

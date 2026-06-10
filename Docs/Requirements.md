@@ -171,7 +171,7 @@ Users upload their auction/vehicle photos directly to object storage — image b
 3. The browser PUTs the file straight to the `auction-images` bucket using the presigned URL
 4. The client submits the create/edit form with the returned object URL as `ImageUrl`
 
-Constraints: object keys are server-generated GUIDs (no overwrites, no user-controlled paths); presigned URLs expire after **5 minutes** and sign the content type; the Auction Service uses a dedicated MinIO access key whose policy allows `GetObject`/`PutObject` on `auction-images/*` only. Anonymous access to the bucket remains read-only. The plain URL input stays available as a fallback for externally hosted images.
+Constraints: object keys are server-generated GUIDs (no overwrites, no user-controlled paths); presigned URLs expire after **5 minutes** and sign the content type; the Auction Service uses a dedicated MinIO access key whose policy allows `PutObject` on `auction-images/*` only (least privilege — reads, including the thumbnail generator fetching originals, go through the bucket's anonymous read access). Anonymous access to the bucket remains read-only. The plain URL input stays available as a fallback for externally hosted images.
 
 **Thumbnail Generation:**
 
