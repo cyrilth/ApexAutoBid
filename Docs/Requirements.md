@@ -70,9 +70,10 @@ The application runs inside a **Docker Host** and consists of the following comp
 | GET | api/auctions/{id} | Get auction by id | Anon |
 | POST | api/admin/auctions/{id}/end | End an auction now | Admin |
 | POST | api/admin/auctions/{id}/cancel | Cancel/invalidate an auction | Admin |
-| GET/POST/PUT/DELETE | api/admin/banners | Manage banner messages | Admin |
+| GET/POST | api/admin/banners | List/create banner messages | Admin |
+| PUT/DELETE | api/admin/banners/{id} | Update/delete a banner message | Admin |
 | GET | api/banners | Active banners (home/auction scope) | Anon |
-| GET | api/admin/stats | Auction counts by status | Admin |
+| GET | api/admin/auctions/stats | Auction counts by status | Admin |
 | GET | api/auctions/duration-limits | Current min/max auction duration | Anon |
 | GET/PUT | api/admin/settings/duration | Read/set min/max auction duration (stored in DB) | Admin |
 
@@ -347,7 +348,7 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 | POST | api/bids | Place bid (auctionId, amount) | Auth |
 | GET | api/bids/{auctionId} | Get bids for auction | Anon |
 | DELETE | api/admin/bids/{id} | Remove a bid (recalculates high bid) | Admin |
-| GET | api/admin/stats | Total bid count | Admin |
+| GET | api/admin/bids/stats | Total bid count | Admin |
 
 **Bid Validation Rules (POST api/bids):**
 - The caller must have the `email_verified` claim — otherwise 403 (see §3.4 Email Verification)
@@ -721,7 +722,7 @@ A role-gated admin area (`/admin` in the Next.js app) plus admin-only APIs acros
 | POST | api/admin/users/{id}/resend-confirmation | Generate and send a new email-validation link |
 | PUT | api/admin/users/{id}/roles | Assign/remove roles (e.g., grant `admin`) |
 | PUT | api/admin/users/{id}/lock | Lock or unlock an account |
-| GET | api/admin/stats | User counts (total, confirmed, locked) |
+| GET | api/admin/users/stats | User counts (total, confirmed, locked) |
 
 ### 10.2 Auction & Bid Management
 
@@ -738,12 +739,12 @@ Admins can publish banner messages shown on the home page, a specific auction pa
 
 **Banner model:** Id, Message, Scope (`Global` | `HomePage` | `Auction`), AuctionId? (when Scope = Auction), ActiveFrom, ActiveUntil, CreatedBy
 
-- Admin CRUD via `api/admin/banners`; the public reads active banners via `GET api/banners?scope=&auctionId=` (Anon)
+- Admin CRUD via `GET/POST api/admin/banners` and `PUT/DELETE api/admin/banners/{id}`; the public reads active banners via `GET api/banners?scope=&auctionId=` (Anon)
 - Publishing emits `BannerPublished`, which the Notification Service broadcasts over SignalR so open pages show the banner without a refresh
 
 ### 10.4 Statistics
 
-The admin dashboard landing page aggregates per-service stats endpoints (all `GET api/admin/stats`, Admin-only, called through the gateway): user counts (Identity), auction counts by status (Auction), total bids (Bidding).
+The admin dashboard landing page aggregates per-service stats endpoints (Admin-only, called through the gateway): `GET api/admin/users/stats` (Identity — user counts), `GET api/admin/auctions/stats` (Auction — auction counts by status), and `GET api/admin/bids/stats` (Bidding — total bid count). Stats paths are scoped by resource segment — a single shared `api/admin/stats` path would be unroutable at the gateway, since YARP would match only one service.
 
 ### 10.5 New Event Contracts
 

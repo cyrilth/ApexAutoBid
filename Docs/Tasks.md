@@ -528,28 +528,28 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 2.4. `POST api/admin/users/{id}/resend-confirmation` — generate a new email-validation link — `dotnet-service-builder`
   - [ ] 2.5. `PUT api/admin/users/{id}/roles` — assign/remove roles — `dotnet-service-builder`
   - [ ] 2.6. `PUT api/admin/users/{id}/lock` — lock/unlock account — `dotnet-service-builder`
-  - [ ] 2.7. `GET api/admin/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
+  - [ ] 2.7. `GET api/admin/users/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
   - [ ] 2.8. Document the admin API with OpenAPI + Scalar (Bearer, admin role noted) and add it to the gateway's aggregated docs — `dotnet-service-builder`
 - [ ] 3. Auction Service admin features (`Requirements.md` §10.2–10.3) — `dotnet-service-builder`
   - [ ] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
   - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
   - [ ] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
   - [ ] 3.4. Auction duration validation on create/update — resolution order: DB `PlatformSettings` → env vars (`Auction__MinDuration`/`Auction__MaxDuration`) → defaults 1 hour–90 days; dev sets min to 1 minute (`appsettings.Development.json` / compose); admins exempt — `dotnet-service-builder`
-  - [ ] 3.5. `Banner` entity + admin CRUD (`api/admin/banners`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
+  - [ ] 3.5. `Banner` entity + admin CRUD (`GET/POST api/admin/banners`, `PUT/DELETE api/admin/banners/{id}`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
   - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
-  - [ ] 3.7. `GET api/admin/stats` — auction counts by status — `dotnet-service-builder`
+  - [ ] 3.7. `GET api/admin/auctions/stats` — auction counts by status — `dotnet-service-builder`
   - [ ] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
 - [ ] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
 - [ ] 5. Bidding Service admin features — `dotnet-service-builder`
   - [ ] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
   - [ ] 5.2. Consume `AuctionCancelled` — mark local auction finished; refuse further bids; never emit `AuctionFinished` — `dotnet-service-builder`
   - [ ] 5.3. Apply `AuctionUpdated.AuctionEnd` to local auction records — `dotnet-service-builder`
-  - [ ] 5.4. `GET api/admin/stats` — total bid count — `dotnet-service-builder`
+  - [ ] 5.4. `GET api/admin/bids/stats` — total bid count — `dotnet-service-builder`
 - [ ] 6. Notification Service: consume `AuctionCancelled` (broadcast + targeted to seller) and `BannerPublished` (broadcast) — `dotnet-service-builder`
-- [ ] 7. Gateway: route `api/admin/*` paths and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
+- [ ] 7. Gateway: route `api/admin/*` paths by resource segment, matching the base collection path as well as child paths (`users*` → Identity, `auctions*`/`banners*`/`settings*` → Auction, `bids*` → Bidding) and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
 - [ ] 8. Frontend admin area (`/admin`, role-gated) — `frontend-builder`
   - [ ] 8.1. Role-based route protection (role claim from the session; non-admins redirected) — `frontend-builder`
-  - [ ] 8.2. Dashboard page — stats cards from the per-service `api/admin/stats` endpoints — `frontend-builder`
+  - [ ] 8.2. Dashboard page — stats cards from the per-service stats endpoints (`api/admin/users/stats`, `api/admin/auctions/stats`, `api/admin/bids/stats`) — `frontend-builder`
   - [ ] 8.3. Users page — list/search, create, reset password, resend confirmation, roles, lock — `frontend-builder`
   - [ ] 8.4. Auctions page — create with seller assignment, end now, cancel, remove bid from the bid history — `frontend-builder`
   - [ ] 8.5. Banners page — CRUD with scope (global/home/auction) and active window — `frontend-builder`
