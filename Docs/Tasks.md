@@ -363,7 +363,7 @@ Status values: `Not started` · `In progress` · `Done`
 ### Tasks
 
 - [ ] 1. Create the Next.js project (`frontend/web-app`) with dependencies — `frontend-builder`
-- [ ] 2. Configure Tailwind CSS and Flowbite React — `frontend-builder`
+- [ ] 2. Configure Tailwind CSS and Flowbite React — theme tokens (Teal Breeze `primary` scale, `accent` colors) and Inter font per `Docs/DesignGuide.md` — `frontend-builder`
 - [ ] 3. Set up next-auth with Duende IdentityServer (OAuth2/OIDC) — `frontend-builder`
 - [ ] 4. Implement auction listing page — `frontend-builder`
   - [ ] 4.1. Fetch from Search Service (via Gateway) — `frontend-builder`

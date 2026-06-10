@@ -10,6 +10,7 @@ ApexAutoBid is a real-time online car auction platform built with a microservice
 - `Docs/Tasks.md` — Task tracker with checkable boxes per phase (source of truth for progress)
 - `Docs/AgentGuide.md` — How to use sub-agents for development
 - `Docs/Requirements.md` — Functional and non-functional requirements
+- `Docs/DesignGuide.md` — UI design conventions (color palette, typography, layout, component usage) — required reading for all frontend tasks
 
 ## Tech Stack
 
