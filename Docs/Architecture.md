@@ -128,12 +128,20 @@ The Auction Service signs uploads with a dedicated MinIO access key scoped to `P
 The **Gateway** uses **YARP Reverse Proxy** to route client requests to backend services. It handles JWT bearer token validation so that individual services can trust authenticated requests forwarded through the gateway.
 
 ```
-Client ──► Gateway ──► /api/auctions/*    ──► Auction Service
-                   ──► /api/search*       ──► Search Service
-                   ──► /api/bids/*        ──► Bidding Service
-                   ──► /notifications     ──► Notification Service
-                   ──► /openapi/{svc}     ──► service OpenAPI documents (aggregated docs)
+Client ──► Gateway ──► /api/auctions/*        ──► Auction Service
+                   ──► /api/banners*          ──► Auction Service
+                   ──► /api/search*           ──► Search Service
+                   ──► /api/bids/*            ──► Bidding Service
+                   ──► /api/admin/users*     ──► Identity Service
+                   ──► /api/admin/auctions*  ──► Auction Service
+                   ──► /api/admin/banners*   ──► Auction Service
+                   ──► /api/admin/settings*  ──► Auction Service
+                   ──► /api/admin/bids*      ──► Bidding Service
+                   ──► /notifications         ──► Notification Service
+                   ──► /openapi/{svc}         ──► service OpenAPI documents (aggregated docs)
 ```
+
+Admin routes are scoped by resource segment so every endpoint — including each service's stats endpoint (`/api/admin/users/stats`, `/api/admin/auctions/stats`, `/api/admin/bids/stats`) — maps to exactly one service; a path shared across services (e.g., a single `api/admin/stats`) would be unroutable.
 
 ---
 
