@@ -63,13 +63,13 @@ The application runs inside a **Docker Host** and consists of the following comp
 | POST | api/auctions | Create auction | Auth |
 | POST | api/auctions/upload-url | Get a presigned image-upload URL | Auth (verified email) |
 | POST | api/auctions/thumbnail | Generate a thumbnail for an uploaded image | Auth (verified email) |
-| PUT | api/auctions/:id | Update auction | Auth |
-| DELETE | api/auctions/:id | Delete auction | Auth |
+| PUT | api/auctions/{id} | Update auction | Auth |
+| DELETE | api/auctions/{id} | Delete auction | Auth |
 | GET | api/auctions | Get all auctions | Anon |
 | GET | api/auctions?date= | Get auctions updated from a given date | Anon |
-| GET | api/auctions/:id | Get auction by id | Anon |
-| POST | api/admin/auctions/:id/end | End an auction now | Admin |
-| POST | api/admin/auctions/:id/cancel | Cancel/invalidate an auction | Admin |
+| GET | api/auctions/{id} | Get auction by id | Anon |
+| POST | api/admin/auctions/{id}/end | End an auction now | Admin |
+| POST | api/admin/auctions/{id}/cancel | Cancel/invalidate an auction | Admin |
 | GET/POST/PUT/DELETE | api/admin/banners | Manage banner messages | Admin |
 | GET | api/banners | Active banners (home/auction scope) | Anon |
 | GET | api/admin/stats | Auction counts by status | Admin |
@@ -155,7 +155,7 @@ The application runs inside a **Docker Host** and consists of the following comp
 
 **Post-Sale Contact Exchange:**
 
-So the winner and seller can contact each other (e.g., by email) after a sale, `GET api/auctions/:id` conditionally includes contact fields once the auction is sold (`Status = Finished` with a winner):
+So the winner and seller can contact each other (e.g., by email) after a sale, `GET api/auctions/{id}` conditionally includes contact fields once the auction is sold (`Status = Finished` with a winner):
 - `WinnerEmail` is included **only** when the caller's username claim equals `Seller`
 - `SellerEmail` is included **only** when the caller's username claim equals `Winner`
 - All other callers (including anonymous) receive neither field
@@ -717,18 +717,18 @@ A role-gated admin area (`/admin` in the Next.js app) plus admin-only APIs acros
 |--------|------|-------------|
 | GET | api/admin/users | List/search users (paged) |
 | POST | api/admin/users | Create a user (optionally pre-confirmed) |
-| POST | api/admin/users/:id/reset-password | Set a temporary password or send a reset link |
-| POST | api/admin/users/:id/resend-confirmation | Generate and send a new email-validation link |
-| PUT | api/admin/users/:id/roles | Assign/remove roles (e.g., grant `admin`) |
-| PUT | api/admin/users/:id/lock | Lock or unlock an account |
+| POST | api/admin/users/{id}/reset-password | Set a temporary password or send a reset link |
+| POST | api/admin/users/{id}/resend-confirmation | Generate and send a new email-validation link |
+| PUT | api/admin/users/{id}/roles | Assign/remove roles (e.g., grant `admin`) |
+| PUT | api/admin/users/{id}/lock | Lock or unlock an account |
 | GET | api/admin/stats | User counts (total, confirmed, locked) |
 
 ### 10.2 Auction & Bid Management
 
 - **Create for any seller:** admins may pass an explicit `Seller` on `POST api/auctions` (including themselves) — see §3.1
-- **End now:** `POST api/admin/auctions/:id/end` sets `AuctionEnd = UtcNow` and emits `AuctionUpdated` (with `AuctionEnd`); the Bidding Service's background job then finalizes it through the normal flow (winner, `AuctionFinished`, notifications)
-- **Cancel/invalidate:** `POST api/admin/auctions/:id/cancel` sets status `Cancelled` and emits `AuctionCancelled` — Search marks the item cancelled, Bidding refuses further bids and never emits `AuctionFinished`, Notification broadcasts and informs the seller
-- **Remove a bid:** `DELETE api/admin/bids/:id` (Bidding Service) deletes the bid, recalculates the auction's high bid, and emits `BidRemoved (BidId, AuctionId, CurrentHighBid?)` so the Auction and Search Services refresh `CurrentHighBid`
+- **End now:** `POST api/admin/auctions/{id}/end` sets `AuctionEnd = UtcNow` and emits `AuctionUpdated` (with `AuctionEnd`); the Bidding Service's background job then finalizes it through the normal flow (winner, `AuctionFinished`, notifications)
+- **Cancel/invalidate:** `POST api/admin/auctions/{id}/cancel` sets status `Cancelled` and emits `AuctionCancelled` — Search marks the item cancelled, Bidding refuses further bids and never emits `AuctionFinished`, Notification broadcasts and informs the seller
+- **Remove a bid:** `DELETE api/admin/bids/{id}` (Bidding Service) deletes the bid, recalculates the auction's high bid, and emits `BidRemoved (BidId, AuctionId, CurrentHighBid?)` so the Auction and Search Services refresh `CurrentHighBid`
 - **Adjust duration:** admins may shorten/extend `AuctionEnd` on live auctions; regular sellers are bound by the platform duration limits
 - **Duration limits:** the dashboard's Settings page edits the platform-wide min/max auction duration via `PUT api/admin/settings/duration`, persisted in a `PlatformSettings` table (Id, MinDuration, MaxDuration, UpdatedBy, UpdatedAt) in the Auction Service database. DB values override the environment-variable/config defaults (§3.1) and take effect immediately — no restart
 

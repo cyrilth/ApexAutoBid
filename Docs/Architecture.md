@@ -105,7 +105,7 @@ Bidding Service ──gRPC──► Auction Service (GetAuction)
 
 The **Notification Service** exposes a SignalR hub at `/notifications` that the Next.js client connects to for real-time push notifications (new bids, auction results). Anonymous connections receive broadcasts only; authenticated clients connect with their JWT (`access_token` query parameter) and are mapped to their username via an `IUserIdProvider`, enabling targeted messages — when an auction finishes, the winner receives `AuctionWon` and the seller receives `AuctionSellerResult` via `Clients.User(...)`.
 
-Post-sale contact exchange does **not** go through SignalR: after a sale, the Auction Service's `GET api/auctions/:id` conditionally reveals `WinnerEmail` to the seller and `SellerEmail` to the winner (emails flow `email` claim → `Bid.BidderEmail` → `AuctionFinished.WinnerEmail` → Auction record, and are never stored in the search index or pushed over the hub).
+Post-sale contact exchange does **not** go through SignalR: after a sale, the Auction Service's `GET api/auctions/{id}` conditionally reveals `WinnerEmail` to the seller and `SellerEmail` to the winner (emails flow `email` claim → `Bid.BidderEmail` → `AuctionFinished.WinnerEmail` → Auction record, and are never stored in the search index or pushed over the hub).
 
 ### 3.4 Image Upload (Presigned URLs)
 
