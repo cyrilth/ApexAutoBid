@@ -166,7 +166,7 @@ Services maintain local projections of data they need from other services, synch
 
 **Duende IdentityServer** with **ASP.NET Core Identity** serves as the central Security Token Service (STS).
 
-- Issues JWT access tokens via OAuth2/OpenID Connect (claims: `username`, `email`, `email_verified`)
+- Issues JWT access tokens via OAuth2/OpenID Connect (claims: `username`, `email`, `email_verified`, `role` — the `admin` role gates `api/admin/*` and the admin dashboard)
 - Manages user registration and authentication, with **email verification** (`RequireConfirmedEmail`): confirmation emails go to Mailpit in dev, a real SMTP provider in production; the Auction and Bidding Services require the `email_verified` claim for creating auctions and placing bids
 - **Google external login** on the login/register pages (client ID/secret via environment variables only — never committed; disabled when absent). Google-verified emails count as confirmed.
 - PostgreSQL stores user accounts and identity data
@@ -179,7 +179,7 @@ Services maintain local projections of data they need from other services, synch
 2. Identity Service ──► issues JWT token ──► Next.js App (stores in session)
 3. Next.js App ──► Gateway (JWT in Authorization header)
 4. Gateway ──► validates JWT ──► forwards to backend service
-5. Backend service ──► reads claims (username, etc.) from validated token
+5. Backend service ──► reads claims (username, email, email_verified, role) from validated token
 ```
 
 ### 5.3 Endpoint Authorization
