@@ -41,8 +41,11 @@ Map tasks to the appropriate agent based on content:
 | .NET project setup, entities, DTOs, controllers, EF Core, MassTransit, NuGet, gRPC, consumers | `dotnet-service-builder` |
 | Next.js, React components, pages, Tailwind, Zustand, forms, SignalR client | `frontend-builder` |
 | Running `dotnet test`, unit tests, integration tests | `test-runner` |
+| Writing Playwright test files | `frontend-builder` |
 | Running Playwright tests, e2e tests | `playwright-tester` |
-| Dockerfile, docker-compose, container validation | `docker-validator` |
+| Writing Dockerfiles | `dotnet-service-builder` (backend) / `frontend-builder` (web app) |
+| Writing docker-compose files | none (main conversation) |
+| Validating Docker builds, compose config, running stack | `docker-validator` |
 | Code review, security review | `code-reviewer` |
 | Solution structure, `.sln`, `.editorconfig`, folder creation | `dotnet-service-builder` |
 | Kubernetes manifests, CI/CD, GitHub Actions | none (main conversation) |
@@ -69,9 +72,15 @@ Edit `Docs/Tasks.md` and change `- [ ]` to `- [x]` for the specified task.
 
 Only mark a task complete when explicitly told to. Never mark tasks complete on your own.
 
+After checking off tasks, update the **Progress Summary** table at the top of `Docs/Tasks.md`:
+- Increment the phase's `Done` count by the number of boxes you just checked (subtasks count individually)
+- Set `Status` to `In progress` on the first completed task in a phase, and `Done` when Done equals Total
+- Keep the `Overall` row in sync (sum of all phases)
+- If you add or remove tasks, also correct the phase's `Total` and the Overall total
+
 ## When asked for task status
 
-Read `Docs/Tasks.md` and report:
+Read the **Progress Summary** table at the top of `Docs/Tasks.md` for the per-phase overview, then report:
 - Total tasks per phase
 - Completed vs remaining
 - Next unchecked task in the current phase

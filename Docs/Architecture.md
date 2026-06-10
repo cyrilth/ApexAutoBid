@@ -10,6 +10,9 @@
 | API Gateway | YARP Reverse Proxy | Latest |
 | Message Broker | RabbitMQ (via MassTransit) | Latest |
 | Real-time | SignalR | (bundled with .NET 10) |
+| API Documentation | OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar | Latest |
+| Bot Protection | Cloudflare Turnstile + ASP.NET Core rate limiting | Latest |
+| Object Storage | MinIO (S3-compatible — auction images) | Latest |
 | Relational DB | PostgreSQL | Latest |
 | Document DB | MongoDB | Latest |
 | Containerization | Docker / Docker Compose | Latest |
@@ -83,11 +86,14 @@
 All services communicate asynchronously via **RabbitMQ** using **MassTransit** publish/subscribe.
 
 ```
-Auction Service ──publishes──► AuctionCreated ──► Search, Bidding, Notification
-Auction Service ──publishes──► AuctionUpdated ──► Search
-Auction Service ──publishes──► AuctionDeleted ──► Search
-Bidding Service ──publishes──► BidPlaced      ──► Auction, Search, Notification
-Bidding Service ──publishes──► AuctionFinished──► Auction, Search, Notification
+Auction Service ──publishes──► AuctionCreated   ──► Search, Bidding, Notification
+Auction Service ──publishes──► AuctionUpdated   ──► Search, Bidding
+Auction Service ──publishes──► AuctionDeleted   ──► Search
+Auction Service ──publishes──► AuctionCancelled ──► Search, Bidding, Notification
+Auction Service ──publishes──► BannerPublished  ──► Notification
+Bidding Service ──publishes──► BidPlaced        ──► Auction, Search, Notification
+Bidding Service ──publishes──► BidRemoved       ──► Auction, Search
+Bidding Service ──publishes──► AuctionFinished  ──► Auction, Search, Notification
 ```
 
 ### 3.2 Synchronous (gRPC)
@@ -100,9 +106,24 @@ Bidding Service ──gRPC──► Auction Service (GetAuction)
 
 ### 3.3 Real-time (SignalR)
 
-The **Notification Service** exposes a SignalR hub at `/notifications` that the Next.js client connects to for real-time push notifications (new bids, auction results).
+The **Notification Service** exposes a SignalR hub at `/notifications` that the Next.js client connects to for real-time push notifications (new bids, auction results). Anonymous connections receive broadcasts only; authenticated clients connect with their JWT (`access_token` query parameter) and are mapped to their username via an `IUserIdProvider`, enabling targeted messages — when an auction finishes, the winner receives `AuctionWon` and the seller receives `AuctionSellerResult` via `Clients.User(...)`.
 
-### 3.4 Gateway Routing
+Post-sale contact exchange does **not** go through SignalR: after a sale, the Auction Service's `GET api/auctions/{id}` conditionally reveals `WinnerEmail` to the seller and `SellerEmail` to the winner (emails flow `email` claim → `Bid.BidderEmail` → `AuctionFinished.WinnerEmail` → Auction record, and are never stored in the search index or pushed over the hub).
+
+### 3.4 Image Upload (Presigned URLs)
+
+Auction images go directly from the browser to object storage — image bytes never pass through the services:
+
+```
+1. Client ──► POST api/auctions/upload-url (JWT) ──► Auction Service
+2. Auction Service ──► validates content type ──► returns presigned PUT URL (5 min) + object URL
+3. Client ──► PUT image bytes ──► MinIO (auction-images bucket)
+4. Client ──► submits create/edit form with the object URL as ImageUrl
+```
+
+The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch the uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings and social link previews use the thumbnail, the detail page the full image.
+
+### 3.5 Gateway Routing
 
 The **Gateway** uses **YARP Reverse Proxy** to route client requests to backend services. It handles JWT bearer token validation so that individual services can trust authenticated requests forwarded through the gateway.
 
@@ -111,6 +132,7 @@ Client ──► Gateway ──► /api/auctions/*    ──► Auction Service
                    ──► /api/search*       ──► Search Service
                    ──► /api/bids/*        ──► Bidding Service
                    ──► /notifications     ──► Notification Service
+                   ──► /openapi/{svc}     ──► service OpenAPI documents (aggregated docs)
 ```
 
 ---
@@ -144,8 +166,9 @@ Services maintain local projections of data they need from other services, synch
 
 **Duende IdentityServer** with **ASP.NET Core Identity** serves as the central Security Token Service (STS).
 
-- Issues JWT access tokens via OAuth2/OpenID Connect
-- Manages user registration and authentication
+- Issues JWT access tokens via OAuth2/OpenID Connect (claims: `username`, `email`, `email_verified`, `role` — the `admin` role gates `api/admin/*` and the admin dashboard)
+- Manages user registration and authentication, with **email verification** (`RequireConfirmedEmail`): confirmation emails go to Mailpit in dev, a real SMTP provider in production; the Auction and Bidding Services require the `email_verified` claim for creating auctions and placing bids
+- **Google external login** on the login/register pages (client ID/secret via environment variables only — never committed; disabled when absent). Google-verified emails count as confirmed.
 - PostgreSQL stores user accounts and identity data
 - Uses **Polly** for resilient database connections during startup
 
@@ -156,7 +179,7 @@ Services maintain local projections of data they need from other services, synch
 2. Identity Service ──► issues JWT token ──► Next.js App (stores in session)
 3. Next.js App ──► Gateway (JWT in Authorization header)
 4. Gateway ──► validates JWT ──► forwards to backend service
-5. Backend service ──► reads claims (username, etc.) from validated token
+5. Backend service ──► reads claims (username, email, email_verified, role) from validated token
 ```
 
 ### 5.3 Endpoint Authorization
@@ -165,8 +188,19 @@ Services maintain local projections of data they need from other services, synch
 |-------------|-------------|
 | Auth | Requires valid JWT. User identity extracted from claims. |
 | Anon | No authentication required. Publicly accessible. |
+| Admin | Requires valid JWT with the `admin` role claim (`api/admin/*` endpoints). Enforced at the gateway and again in each service. |
 
 Resource-level authorization (e.g., only the seller can update/delete their auction) is enforced within individual services.
+
+### 5.4 Bot Protection & Rate Limiting
+
+| Layer | Mechanism | Protects |
+|-------|-----------|----------|
+| Identity Service | Cloudflare Turnstile (server-side `siteverify`) on the register page | Bot signups, confirmation-email abuse |
+| Identity Service | ASP.NET Core Identity account lockout + rate limiting on login/register/token | Credential stuffing, registration floods |
+| Gateway | `Microsoft.AspNetCore.RateLimiting` — per-IP general policy, stricter on mutating endpoints (429 on excess) | API abuse, bid spam, scraping |
+
+Dev/Docker use Cloudflare's official always-pass Turnstile test keys (committable); production keys come from environment variables. Authenticated actions need no captcha — lockout, rate limits, and the verified-email requirement cover them.
 
 ---
 
@@ -176,9 +210,9 @@ Resource-level authorization (e.g., only the seller can update/delete their auct
 |---------|---------|---------|---------|
 | Retry | Polly | Bidding Service | Retry gRPC/HTTP calls to Auction Service on transient failure |
 | Retry | Polly | Identity Service | Retry database connections during startup |
-| Retry | Polly | Search Service | Retry HTTP calls via `Microsoft.Extensions.Http.Polly` |
-| Message Retry | MassTransit | All services | Automatic retry of failed message consumers |
-| Outbox | MassTransit | All services | Ensures messages are published even if the broker is temporarily down |
+| Retry | Polly | Search Service | Retry HTTP calls via `Microsoft.Extensions.Http.Resilience` (Polly v8) |
+| Message Retry | MassTransit | All MassTransit services | Automatic retry of failed message consumers |
+| Outbox | MassTransit | Auction, Search, Bidding | Ensures published messages are not lost if the broker is temporarily down (requires a database — not applicable to Notification, Identity, or Gateway) |
 
 ---
 
@@ -194,7 +228,7 @@ Infrastructure → Application → Domain
 ```
 
 - **Domain** has zero external NuGet dependencies. Contains entities, enums, value objects, and domain interfaces.
-- **Application** depends only on Domain. Contains DTOs, AutoMapper profiles, MassTransit consumers, application services, and RequestHelpers. NuGet: AutoMapper, MassTransit, Contracts project ref.
+- **Application** depends only on Domain. Contains DTOs, Mapster mapping configs (`IRegister`), MassTransit consumers, application services, and RequestHelpers. NuGet: Mapster, MassTransit, Contracts project ref.
 - **Infrastructure** depends only on Application (and transitively Domain). Contains DbContext, migrations, repository implementations, gRPC clients/servers, HTTP clients. NuGet: EF Core, Npgsql, MongoDB.Entities, Grpc.Net.Client, Polly.
 - **API** depends on Application and Infrastructure. Contains controllers, Program.cs, Dockerfile, middleware. NuGet: Microsoft.AspNetCore.Authentication.JwtBearer.
 
@@ -343,12 +377,18 @@ ApexAutoBid/
 │   ├── SearchService.UnitTests/
 │   ├── SearchService.IntegrationTests/
 │   ├── BiddingService.UnitTests/
-│   └── BiddingService.IntegrationTests/
+│   ├── BiddingService.IntegrationTests/
+│   ├── IdentityService.UnitTests/
+│   ├── IdentityService.IntegrationTests/
+│   ├── GatewayService.IntegrationTests/
+│   └── NotificationService.IntegrationTests/
 │
 ├── Docs/
 │   ├── Requirements.md
 │   ├── Architecture.md
-│   └── Initial_Planning/
+│   ├── Tasks.md
+│   ├── AgentGuide.md
+│   └── postman/                       # Postman collection (created in Phase 8)
 │
 ├── .editorconfig
 ├── .gitignore
@@ -375,7 +415,10 @@ docker-compose.yml
 ├── identity-svc      (port 5000)
 ├── gateway-svc       (port 6001)
 ├── notification-svc  (port 7004)
-└── web-app           (port 3000)
+├── web-app           (port 3000)
+├── mailpit           (SMTP 1025, web UI 8025 — dev email catcher)
+├── minio             (S3 API 9000, console 9001 — auction images; mc init container seeds the bucket)
+└── nginx             (ports 80/443, SSL via acme-companion)
 ```
 
 ### 8.2 Kubernetes (Production)
@@ -394,7 +437,7 @@ docker-compose.yml
 │  │  webapp ─ gateway ─ identity       │  │
 │  │  auction ─ search ─ bid            │  │
 │  │  notification ─ rabbitmq           │  │
-│  │  postgres ─ mongodb                │  │
+│  │  postgres ─ mongodb ─ minio        │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  ┌────────────────────────────────────┐  │
@@ -407,13 +450,15 @@ docker-compose.yml
 └──────────────────────────────────────────┘
 ```
 
+**Secrets per environment:** local development uses `appsettings.Development.json` per service and `docker-compose.yml` environment blocks (dev-only values, committed by design); local Kubernetes uses the committed `k8s/dev-secrets.yaml`; production secrets and CI credentials (GitHub repository secrets) are never committed — see `Requirements.md` §6 for the full strategy.
+
 ### 8.3 CI/CD Pipeline
 
 Each service has its own GitHub Actions workflow:
 
 ```
-Push to main (src/AuctionService/**) ──► Build Docker image ──► Push to Docker Hub
-Push to main (src/SearchService/**)  ──► Build Docker image ──► Push to Docker Hub
+Push to main (backend/AuctionService/**) ──► Build Docker image ──► Push to Docker Hub
+Push to main (backend/SearchService/**)  ──► Build Docker image ──► Push to Docker Hub
 ...etc for each service
 ```
 
@@ -432,14 +477,35 @@ Stage 3 (runner)  ──► Copy standalone output, run as non-root user on port
 
 ## 9. Shared Contracts
 
-The `src/Contracts/` project contains the event contract classes shared across all services. Each event is a plain C# record/class with no dependencies, referenced by all services that publish or consume it.
+The `backend/Contracts/` project contains the event contract classes shared across all services. Each event is a plain C# record/class with no dependencies, referenced by all services that publish or consume it.
 
 | Contract | Properties |
 |----------|-----------|
-| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, Status, ReservePrice, SoldAmount?, CurrentHighBid? |
-| AuctionUpdated | Id, Make, Model, Color, Mileage, Year |
+| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, ThumbnailUrl?, Status, ReservePrice, SoldAmount?, CurrentHighBid? |
+| AuctionUpdated | Id, Make, Model, Color, Mileage, Year, AuctionEnd? |
 | AuctionDeleted | Id |
 | BidPlaced | Id, AuctionId, Bidder, BidTime, Amount, BidStatus |
-| AuctionFinished | ItemSold, AuctionId, Winner?, Seller, Amount? |
+| AuctionFinished | ItemSold, AuctionId, Winner?, WinnerEmail?, Seller, Amount? |
+| AuctionCancelled | AuctionId, Seller |
+| BidRemoved | BidId, AuctionId, CurrentHighBid? |
+| BannerPublished | Id, Message, Scope, AuctionId?, ActiveFrom, ActiveUntil |
 
 These contracts are the **single source of truth** for event shapes, ensuring consistency across all publishers and consumers.
+
+---
+
+## 10. API Documentation
+
+Each API-exposing service generates an OpenAPI document using the built-in `Microsoft.AspNetCore.OpenApi` package and serves an interactive **Scalar** reference UI (`Scalar.AspNetCore`):
+
+| Service | OpenAPI Document | Scalar UI |
+|---------|------------------|-----------|
+| Auction Service | `/openapi/v1.json` | `/scalar` |
+| Search Service | `/openapi/v1.json` | `/scalar` |
+| Bidding Service | `/openapi/v1.json` | `/scalar` |
+| Gateway | aggregates all of the above via YARP | `/scalar` (one page, all documents) |
+
+- JWT-protected endpoints are documented with an OpenAPI **security scheme** added via a document transformer (the built-in generator does not auto-detect `[Authorize]`).
+- The **Gateway** proxies each service's OpenAPI document through YARP and hosts a single aggregated Scalar page (`AddDocument` per service).
+- The docs UI authenticates against **IdentityServer** using the **OAuth2 authorization code flow + PKCE** (dedicated `scalar` public client): clicking Authorize runs the real IdentityServer login, and the obtained JWT is automatically attached to all "try it" requests. The token endpoint allows CORS from the docs origins for the browser-based code exchange.
+- The Notification Service is excluded (SignalR hub only, no REST API).

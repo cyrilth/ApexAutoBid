@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project uses 6 custom Claude Code sub-agents defined in `.claude/agents/`. Sub-agents are specialized AI assistants that run in their own context window, keeping verbose output (test results, build logs) out of your main conversation.
+This project uses 7 custom Claude Code sub-agents defined in `.claude/agents/`. Sub-agents are specialized AI assistants that run in their own context window, keeping verbose output (test results, build logs) out of your main conversation.
 
 ---
 
@@ -60,7 +60,7 @@ Both agents work simultaneously and return results to your main conversation.
 
 ### Same Session (Sub-Agents)
 
-All 6 agents are **sub-agents** — they run within your current Claude Code session. This means:
+All 7 agents are **sub-agents** — they run within your current Claude Code session. This means:
 
 - They share the same terminal and filesystem
 - They return results back to the main conversation
@@ -227,10 +227,10 @@ Claude: → task-manager looks up Task 4
          → Recommended agent: dotnet-service-builder
 
        → dotnet-service-builder
-         → Creates backend/AuctionService/Entities/Auction.cs
-         → Creates backend/AuctionService/Entities/Item.cs
-         → Creates backend/AuctionService/Entities/Status.cs
-         → Returns: "Created 3 entity files following EF Core conventions"
+         → Creates backend/AuctionService/AuctionService.Domain/Entities/Auction.cs
+         → Creates backend/AuctionService/AuctionService.Domain/Entities/Item.cs
+         → Creates backend/AuctionService/AuctionService.Domain/Enums/Status.cs
+         → Returns: "Created 2 entities and 1 enum in the Domain layer"
 
        → task-manager checks off 4, 4.1, 4.2, 4.3 in Tasks.md
 
@@ -240,7 +240,7 @@ Claude: → task-manager looks up Phase 2, Task 4
          → Recommended agent: dotnet-service-builder
 
        → dotnet-service-builder
-         → Creates 5 consumer classes in backend/SearchService/Consumers/
+         → Creates 5 consumer classes in backend/SearchService/SearchService.Application/Consumers/
          → Each implements IConsumer<T> with MassTransit
          → Returns: "Created 5 consumers for AuctionCreated, AuctionUpdated,
            AuctionDeleted, BidPlaced, AuctionFinished"
@@ -254,8 +254,8 @@ Claude: → task-manager looks up Phase 5, Task 6
 
        → dotnet-service-builder
          → Creates protos/auctions.proto
-         → Creates Services/GrpcAuctionClient.cs
-         → Registers gRPC client in Program.cs
+         → Creates BiddingService.Infrastructure/Grpc/GrpcAuctionClient.cs
+         → Registers gRPC client in BiddingService.API/Program.cs
          → Returns: "gRPC client configured with Polly retry"
 ```
 
@@ -342,30 +342,36 @@ Claude: → task-manager looks up Phase 2, Task 11
 
 #### `playwright-tester` — Run Frontend E2E Tests
 
-Runs Playwright tests and returns pass/fail with failure details. Used for Phase 7 e2e tests and full-stack verification.
+Runs Playwright tests and returns pass/fail with failure details. Used for Phase 7 e2e tests and full-stack verification. **Read-only** — it cannot write files, so `frontend-builder` writes the test files and this agent runs them.
 
 ```
 You: Complete Phase 7, Task 14
 Claude: → task-manager looks up Phase 7, Task 14
          → "Set up Playwright test project"
-         → Recommended agent: playwright-tester
+         → Recommended agent: frontend-builder
 
-       → playwright-tester
+       → frontend-builder
          → Runs: npm init playwright@latest (in frontend/web-app/)
-         → Installs browsers: npx playwright install
          → Creates playwright.config.ts
          → Returns: "Playwright configured with chromium,
            base URL pointing to Gateway"
+
+       → playwright-tester
+         → Installs browsers: npx playwright install
+         → Runs: npx playwright test --list
+         → Returns: "Setup verified, test runner working"
 
        → task-manager checks off Task 14
 
 You: Complete Phase 7, Task 15.6
 Claude: → task-manager looks up Phase 7, Task 15.6
          → "Auth — login flow via IdentityServer"
-         → Recommended agent: playwright-tester
+         → Recommended agent: frontend-builder (write), playwright-tester (run)
+
+       → frontend-builder
+         → Writes tests/auth.spec.ts with login flow test
 
        → playwright-tester
-         → Writes tests/auth.spec.ts with login flow test
          → Runs: npx playwright test tests/auth.spec.ts
          → Returns: "1 passed: login redirects to IdentityServer,
            enters credentials, redirects back with session"
@@ -392,33 +398,39 @@ Claude: → task-manager looks up Phase 8, Task 7
 
 #### `docker-validator` — Validate Docker Setup
 
-Validates Dockerfiles and docker-compose configuration. Used for Dockerize tasks and Phase 8.
+Validates Dockerfiles and docker-compose configuration. **Read-only** — it cannot write files. Builder agents (`dotnet-service-builder`, `frontend-builder`) create Dockerfiles, the main conversation creates compose files, and this agent builds and verifies them.
 
 ```
 You: Complete Phase 1, Task 13
 Claude: → task-manager looks up Task 13
          → "Dockerize the Auction Service"
-         → Recommended agent: docker-validator
+         → Recommended agent: dotnet-service-builder (create), docker-validator (verify)
+
+       → dotnet-service-builder
+         → Creates backend/AuctionService/AuctionService.API/Dockerfile
+           (multi-stage build, multi-project restore)
 
        → docker-validator
-         → Creates backend/AuctionService/Dockerfile (multi-stage build)
-         → Runs: docker build -t auction-service backend/AuctionService/
-         → Returns: "Dockerfile created. Build successful.
-           Image size: 215MB. Non-root user configured."
+         → Runs: docker build -t auction-service
+           -f backend/AuctionService/AuctionService.API/Dockerfile .
+         → Returns: "Build successful. Image size: 215MB.
+           Non-root user configured."
 
        → task-manager checks off Task 13
 
 You: Complete Phase 8, Task 1
 Claude: → task-manager looks up Phase 8, Task 1
          → "Create docker/docker-compose.yml"
-         → Recommended agent: docker-validator
+         → Recommended agent: main conversation (create), docker-validator (validate)
+
+       → (main conversation creates docker/docker-compose.yml with all services)
 
        → docker-validator
-         → Creates docker/docker-compose.yml with all services
          → Runs: docker compose -f docker/docker-compose.yml config
-         → Returns: "Compose file valid. 10 services defined:
+         → Returns: "Compose file valid. 11 services defined:
            postgres, mongodb, rabbitmq, auction-svc, search-svc,
-           bidding-svc, identity-svc, gateway-svc, notification-svc, web-app"
+           bidding-svc, identity-svc, gateway-svc, notification-svc,
+           web-app, nginx"
 
        → task-manager checks off 1, 1.1, 1.2, 1.3
 
@@ -583,11 +595,6 @@ Use docker-validator to verify the full stack builds and runs
 ### Edit an agent
 ```
 /agents → select agent → edit
-```
-
-### CLI listing
-```bash
-claude agents
 ```
 
 ### Agent files location
