@@ -73,10 +73,12 @@ The application runs inside a **Docker Host** and consists of the following comp
 | GET/POST/PUT/DELETE | api/admin/banners | Manage banner messages | Admin |
 | GET | api/banners | Active banners (home/auction scope) | Anon |
 | GET | api/admin/stats | Auction counts by status | Admin |
+| GET | api/auctions/duration-limits | Current min/max auction duration | Anon |
+| GET/PUT | api/admin/settings/duration | Read/set min/max auction duration (stored in DB) | Admin |
 
 **Commands:**
 - **CreateAuction** - Creates an Item. Emits `AuctionCreated`. Requires the `email_verified` claim — returns 403 otherwise (see §3.4 Email Verification). `Seller` comes from the username claim; an explicit `Seller` value in the request is honored **only** for callers in the `admin` role (admins can create auctions for any user, including themselves)
-- **Auction duration:** `AuctionEnd` is chosen by the seller; on create/update it must lie between configurable bounds (`Auction:MinDuration` / `Auction:MaxDuration`, defaults **1 hour – 90 days** from now) — admins are exempt and may also shorten or extend `AuctionEnd` on a live auction (propagated via `AuctionUpdated.AuctionEnd`)
+- **Auction duration:** `AuctionEnd` is chosen by the seller; on create/update it must lie between the platform's min/max duration bounds. Resolution order: **admin-set values in the database** (PlatformSettings, editable from the admin dashboard — §10.2) → **environment variables** (`Auction__MinDuration` / `Auction__MaxDuration`, TimeSpan format) → **defaults (1 hour – 90 days)**. Dev/Docker set `Auction__MinDuration=00:01:00` so a 1-minute auction can be created for local testing of the full lifecycle. Admins are exempt from the bounds and may shorten or extend `AuctionEnd` on a live auction (propagated via `AuctionUpdated.AuctionEnd`). The current bounds are publicly readable via `GET api/auctions/duration-limits` so the create form can constrain its datepicker
 - **UpdateAuction** - Updates an Auction. Emits `AuctionUpdated`
 - **DeleteAuction** - Deletes an Auction (only if no bids or reserve not met). Emits `AuctionDeleted`
 
@@ -360,6 +362,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 **gRPC:** The Bidding Service uses gRPC to directly call the Auction Service as a fallback mechanism when event data is not yet available (e.g., fetching auction details if the `AuctionCreated` event hasn't been consumed yet). Uses Polly for retry/resilience.
 
 **Resilience:** Uses **Polly v8** via `Microsoft.Extensions.Http.Resilience` for retry policies on HTTP/gRPC calls to handle transient failures.
+
+**Background finalization:** the expired-auction check interval is configurable via `Bidding__FinalizationIntervalSeconds` (default **10**). Dev/Docker keep it at 10s so short test auctions (e.g., the 1-minute minimum in dev — §3.1) finalize promptly after ending.
 
 **Models:**
 
@@ -725,7 +729,8 @@ A role-gated admin area (`/admin` in the Next.js app) plus admin-only APIs acros
 - **End now:** `POST api/admin/auctions/:id/end` sets `AuctionEnd = UtcNow` and emits `AuctionUpdated` (with `AuctionEnd`); the Bidding Service's background job then finalizes it through the normal flow (winner, `AuctionFinished`, notifications)
 - **Cancel/invalidate:** `POST api/admin/auctions/:id/cancel` sets status `Cancelled` and emits `AuctionCancelled` — Search marks the item cancelled, Bidding refuses further bids and never emits `AuctionFinished`, Notification broadcasts and informs the seller
 - **Remove a bid:** `DELETE api/admin/bids/:id` (Bidding Service) deletes the bid, recalculates the auction's high bid, and emits `BidRemoved (BidId, AuctionId, CurrentHighBid?)` so the Auction and Search Services refresh `CurrentHighBid`
-- **Adjust duration:** admins may shorten/extend `AuctionEnd` on live auctions; regular sellers are bound by the configurable duration limits (1 hour – 90 days, §3.1)
+- **Adjust duration:** admins may shorten/extend `AuctionEnd` on live auctions; regular sellers are bound by the platform duration limits
+- **Duration limits:** the dashboard's Settings page edits the platform-wide min/max auction duration via `PUT api/admin/settings/duration`, persisted in a `PlatformSettings` table (Id, MinDuration, MaxDuration, UpdatedBy, UpdatedAt) in the Auction Service database. DB values override the environment-variable/config defaults (§3.1) and take effect immediately — no restart
 
 ### 10.3 Banner Messages (Auction Service)
 

@@ -16,8 +16,8 @@
 | 8. Docker Compose Deployment | 0 | 10 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 17 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 10 | Not started |
-| 11. Admin Dashboard | 0 | 46 | Not started |
-| **Overall** | **0** | **336** | **Not started** |
+| 11. Admin Dashboard | 0 | 48 | Not started |
+| **Overall** | **0** | **338** | **Not started** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -286,7 +286,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 10.4. TooLow — bid <= current high bid — `dotnet-service-builder`
   - [ ] 10.5. Finished — auction already ended — `dotnet-service-builder`
 - [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
-- [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold) — `dotnet-service-builder`
+- [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold; check interval from `Bidding__FinalizationIntervalSeconds`, default 10s, so short dev auctions finalize promptly) — `dotnet-service-builder`
 - [ ] 13. Add JWT bearer authentication (require the `email_verified` claim for `POST api/bids` — 403 otherwise) — `dotnet-service-builder`
 - [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
@@ -534,10 +534,11 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
   - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
   - [ ] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
-  - [ ] 3.4. Auction duration validation on create/update (`Auction:MinDuration`/`Auction:MaxDuration` config, defaults 1 hour–90 days; admins exempt) — `dotnet-service-builder`
+  - [ ] 3.4. Auction duration validation on create/update — resolution order: DB `PlatformSettings` → env vars (`Auction__MinDuration`/`Auction__MaxDuration`) → defaults 1 hour–90 days; dev sets min to 1 minute (`appsettings.Development.json` / compose); admins exempt — `dotnet-service-builder`
   - [ ] 3.5. `Banner` entity + admin CRUD (`api/admin/banners`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
   - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
   - [ ] 3.7. `GET api/admin/stats` — auction counts by status — `dotnet-service-builder`
+  - [ ] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
 - [ ] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
 - [ ] 5. Bidding Service admin features — `dotnet-service-builder`
   - [ ] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
@@ -553,6 +554,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 8.4. Auctions page — create with seller assignment, end now, cancel, remove bid from the bid history — `frontend-builder`
   - [ ] 8.5. Banners page — CRUD with scope (global/home/auction) and active window — `frontend-builder`
   - [ ] 8.6. Render active banners on the home page and auction detail pages, live-updating on `BannerPublished` — `frontend-builder`
+  - [ ] 8.7. Settings page — edit the platform min/max auction duration (`PUT api/admin/settings/duration`) — `frontend-builder`
 - [ ] 9. Write unit tests — `dotnet-service-builder`
   - [ ] 9.1. Admin endpoints return 403 for non-admin callers (each service) — `dotnet-service-builder`
   - [ ] 9.2. RemoveBid — recalculates the high bid and emits `BidRemoved` — `dotnet-service-builder`
