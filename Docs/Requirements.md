@@ -699,7 +699,7 @@ These bids explain the auction states: #1's current high bid is $18,000 (below i
 
 ## 9. API Testing
 
-A **Postman collection** is available at `Docs/Initial_Planning/CourseAssets/postman/Carsties.postman_collection.json` for testing all API endpoints.
+A **Postman collection** covering all API endpoints is created during Phase 8 (Task 6) and committed at `Docs/postman/ApexAutoBid.postman_collection.json`. Until then, the interactive Scalar docs (below) are the way to exercise the APIs manually.
 
 ### API Documentation
 

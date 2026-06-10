@@ -86,11 +86,14 @@
 All services communicate asynchronously via **RabbitMQ** using **MassTransit** publish/subscribe.
 
 ```
-Auction Service ──publishes──► AuctionCreated ──► Search, Bidding, Notification
-Auction Service ──publishes──► AuctionUpdated ──► Search
-Auction Service ──publishes──► AuctionDeleted ──► Search
-Bidding Service ──publishes──► BidPlaced      ──► Auction, Search, Notification
-Bidding Service ──publishes──► AuctionFinished──► Auction, Search, Notification
+Auction Service ──publishes──► AuctionCreated   ──► Search, Bidding, Notification
+Auction Service ──publishes──► AuctionUpdated   ──► Search, Bidding
+Auction Service ──publishes──► AuctionDeleted   ──► Search
+Auction Service ──publishes──► AuctionCancelled ──► Search, Bidding, Notification
+Auction Service ──publishes──► BannerPublished  ──► Notification
+Bidding Service ──publishes──► BidPlaced        ──► Auction, Search, Notification
+Bidding Service ──publishes──► BidRemoved       ──► Auction, Search
+Bidding Service ──publishes──► AuctionFinished  ──► Auction, Search, Notification
 ```
 
 ### 3.2 Synchronous (gRPC)
@@ -385,7 +388,7 @@ ApexAutoBid/
 │   ├── Architecture.md
 │   ├── Tasks.md
 │   ├── AgentGuide.md
-│   └── Initial_Planning/
+│   └── postman/                       # Postman collection (created in Phase 8)
 │
 ├── .editorconfig
 ├── .gitignore

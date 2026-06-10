@@ -15,9 +15,13 @@ You are a Docker validation specialist for the ApexAutoBid project.
 
 ## Key locations
 
-- Docker Compose: `docker/docker-compose.yml`
-- Service Dockerfiles: `backend/{ServiceName}/Dockerfile`
+- Docker Compose (full stack): `docker/docker-compose.yml`
+- Docker Compose (dev infrastructure): `docker/docker-compose.infra.yml` (PostgreSQL, MongoDB, RabbitMQ, Mailpit, MinIO + seed-image init)
+- Clean Architecture service Dockerfiles (Auction, Search, Bidding): `backend/{ServiceName}/{ServiceName}.API/Dockerfile`
+- Flat service Dockerfiles (Identity, Gateway, Notification): `backend/{ServiceName}/Dockerfile`
 - Frontend Dockerfile: `frontend/web-app/Dockerfile`
+
+Backend Dockerfiles COPY paths relative to the repo root (multi-project restore), so build them from the repo root: `docker build -f backend/{ServiceName}/{ServiceName}.API/Dockerfile .`
 
 ## Validation steps
 

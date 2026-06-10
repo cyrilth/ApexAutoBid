@@ -438,7 +438,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
-- [ ] 6. Import and verify Postman collection against all API endpoints — *main conversation*
+- [ ] 6. Create a Postman collection covering all API endpoints, verify it passes against the running stack, and commit it at `Docs/postman/ApexAutoBid.postman_collection.json` — *main conversation*
 - [ ] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
 
 ---
