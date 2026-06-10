@@ -11,6 +11,7 @@
 | Message Broker | RabbitMQ (via MassTransit) | Latest |
 | Real-time | SignalR | (bundled with .NET 10) |
 | API Documentation | OpenAPI (Microsoft.AspNetCore.OpenApi) + Scalar | Latest |
+| Bot Protection | Cloudflare Turnstile + ASP.NET Core rate limiting | Latest |
 | Relational DB | PostgreSQL | Latest |
 | Document DB | MongoDB | Latest |
 | Containerization | Docker / Docker Compose | Latest |
@@ -101,7 +102,9 @@ Bidding Service ──gRPC──► Auction Service (GetAuction)
 
 ### 3.3 Real-time (SignalR)
 
-The **Notification Service** exposes a SignalR hub at `/notifications` that the Next.js client connects to for real-time push notifications (new bids, auction results).
+The **Notification Service** exposes a SignalR hub at `/notifications` that the Next.js client connects to for real-time push notifications (new bids, auction results). Anonymous connections receive broadcasts only; authenticated clients connect with their JWT (`access_token` query parameter) and are mapped to their username via an `IUserIdProvider`, enabling targeted messages — when an auction finishes, the winner receives `AuctionWon` and the seller receives `AuctionSellerResult` via `Clients.User(...)`.
+
+Post-sale contact exchange does **not** go through SignalR: after a sale, the Auction Service's `GET api/auctions/:id` conditionally reveals `WinnerEmail` to the seller and `SellerEmail` to the winner (emails flow `email` claim → `Bid.BidderEmail` → `AuctionFinished.WinnerEmail` → Auction record, and are never stored in the search index or pushed over the hub).
 
 ### 3.4 Gateway Routing
 
@@ -146,8 +149,9 @@ Services maintain local projections of data they need from other services, synch
 
 **Duende IdentityServer** with **ASP.NET Core Identity** serves as the central Security Token Service (STS).
 
-- Issues JWT access tokens via OAuth2/OpenID Connect
-- Manages user registration and authentication
+- Issues JWT access tokens via OAuth2/OpenID Connect (claims: `username`, `email`, `email_verified`)
+- Manages user registration and authentication, with **email verification** (`RequireConfirmedEmail`): confirmation emails go to Mailpit in dev, a real SMTP provider in production; the Auction and Bidding Services require the `email_verified` claim for creating auctions and placing bids
+- **Google external login** on the login/register pages (client ID/secret via environment variables only — never committed; disabled when absent). Google-verified emails count as confirmed.
 - PostgreSQL stores user accounts and identity data
 - Uses **Polly** for resilient database connections during startup
 
@@ -169,6 +173,16 @@ Services maintain local projections of data they need from other services, synch
 | Anon | No authentication required. Publicly accessible. |
 
 Resource-level authorization (e.g., only the seller can update/delete their auction) is enforced within individual services.
+
+### 5.4 Bot Protection & Rate Limiting
+
+| Layer | Mechanism | Protects |
+|-------|-----------|----------|
+| Identity Service | Cloudflare Turnstile (server-side `siteverify`) on the register page | Bot signups, confirmation-email abuse |
+| Identity Service | ASP.NET Core Identity account lockout + rate limiting on login/register/token | Credential stuffing, registration floods |
+| Gateway | `Microsoft.AspNetCore.RateLimiting` — per-IP general policy, stricter on mutating endpoints (429 on excess) | API abuse, bid spam, scraping |
+
+Dev/Docker use Cloudflare's official always-pass Turnstile test keys (committable); production keys come from environment variables. Authenticated actions need no captcha — lockout, rate limits, and the verified-email requirement cover them.
 
 ---
 
@@ -384,6 +398,7 @@ docker-compose.yml
 ├── gateway-svc       (port 6001)
 ├── notification-svc  (port 7004)
 ├── web-app           (port 3000)
+├── mailpit           (SMTP 1025, web UI 8025 — dev email catcher)
 └── nginx             (ports 80/443, SSL via acme-companion)
 ```
 
@@ -415,6 +430,8 @@ docker-compose.yml
 │  └────────────────────────────────────┘  │
 └──────────────────────────────────────────┘
 ```
+
+**Secrets per environment:** local development uses `appsettings.Development.json` per service and `docker-compose.yml` environment blocks (dev-only values, committed by design); local Kubernetes uses the committed `k8s/dev-secrets.yaml`; production secrets and CI credentials (GitHub repository secrets) are never committed — see `Requirements.md` §6 for the full strategy.
 
 ### 8.3 CI/CD Pipeline
 
@@ -449,7 +466,7 @@ The `backend/Contracts/` project contains the event contract classes shared acro
 | AuctionUpdated | Id, Make, Model, Color, Mileage, Year |
 | AuctionDeleted | Id |
 | BidPlaced | Id, AuctionId, Bidder, BidTime, Amount, BidStatus |
-| AuctionFinished | ItemSold, AuctionId, Winner?, Seller, Amount? |
+| AuctionFinished | ItemSold, AuctionId, Winner?, WinnerEmail?, Seller, Amount? |
 
 These contracts are the **single source of truth** for event shapes, ensuring consistency across all publishers and consumers.
 

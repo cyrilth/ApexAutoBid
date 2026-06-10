@@ -25,10 +25,10 @@
   - [ ] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
   - [ ] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
   - [ ] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
-  - [ ] 2.5. `AuctionFinished` event contract — `dotnet-service-builder`
+  - [ ] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
 - [ ] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
 - [ ] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
-  - [ ] 4.1. `Auction` entity — `dotnet-service-builder`
+  - [ ] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
   - [ ] 4.2. `Item` entity — `dotnet-service-builder`
   - [ ] 4.3. `Status` enum in `AuctionService.Domain/Enums/` — `dotnet-service-builder`
 - [ ] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
@@ -49,7 +49,7 @@
 - [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
 - [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
-  - [ ] 12.2. `AuctionFinished` consumer — `dotnet-service-builder`
+  - [ ] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
 - [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
   - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
@@ -91,7 +91,7 @@
   - [ ] 4.2. `AuctionUpdated` — update item fields — `dotnet-service-builder`
   - [ ] 4.3. `AuctionDeleted` — remove item — `dotnet-service-builder`
   - [ ] 4.4. `BidPlaced` — update current high bid — `dotnet-service-builder`
-  - [ ] 4.5. `AuctionFinished` — update status, winner, sold amount — `dotnet-service-builder`
+  - [ ] 4.5. `AuctionFinished` — update status, winner, sold amount (ignore `WinnerEmail` — emails are never stored in the search index) — `dotnet-service-builder`
 - [ ] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
 - [ ] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [ ] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
@@ -125,6 +125,9 @@
 - Login and register pages are functional
 - Auction Service rejects unauthenticated requests to protected endpoints
 - Default users are seeded
+- Registration sends a confirmation email (visible in Mailpit); unconfirmed users receive 403 when creating auctions
+- "Sign in with Google" works when the Google env vars are set, and yields an account with a confirmed email
+- Registration rejects submissions without a valid Turnstile token; repeated failed logins lock the account
 - Scalar docs login flow obtains a JWT via IdentityServer (authorization code + PKCE) and authenticated "try it" requests succeed
 - Unit tests pass
 - Service runs in Docker
@@ -137,8 +140,9 @@
   - [ ] 3.1. Clients — `dotnet-service-builder`
   - [ ] 3.2. Scopes — `dotnet-service-builder`
   - [ ] 3.3. Resources — `dotnet-service-builder`
+  - [ ] 3.4. Include `username` and `email` claims in access tokens (email is needed for post-sale contact exchange) — `dotnet-service-builder`
 - [ ] 4. Add Razor Pages for login/register UI — `dotnet-service-builder`
-- [ ] 5. Seed default users (bob, alice, tom) — `dotnet-service-builder`
+- [ ] 5. Seed default users (bob, alice, tom) with confirmed emails — `dotnet-service-builder`
 - [ ] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [ ] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
@@ -157,6 +161,19 @@
   - [ ] 13.1. Register a `scalar` client in `Config.cs` (authorization code + PKCE, public client without secret, redirect URIs for the Scalar docs pages) — `dotnet-service-builder`
   - [ ] 13.2. Enable CORS on the IdentityServer token endpoint for browser-based code exchange from the docs pages — `dotnet-service-builder`
   - [ ] 13.3. Switch the Auction Service Scalar config to the OAuth2 authorization code flow with PKCE (`AddAuthorizationCodeFlow`) — `dotnet-service-builder`
+- [ ] 14. Add email verification — `dotnet-service-builder`
+  - [ ] 14.1. Enable `RequireConfirmedEmail` and the confirmation flow in the register UI (confirmation link) — `dotnet-service-builder`
+  - [ ] 14.2. Email sender: SMTP to Mailpit in dev (`localhost:1025`, no credentials); production SMTP credentials via environment variables — `dotnet-service-builder`
+  - [ ] 14.3. Include the `email_verified` claim in access tokens — `dotnet-service-builder`
+  - [ ] 14.4. Require the `email_verified` claim for `POST api/auctions` in the Auction Service (403 otherwise) — `dotnet-service-builder`
+- [ ] 15. Add Google external login — `dotnet-service-builder`
+  - [ ] 15.1. Add `Microsoft.AspNetCore.Authentication.Google`; client ID/secret from environment variables only (real external credentials — never committed; Google login is disabled when the variables are absent) — `dotnet-service-builder`
+  - [ ] 15.2. "Sign in with Google" on the login/register pages; treat Google-asserted verified emails as confirmed — `dotnet-service-builder`
+- [ ] 16. Add bot protection — `dotnet-service-builder`
+  - [ ] 16.1. Cloudflare Turnstile widget on the register page + server-side `siteverify` validation of the token (plain `HttpClient`) — `dotnet-service-builder`
+  - [ ] 16.2. Dev/Docker use Cloudflare's official always-pass test keys (committed — published for this purpose); production keys via environment variables — `dotnet-service-builder`
+  - [ ] 16.3. Enable ASP.NET Core Identity account lockout on repeated failed logins — `dotnet-service-builder`
+  - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
 
 ---
 
@@ -170,6 +187,7 @@
 - All API routes are proxied correctly to their respective services
 - JWT authentication is validated at the gateway
 - Both authenticated and anonymous endpoints work through the gateway
+- Requests exceeding the rate limit receive 429
 - Aggregated Scalar docs page serves all service APIs through the gateway, with one OAuth2 login covering all "try it" requests
 - Integration tests pass
 - Service runs in Docker
@@ -195,6 +213,9 @@
   - [ ] 7.1. Proxy each service's `/openapi/v1.json` through YARP — `dotnet-service-builder`
   - [ ] 7.2. Host a single Scalar UI at the gateway listing all service documents (`AddDocument` per service) — `dotnet-service-builder`
   - [ ] 7.3. Configure the OAuth2 authorization code flow (PKCE, `scalar` client) against IdentityServer so one login covers all "try it" requests — `dotnet-service-builder`
+- [ ] 8. Add rate limiting at the gateway (`Microsoft.AspNetCore.RateLimiting`) — `dotnet-service-builder`
+  - [ ] 8.1. General per-IP fixed-window policy on all proxied routes; stricter policy on mutating endpoints (`POST api/bids`, `POST/PUT/DELETE api/auctions`); limits from configuration — `dotnet-service-builder`
+  - [ ] 8.2. Integration test — exceeding the limit returns 429 — `dotnet-service-builder`
 
 ---
 
@@ -209,6 +230,7 @@
 - gRPC fallback to Auction Service works for missing auction data
 - Background service detects and finalizes expired auctions
 - `BidPlaced` and `AuctionFinished` events are published
+- After a sale, the seller and winner can see each other's email via `GET api/auctions/{id}` — no other caller can
 - OpenAPI document and Scalar docs UI are served with the OAuth2/Bearer security scheme
 - Unit tests and integration tests pass
 - Service runs in Docker
@@ -217,7 +239,7 @@
 
 - [ ] 1. Create the Bidding Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
 - [ ] 2. Define models in `BiddingService.Domain/` — `dotnet-service-builder`
-  - [ ] 2.1. `Bid` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
+  - [ ] 2.1. `Bid` entity in `BiddingService.Domain/Entities/` (includes Bidder and `BidderEmail` from claims; email is never returned by the bids API) — `dotnet-service-builder`
   - [ ] 2.2. `BidStatus` enum in `BiddingService.Domain/Enums/` — `dotnet-service-builder`
   - [ ] 2.3. Local `Auction` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
 - [ ] 3. Set up MongoDB connection via `MongoDB.Entities` in `BiddingService.Infrastructure/Data/` — `dotnet-service-builder`
@@ -229,14 +251,15 @@
 - [ ] 9. Implement API endpoints in `BiddingService.API/Controllers/` — `dotnet-service-builder`
   - [ ] 9.1. `POST api/bids` — place bid (Auth) — `dotnet-service-builder`
   - [ ] 9.2. `GET api/bids/{auctionId}` — get bids for auction (Anon) — `dotnet-service-builder`
-- [ ] 10. Implement bid status logic — `dotnet-service-builder`
-  - [ ] 10.1. Accepted — bid > current high bid and > reserve price — `dotnet-service-builder`
-  - [ ] 10.2. AcceptedBelowReserve — bid > current high bid but < reserve price — `dotnet-service-builder`
-  - [ ] 10.3. TooLow — bid <= current high bid — `dotnet-service-builder`
-  - [ ] 10.4. Finished — auction already ended — `dotnet-service-builder`
+- [ ] 10. Implement bid validation and status logic — `dotnet-service-builder`
+  - [ ] 10.1. Reject bid when bidder is the auction's seller — 400 Bad Request — `dotnet-service-builder`
+  - [ ] 10.2. Accepted — bid > current high bid and > reserve price — `dotnet-service-builder`
+  - [ ] 10.3. AcceptedBelowReserve — bid > current high bid but < reserve price — `dotnet-service-builder`
+  - [ ] 10.4. TooLow — bid <= current high bid — `dotnet-service-builder`
+  - [ ] 10.5. Finished — auction already ended — `dotnet-service-builder`
 - [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
-- [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished`) — `dotnet-service-builder`
-- [ ] 13. Add JWT bearer authentication — `dotnet-service-builder`
+- [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold) — `dotnet-service-builder`
+- [ ] 13. Add JWT bearer authentication (require the `email_verified` claim for `POST api/bids` — 403 otherwise) — `dotnet-service-builder`
 - [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
   - [ ] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
@@ -253,10 +276,9 @@
   - [ ] 16.4. Background service — finalizes expired auction — `dotnet-service-builder`
 - [ ] 17. Verify end-to-end: place bid → Auction Service updates CurrentHighBid → Search Service updates — `test-runner`
 - [ ] 18. Add API documentation: OpenAPI generation + Scalar UI with the OAuth2/Bearer security scheme (same pattern as Auction Service) — `dotnet-service-builder`
-
----
-
-## Phase 6: Notification Service
+- [ ] 19. Implement post-sale contact exchange in the Auction Service — `dotnet-service-builder`
+  - [ ] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
+  - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
 
 **Goal:** Build a real-time notification service using SignalR.
 
@@ -265,6 +287,7 @@
 **Acceptance Criteria:**
 - SignalR hub accepts client connections at `/notifications`
 - Clients receive real-time notifications for `AuctionCreated`, `BidPlaced`, and `AuctionFinished`
+- When an auction finishes, the winner receives a targeted `AuctionWon` message and the seller a targeted `AuctionSellerResult` message (authenticated connections only)
 - Integration tests pass
 - Service runs in Docker
 
@@ -273,16 +296,20 @@
 - [ ] 1. Create the Notification Service project with NuGet packages — `dotnet-service-builder`
 - [ ] 2. Configure MassTransit with RabbitMQ (consumer-only — no outbox; this service has no database and publishes no events) — `dotnet-service-builder`
 - [ ] 3. Create SignalR hub at `/notifications` — `dotnet-service-builder`
+  - [ ] 3.1. Allow anonymous connections (broadcasts) — `dotnet-service-builder`
+  - [ ] 3.2. Add JWT bearer authentication (`access_token` query param) + username-based `IUserIdProvider` for targeted messages — `dotnet-service-builder`
 - [ ] 4. Implement event consumers that push to SignalR clients — `dotnet-service-builder`
   - [ ] 4.1. `AuctionCreated` — notify clients of new auction — `dotnet-service-builder`
   - [ ] 4.2. `BidPlaced` — notify clients of new bid — `dotnet-service-builder`
   - [ ] 4.3. `AuctionFinished` — notify clients of auction result — `dotnet-service-builder`
+  - [ ] 4.4. `AuctionFinished` — additionally send targeted `AuctionWon` to the winner (when ItemSold) and `AuctionSellerResult` to the seller via `Clients.User(...)` — `dotnet-service-builder`
 - [ ] 5. Dockerize the Notification Service — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 6. Write integration tests (NotificationService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 6.1. AuctionCreated consumer — pushes notification to SignalR clients — `dotnet-service-builder`
   - [ ] 6.2. BidPlaced consumer — pushes notification to SignalR clients — `dotnet-service-builder`
   - [ ] 6.3. AuctionFinished consumer — pushes notification to SignalR clients — `dotnet-service-builder`
   - [ ] 6.4. SignalR hub — client connects and receives messages — `dotnet-service-builder`
+  - [ ] 6.5. AuctionFinished consumer — winner and seller receive targeted messages; anonymous clients receive only the broadcast — `dotnet-service-builder`
 - [ ] 7. Verify end-to-end: place bid → notification pushed to connected SignalR client — `test-runner`
 
 ---
@@ -313,6 +340,7 @@
   - [ ] 5.1. Display DetailedSpecs (seller, make, model, year, mileage, reserve price) — `frontend-builder`
   - [ ] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
   - [ ] 5.3. Bid history list — `frontend-builder`
+  - [ ] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
 - [ ] 6. Implement auction create/edit form — `frontend-builder`
   - [ ] 6.1. `react-hook-form` for form handling — `frontend-builder`
   - [ ] 6.2. `react-datepicker` for auction end date — `frontend-builder`
@@ -321,6 +349,7 @@
 - [ ] 8. Implement bid placement UI — `frontend-builder`
   - [ ] 8.1. Bid input and submit — `frontend-builder`
   - [ ] 8.2. Real-time bid updates via SignalR (`@microsoft/signalr`) — `frontend-builder`
+  - [ ] 8.3. Connect to the hub with the access token when logged in; show targeted "You won" toast (winner) and auction-result toast (seller) — `frontend-builder`
 - [ ] 9. Set up Zustand store for client-side state management — `frontend-builder`
 - [ ] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
 - [ ] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
@@ -343,6 +372,7 @@
   - [ ] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
   - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
   - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
+  - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
 - [ ] 16. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
 
 ---
@@ -363,10 +393,10 @@
 ### Tasks
 
 - [ ] 1. Create `docker/docker-compose.yml` — *main conversation*, validate with `docker-validator`
-  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ — *main conversation*
+  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher) — *main conversation*
   - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
   - [ ] 1.3. Frontend: Next.js web app — *main conversation*
-- [ ] 2. Configure environment variables and connection strings for all services — *main conversation*, validate with `docker-validator`
+- [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — *main conversation*, validate with `docker-validator`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
@@ -390,7 +420,7 @@
 ### Tasks
 
 - [ ] 1. Create Kubernetes manifests — *main conversation*
-  - [ ] 1.1. `dev-secrets.yaml` — secrets for databases, RabbitMQ, and app config — *main conversation*
+  - [ ] 1.1. `dev-secrets.yaml` — secrets for databases, RabbitMQ, and app config (dev-only values, committed by design; production secrets are handled separately in Phase 10) — *main conversation*
   - [ ] 1.2. Deployment + ClusterIP for PostgreSQL — *main conversation*
   - [ ] 1.3. Deployment + ClusterIP for MongoDB — *main conversation*
   - [ ] 1.4. Deployment + ClusterIP for RabbitMQ — *main conversation*
@@ -428,7 +458,7 @@
   - [ ] 1.3. Push to Docker Hub — *main conversation*
 - [ ] 2. Configure Docker Hub secrets in GitHub repository — *main conversation*
 - [ ] 3. Set up production Kubernetes cluster (cloud provider) — *main conversation*
-- [ ] 4. Configure production secrets and environment variables — *main conversation*
+- [ ] 4. Configure production secrets and environment variables (applied directly to the cluster from a local, untracked manifest — never committed) — *main conversation*
 - [ ] 5. Deploy all services to cloud Kubernetes — *main conversation*
 - [ ] 6. Configure DNS and ingress for public access — *main conversation*
 - [ ] 7. Verify production deployment end-to-end — `playwright-tester`

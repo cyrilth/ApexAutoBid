@@ -20,6 +20,7 @@ You are a .NET microservice scaffolding specialist for the ApexAutoBid project.
 - **Resilience:** Polly for retry policies
 - **Auth:** JWT bearer authentication via Duende IdentityServer
 - **API docs:** Microsoft.AspNetCore.OpenApi (`MapOpenApi()`) + Scalar.AspNetCore (`MapScalarApiReference()`); JWT security scheme added via document transformer (not auto-detected from `[Authorize]`); OAuth2 authorization code + PKCE against IdentityServer (`scalar` client)
+- **Configuration:** dev values (connection strings, RabbitMQ credentials, IdentityServer URL) go in `appsettings.Development.json` — committed by design, dev-only; `appsettings.json` holds only non-sensitive defaults; never put production credentials anywhere in the repo (see `Docs/Requirements.md` §6)
 
 ## Architecture: Two Scaffolding Paths
 

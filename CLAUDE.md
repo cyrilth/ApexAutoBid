@@ -17,7 +17,9 @@ ApexAutoBid is a real-time online car auction platform built with a microservice
 |-------|-----------|
 | Backend Services | .NET 10 (C#) |
 | Frontend | Next.js 16.x (App Router, TypeScript) |
-| Identity | Duende IdentityServer + ASP.NET Core Identity |
+| Identity | Duende IdentityServer + ASP.NET Core Identity (email verification + Google login) |
+| Email (dev) | Mailpit (SMTP catcher container) |
+| Bot Protection | Cloudflare Turnstile (register page) + ASP.NET Core rate limiting (gateway + identity) |
 | API Gateway | YARP Reverse Proxy |
 | Messaging | RabbitMQ via MassTransit (Outbox pattern) |
 | Real-time | SignalR |
@@ -114,4 +116,4 @@ This project uses 7 custom sub-agents in `.claude/agents/`. See `Docs/AgentGuide
 - DTOs at API boundaries — never expose entities directly
 - MassTransit consumers must be idempotent
 - Use structured logging with `ILogger`
-- No hardcoded connection strings or secrets — use environment variables
+- Secrets: dev-only credentials are committed by design (`appsettings.Development.json`, `docker-compose.yml` environment blocks, `k8s/dev-secrets.yaml`); production/CI credentials are NEVER committed (GitHub repository secrets, Kubernetes Secrets applied directly to the cluster). External provider credentials (Google OAuth, production SMTP, production Turnstile keys) are NEVER committed in any environment — environment variables only (dev Turnstile uses Cloudflare's committable always-pass test keys). `appsettings.json` holds only non-sensitive defaults. See `Docs/Requirements.md` §6
