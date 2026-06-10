@@ -70,7 +70,8 @@ The application runs inside a **Docker Host** and consists of the following comp
 | GET | api/auctions/{id} | Get auction by id | Anon |
 | POST | api/admin/auctions/{id}/end | End an auction now | Admin |
 | POST | api/admin/auctions/{id}/cancel | Cancel/invalidate an auction | Admin |
-| GET/POST/PUT/DELETE | api/admin/banners | Manage banner messages | Admin |
+| GET/POST | api/admin/banners | List/create banner messages | Admin |
+| PUT/DELETE | api/admin/banners/{id} | Update/delete a banner message | Admin |
 | GET | api/banners | Active banners (home/auction scope) | Anon |
 | GET | api/admin/auctions/stats | Auction counts by status | Admin |
 | GET | api/auctions/duration-limits | Current min/max auction duration | Anon |
@@ -738,7 +739,7 @@ Admins can publish banner messages shown on the home page, a specific auction pa
 
 **Banner model:** Id, Message, Scope (`Global` | `HomePage` | `Auction`), AuctionId? (when Scope = Auction), ActiveFrom, ActiveUntil, CreatedBy
 
-- Admin CRUD via `api/admin/banners`; the public reads active banners via `GET api/banners?scope=&auctionId=` (Anon)
+- Admin CRUD via `GET/POST api/admin/banners` and `PUT/DELETE api/admin/banners/{id}`; the public reads active banners via `GET api/banners?scope=&auctionId=` (Anon)
 - Publishing emits `BannerPublished`, which the Notification Service broadcasts over SignalR so open pages show the banner without a refresh
 
 ### 10.4 Statistics

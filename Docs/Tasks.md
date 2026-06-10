@@ -535,7 +535,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
   - [ ] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
   - [ ] 3.4. Auction duration validation on create/update — resolution order: DB `PlatformSettings` → env vars (`Auction__MinDuration`/`Auction__MaxDuration`) → defaults 1 hour–90 days; dev sets min to 1 minute (`appsettings.Development.json` / compose); admins exempt — `dotnet-service-builder`
-  - [ ] 3.5. `Banner` entity + admin CRUD (`api/admin/banners`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
+  - [ ] 3.5. `Banner` entity + admin CRUD (`GET/POST api/admin/banners`, `PUT/DELETE api/admin/banners/{id}`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
   - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
   - [ ] 3.7. `GET api/admin/auctions/stats` — auction counts by status — `dotnet-service-builder`
   - [ ] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
