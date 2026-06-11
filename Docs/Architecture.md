@@ -139,6 +139,7 @@ Client ──► Gateway ──► /api/auctions*        ──► Auction Servi
                    ──► /api/admin/bids*      ──► Bidding Service
                    ──► /notifications        ──► Notification Service
                    ──► /openapi/{svc}        ──► service OpenAPI documents (aggregated docs)
+                   ──► /api/version          ──► handled by the gateway itself (platform version — see Docs/Versioning.md)
 ```
 
 Admin routes are scoped by resource segment so every endpoint — including each service's stats endpoint (`/api/admin/users/stats`, `/api/admin/auctions/stats`, `/api/admin/bids/stats`) — maps to exactly one service; a path shared across services (e.g., a single `/api/admin/stats`) would be unroutable.

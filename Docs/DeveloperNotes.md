@@ -27,6 +27,9 @@ Run these commands:
 git checkout main
 git pull origin main
 
+# If this merge is a release, tag it (see Docs/Versioning.md):
+# git tag -a v1.2.0 -m "v1.2.0" && git push origin v1.2.0
+
 git checkout develop
 git reset --hard origin/main
 

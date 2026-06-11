@@ -11,6 +11,7 @@ ApexAutoBid is a real-time online car auction platform built with a microservice
 - `Docs/AgentGuide.md` — How to use sub-agents for development
 - `Docs/Requirements.md` — Functional and non-functional requirements
 - `Docs/DesignGuide.md` — UI design conventions (color palette, typography, layout, component usage) — required reading for all frontend tasks
+- `Docs/Versioning.md` — App versioning scheme (platform-wide semver, file-based source of truth + release git tags)
 
 ## Tech Stack
 
@@ -119,4 +120,6 @@ This project uses 7 custom sub-agents in `.claude/agents/`. See `Docs/AgentGuide
 - DTOs at API boundaries — never expose entities directly
 - MassTransit consumers must be idempotent
 - Use structured logging with `ILogger`
+- All API error responses are RFC 7807 ProblemDetails via a global exception handler; production 500s carry a generic message + `traceId` only — full detail in Development and logs (see `Docs/Requirements.md` §13.1)
+- Mutating operations write append-only `AuditEntry` records in the owning service's datastore (see `Docs/Requirements.md` §13.3)
 - Secrets: dev-only credentials are committed by design (`appsettings.Development.json`, `docker-compose.yml` environment blocks, `k8s/dev-secrets.yaml`); production/CI credentials are NEVER committed (GitHub repository secrets, Kubernetes Secrets applied directly to the cluster). External provider credentials (Google OAuth, production SMTP, production Turnstile keys) are NEVER committed in any environment — environment variables only (dev Turnstile uses Cloudflare's committable always-pass test keys). `appsettings.json` holds only non-sensitive defaults. See `Docs/Requirements.md` §6

@@ -6,18 +6,18 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 0 | 52 | Not started |
-| 2. Search Service | 0 | 28 | Not started |
-| 3. Identity Service | 0 | 40 | Not started |
-| 4. Gateway Service | 0 | 22 | Not started |
-| 5. Bidding Service | 0 | 43 | Not started |
+| 1. Auction Service | 0 | 54 | Not started |
+| 2. Search Service | 0 | 29 | Not started |
+| 3. Identity Service | 0 | 41 | Not started |
+| 4. Gateway Service | 0 | 24 | Not started |
+| 5. Bidding Service | 0 | 44 | Not started |
 | 6. Notification Service | 0 | 18 | Not started |
-| 7. Frontend (Next.js) | 0 | 50 | Not started |
+| 7. Frontend (Next.js) | 0 | 53 | Not started |
 | 8. Docker Compose Deployment | 0 | 10 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 17 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
-| 11. Admin Dashboard | 0 | 48 | Not started |
-| **Overall** | **0** | **344** | **Not started** |
+| 11. Admin Dashboard | 0 | 52 | Not started |
+| **Overall** | **0** | **358** | **Not started** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -40,7 +40,7 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the solution structure (`ApexAutoBid.sln`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`) — `dotnet-service-builder`
+- [ ] 1. Create the solution structure (`ApexAutoBid.sln`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`, `backend/Directory.Build.props` with the shared `<Version>` per `Docs/Versioning.md`) — `dotnet-service-builder`
 - [ ] 2. Create the `Contracts` shared project — `dotnet-service-builder`
   - [ ] 2.1. `AuctionCreated` event contract — `dotnet-service-builder`
   - [ ] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
@@ -92,6 +92,8 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 18.3. Unit tests: unauthenticated returns 401; disallowed content type returns 400; response contains a GUID key and expiry — `dotnet-service-builder`
   - [ ] 18.4. `POST api/auctions/thumbnail` (Auth): resize the uploaded object with SixLabors.ImageSharp (max 400px, WebP) to `thumbs/{key}.webp` and return the URL; add nullable `ThumbnailUrl` to the entity, DTOs, and `AuctionCreated` contract; accept only keys inside `auction-images` (no arbitrary URLs — SSRF guard) — `dotnet-service-builder`
   - [ ] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
+- [ ] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [ ] 20. Add the `AuditEntry` entity and write audit records for auction create/update/delete in the same `SaveChanges` (see `Requirements.md` §13.3) — `dotnet-service-builder`
 
 ---
 
@@ -139,6 +141,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 10.4. Search endpoint — returns filtered results — `dotnet-service-builder`
 - [ ] 11. Verify end-to-end: create auction → appears in Search Service via event — `test-runner`
 - [ ] 12. Add API documentation: OpenAPI generation + Scalar UI (anonymous-only API — no security scheme needed) — `dotnet-service-builder`
+- [ ] 13. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1) — `dotnet-service-builder`
 
 ---
 
@@ -202,6 +205,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 16.2. Dev/Docker use Cloudflare's official always-pass test keys (committed — published for this purpose); production keys via environment variables — `dotnet-service-builder`
   - [ ] 16.3. Enable ASP.NET Core Identity account lockout on repeated failed logins — `dotnet-service-builder`
   - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
+- [ ] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
 
 ---
 
@@ -244,6 +248,8 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 8. Add rate limiting at the gateway (`Microsoft.AspNetCore.RateLimiting`) — `dotnet-service-builder`
   - [ ] 8.1. General per-IP fixed-window policy on all proxied routes; stricter policy on mutating endpoints (`POST api/bids`, `POST/PUT/DELETE api/auctions`); limits from configuration — `dotnet-service-builder`
   - [ ] 8.2. Integration test — exceeding the limit returns 429 — `dotnet-service-builder`
+- [ ] 9. Expose `GET api/version` (Anon) — handled by the gateway itself, not proxied; returns the platform version from assembly metadata (see `Docs/Versioning.md`) — `dotnet-service-builder`
+- [ ] 10. Return ProblemDetails for gateway-generated errors (edge 401/403, 429 rate limiting); proxied service errors pass through unchanged (see `Requirements.md` §13.1) — `dotnet-service-builder`
 
 ---
 
@@ -308,6 +314,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
   - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
 - [ ] 20. Seed local auction records and bid history per `Requirements.md` §8.3 (bids carry `BidderEmail`; states consistent with the Auction Service seed) — `dotnet-service-builder`
+- [ ] 21. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1; bid outcomes like TooLow/Finished are normal responses, not errors) — `dotnet-service-builder`
 
 ---
 
@@ -411,7 +418,10 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
   - [ ] 15.17. Image upload — create an auction with a file upload; the image lands in storage and renders on the detail page — `frontend-builder`
   - [ ] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
-- [ ] 16. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
+- [ ] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
+- [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
+- [ ] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
+- [ ] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
 
 ---
 
@@ -538,6 +548,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 2.6. `PUT api/admin/users/{id}/lock` — lock/unlock account — `dotnet-service-builder`
   - [ ] 2.7. `GET api/admin/users/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
   - [ ] 2.8. Document the admin API with OpenAPI + Scalar (Bearer, admin role noted) and add it to the gateway's aggregated docs — `dotnet-service-builder`
+  - [ ] 2.9. Write `AuditEntry` records for all admin user-management actions (see `Requirements.md` §13.3) — `dotnet-service-builder`
 - [ ] 3. Auction Service admin features (`Requirements.md` §10.2–10.3) — `dotnet-service-builder`
   - [ ] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
   - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
@@ -547,12 +558,14 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
   - [ ] 3.7. `GET api/admin/auctions/stats` — auction counts by status — `dotnet-service-builder`
   - [ ] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
+  - [ ] 3.9. Write `AuditEntry` records for admin auction moderation (end/cancel), banner CRUD, and settings changes (see `Requirements.md` §13.3) — `dotnet-service-builder`
 - [ ] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
 - [ ] 5. Bidding Service admin features — `dotnet-service-builder`
   - [ ] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
   - [ ] 5.2. Consume `AuctionCancelled` — mark local auction finished; refuse further bids; never emit `AuctionFinished` — `dotnet-service-builder`
   - [ ] 5.3. Apply `AuctionUpdated.AuctionEnd` to local auction records — `dotnet-service-builder`
   - [ ] 5.4. `GET api/admin/bids/stats` — total bid count — `dotnet-service-builder`
+  - [ ] 5.5. Write an `AuditEntry` for admin bid removal capturing the removed bid (see `Requirements.md` §13.3) — `dotnet-service-builder`
 - [ ] 6. Notification Service: consume `AuctionCancelled` (broadcast + targeted to seller) and `BannerPublished` (broadcast) — `dotnet-service-builder`
 - [ ] 7. Gateway: route `api/admin/*` paths by resource segment, matching the base collection path as well as child paths (`users*` → Identity, `auctions*`/`banners*`/`settings*` → Auction, `bids*` → Bidding) and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
 - [ ] 8. Frontend admin area (`/admin`, role-gated) — `frontend-builder`
@@ -569,6 +582,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 9.3. PlaceBid — cancelled auction refuses bids — `dotnet-service-builder`
   - [ ] 9.4. CreateAuction — `AuctionEnd` outside the configured duration bounds returns 400 (non-admin) — `dotnet-service-builder`
   - [ ] 9.5. CreateAuction — non-admin passing an explicit `Seller` is ignored/rejected — `dotnet-service-builder`
+  - [ ] 9.6. Admin moderation actions write `AuditEntry` records (each auditing service) — `dotnet-service-builder`
 - [ ] 10. Write Playwright admin e2e tests — `frontend-builder`, run with `playwright-tester`
   - [ ] 10.1. Admin sees `/admin`; a regular user is redirected away — `frontend-builder`
   - [ ] 10.2. Create a user and reset their password — `frontend-builder`

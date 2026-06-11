@@ -458,6 +458,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 - A stricter policy on mutating endpoints (`POST api/bids`, `POST/PUT/DELETE api/auctions`)
 - Over-limit requests receive **429 Too Many Requests**; limits are configuration values, not hardcoded
 
+**Version Endpoint:** `GET api/version` (Anon) — handled by the gateway itself, not proxied. Returns the platform version from the gateway's assembly metadata, e.g. `{ "version": "1.2.0" }`. All services share the platform version (see `Docs/Versioning.md`), so this is the backend version; the web app footer displays it alongside the frontend version.
+
 ---
 
 ### 3.6 Notification Service
@@ -544,6 +546,7 @@ Usernames in `Winner`/`Seller` are the SignalR user identifiers — no extra loo
 - Countdown timers for auction end times
 - Currency formatting with comma separators
 - Banner messages on the home page and auction pages (live-updated via SignalR when an admin publishes)
+- Page footer shows the frontend version (from `package.json`) and the backend version (fetched from `GET api/version` — see `Docs/Versioning.md`)
 - Admin area at `/admin` (role-gated): dashboard with platform statistics, user management, auction/bid moderation, banner management — see §10
 
 ---
@@ -789,3 +792,56 @@ zxh404.vscode-proto3
 
 - Private fields use underscore prefix with camelCase (e.g., `_myField`)
 - EditorConfig enforced naming rules for C# private members
+
+---
+
+## 13. Cross-Cutting Concerns
+
+### 13.1 Global Error Handling (Backend)
+
+Every HTTP API service (Auction, Search, Bidding, Identity, Gateway) registers a global exception handler (`IExceptionHandler` + `AddProblemDetails()`) so that **all** error responses are RFC 7807 `application/problem+json`:
+
+- Validation failures → **400** `ValidationProblemDetails` (standard ASP.NET Core model validation)
+- Expected business outcomes (bid too low, auction finished, caller isn't the owner) are normal status-coded responses per each service's spec — never exceptions
+- Unhandled exceptions → **500** ProblemDetails
+
+**Development vs production:**
+
+| | Development | Production |
+|---|------------|------------|
+| 500 `detail` | Exception type, message, and stack trace | Generic message ("An unexpected error occurred.") |
+| Correlation | `traceId` included | `traceId` included — the full exception goes to structured logs (`ILogger`) only; correlate by `traceId` |
+
+The gateway returns ProblemDetails for errors it generates itself (edge 401/403, 429 rate limiting); errors from proxied services pass through unchanged.
+
+### 13.2 Global Error Handling (Frontend)
+
+- App Router error boundaries: a root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset button, styled per `Docs/DesignGuide.md`), and `not-found.tsx` for 404s
+- API failures: parse the ProblemDetails body and surface its `title` as a red toast (react-hot-toast); never render `detail` or stack traces to users in production
+- Development vs production: the Next.js dev overlay shows full errors during development; production builds show only the error-boundary UI (Next.js strips error details from production client bundles automatically). Server-side errors are logged to the server console
+
+### 13.3 Transaction Auditing
+
+Mutating operations leave an **append-only audit trail** in the owning service's own datastore. Each auditing service defines an `AuditEntry` record:
+
+| Property | Type |
+|----------|------|
+| Id | Guid |
+| Timestamp | DateTime (UTC) |
+| Actor | string (username; `system` for background processes) |
+| ActorIsAdmin | bool |
+| Action | string (e.g., `AuctionCreated`, `BidRemoved`, `UserLocked`) |
+| EntityType | string |
+| EntityId | string |
+| Data | string (JSON — payload summary or before/after snapshot) |
+
+**Coverage:**
+
+| Service | Audited operations |
+|---------|--------------------|
+| Auction | Auction create/update/delete; admin end/cancel; banner CRUD; duration settings changes |
+| Bidding | Bid placement is already fully audited by the persisted bid history (bidder, time, amount, status); admin bid removal writes an `AuditEntry` capturing the removed bid |
+| Identity | Admin user management: create user, password reset, resend confirmation, role changes, lock/unlock (failed logins are handled by ASP.NET Core Identity's lockout, §3.4) |
+| Search / Notification | Read-only projections and push — no audit entries |
+
+Rules: the audit write happens in the same unit of work as the mutation (same EF Core `SaveChanges`; for MongoDB, the same operation scope — best effort). Entries are append-only and are **not** exposed through any public API — they are inspected directly in the datastore; an admin read API is a possible later enhancement. `Data` never contains secrets or password material.
