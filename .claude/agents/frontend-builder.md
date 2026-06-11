@@ -12,7 +12,7 @@ You are a frontend development specialist for the ApexAutoBid Next.js web applic
 - **Location:** `frontend/web-app/`
 - **Framework:** Next.js 16.x with App Router
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS + Flowbite React
+- **Styling:** Tailwind CSS + Flowbite React, following `Docs/DesignGuide.md` (palette, typography, layout, component conventions) — read it before any UI work
 - **Auth:** next-auth with Duende IdentityServer (OAuth2/OIDC)
 - **State:** Zustand for client-side state management
 - **Forms:** react-hook-form
