@@ -6,18 +6,18 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 0 | 54 | Not started |
-| 2. Search Service | 0 | 29 | Not started |
-| 3. Identity Service | 0 | 41 | Not started |
-| 4. Gateway Service | 0 | 24 | Not started |
-| 5. Bidding Service | 0 | 44 | Not started |
-| 6. Notification Service | 0 | 18 | Not started |
-| 7. Frontend (Next.js) | 0 | 53 | Not started |
-| 8. Docker Compose Deployment | 0 | 10 | Not started |
-| 9. Kubernetes Local Deployment | 0 | 17 | Not started |
+| 1. Auction Service | 0 | 55 | Not started |
+| 2. Search Service | 0 | 30 | Not started |
+| 3. Identity Service | 0 | 42 | Not started |
+| 4. Gateway Service | 0 | 25 | Not started |
+| 5. Bidding Service | 0 | 45 | Not started |
+| 6. Notification Service | 0 | 19 | Not started |
+| 7. Frontend (Next.js) | 0 | 54 | Not started |
+| 8. Docker Compose Deployment | 0 | 11 | Not started |
+| 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **0** | **358** | **Not started** |
+| **Overall** | **0** | **367** | **Not started** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -71,7 +71,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
   - [ ] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
-- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
   - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
   - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
@@ -94,6 +94,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
 - [ ] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
 - [ ] 20. Add the `AuditEntry` entity and write audit records for auction create/update/delete in the same `SaveChanges` (see `Requirements.md` §13.3) — `dotnet-service-builder`
+- [ ] 21. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -125,7 +126,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
 - [ ] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [ ] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
-- [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 9. Write unit tests (SearchService.UnitTests) — `dotnet-service-builder`
   - [ ] 9.1. Search — returns paged results — `dotnet-service-builder`
   - [ ] 9.2. Search — filters by searchTerm — `dotnet-service-builder`
@@ -142,6 +143,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 11. Verify end-to-end: create auction → appears in Search Service via event — `test-runner`
 - [ ] 12. Add API documentation: OpenAPI generation + Scalar UI (anonymous-only API — no security scheme needed) — `dotnet-service-builder`
 - [ ] 13. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [ ] 14. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -177,7 +179,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [ ] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
-- [ ] 9. Dockerize the Identity Service — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 9. Dockerize the Identity Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 10. Write unit tests (IdentityService.UnitTests) — `dotnet-service-builder`
   - [ ] 10.1. Login — valid credentials returns token — `dotnet-service-builder`
   - [ ] 10.2. Login — invalid credentials returns 401 — `dotnet-service-builder`
@@ -206,6 +208,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 16.3. Enable ASP.NET Core Identity account lockout on repeated failed logins — `dotnet-service-builder`
   - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
 - [ ] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [ ] 18. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -233,7 +236,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 2.3. `/api/bids/*` → Bidding Service (prep for Phase 5) — `dotnet-service-builder`
   - [ ] 2.4. `/notifications` → Notification Service (prep for Phase 6) — `dotnet-service-builder`
 - [ ] 3. Configure JWT bearer authentication on the gateway — `dotnet-service-builder`
-- [ ] 4. Dockerize the Gateway Service — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 4. Dockerize the Gateway Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 5. Write integration tests (GatewayService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 5.1. Route `/api/auctions` — proxies to Auction Service — `dotnet-service-builder`
   - [ ] 5.2. Route `/api/search` — proxies to Search Service — `dotnet-service-builder`
@@ -250,6 +253,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 8.2. Integration test — exceeding the limit returns 429 — `dotnet-service-builder`
 - [ ] 9. Expose `GET api/version` (Anon) — handled by the gateway itself, not proxied; returns the platform version from assembly metadata (see `Docs/Versioning.md`) — `dotnet-service-builder`
 - [ ] 10. Return ProblemDetails for gateway-generated errors (edge 401/403, 429 rate limiting); proxied service errors pass through unchanged (see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [ ] 11. Add health endpoints: `GET /health/live` + `GET /health/ready` — gateway-only checks, no downstream fan-out (see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -294,7 +298,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
 - [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold; check interval from `Bidding__FinalizationIntervalSeconds`, default 10s, so short dev auctions finalize promptly) — `dotnet-service-builder`
 - [ ] 13. Add JWT bearer authentication (require the `email_verified` claim for `POST api/bids` — 403 otherwise) — `dotnet-service-builder`
-- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture) — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
   - [ ] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
   - [ ] 15.2. PlaceBid — bid below reserve returns AcceptedBelowReserve — `dotnet-service-builder`
@@ -315,6 +319,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
 - [ ] 20. Seed local auction records and bid history per `Requirements.md` §8.3 (bids carry `BidderEmail`; states consistent with the Auction Service seed) — `dotnet-service-builder`
 - [ ] 21. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1; bid outcomes like TooLow/Finished are normal responses, not errors) — `dotnet-service-builder`
+- [ ] 22. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -343,7 +348,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 4.2. `BidPlaced` — notify clients of new bid — `dotnet-service-builder`
   - [ ] 4.3. `AuctionFinished` — notify clients of auction result — `dotnet-service-builder`
   - [ ] 4.4. `AuctionFinished` — additionally send targeted `AuctionWon` to the winner (when ItemSold) and `AuctionSellerResult` to the seller via `Clients.User(...)` — `dotnet-service-builder`
-- [ ] 5. Dockerize the Notification Service — `dotnet-service-builder`, verify with `docker-validator`
+- [ ] 5. Dockerize the Notification Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 6. Write integration tests (NotificationService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 6.1. AuctionCreated consumer — pushes notification to SignalR clients — `dotnet-service-builder`
   - [ ] 6.2. BidPlaced consumer — pushes notification to SignalR clients — `dotnet-service-builder`
@@ -351,6 +356,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 6.4. SignalR hub — client connects and receives messages — `dotnet-service-builder`
   - [ ] 6.5. AuctionFinished consumer — winner and seller receive targeted messages; anonymous clients receive only the broadcast — `dotnet-service-builder`
 - [ ] 7. Verify end-to-end: place bid → notification pushed to connected SignalR client — `test-runner`
+- [ ] 8. Add health endpoints: `GET /health/live` + `GET /health/ready` (RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -422,6 +428,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
 - [ ] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
 - [ ] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
+- [ ] 20. Add `GET /api/health` route handler returning 200 (see `Requirements.md` §13.4) — `frontend-builder`
 
 ---
 
@@ -444,6 +451,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher), MinIO + `mc` bucket/seed-image init — *main conversation*
   - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
   - [ ] 1.3. Frontend: Next.js web app — *main conversation*
+  - [ ] 1.4. `healthcheck` blocks for infrastructure and app services (`/health/live`–`/health/ready`, web app `/api/health` — see `Requirements.md` §13.4) and startup ordering via `depends_on: condition: service_healthy` — *main conversation*
 - [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — *main conversation*, validate with `docker-validator`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
@@ -481,6 +489,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 1.11. Deployment + ClusterIP for Web App — *main conversation*
   - [ ] 1.12. Ingress controller configuration — *main conversation*
   - [ ] 1.13. Deployment + ClusterIP + PersistentVolumeClaim for MinIO, plus a bucket/seed-image init Job — *main conversation*
+  - [ ] 1.14. Liveness (`/health/live`) and readiness (`/health/ready`) probes on every service Deployment; web app probes `/api/health` (see `Requirements.md` §13.4) — *main conversation*
 - [ ] 2. Deploy to local Kubernetes (Minikube or Docker Desktop K8s) — *main conversation*
 - [ ] 3. Verify all services are running and communicating — *main conversation*
 - [ ] 4. Test full application via ingress endpoint — `playwright-tester`

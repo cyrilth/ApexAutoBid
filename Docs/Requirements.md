@@ -845,3 +845,48 @@ Mutating operations leave an **append-only audit trail** in the owning service's
 | Search / Notification | Read-only projections and push — no audit entries |
 
 Rules: the audit write happens in the same unit of work as the mutation (same EF Core `SaveChanges`; for MongoDB, the same operation scope — best effort). Entries are append-only and are **not** exposed through any public API — they are inspected directly in the datastore; an admin read API is a possible later enhancement. `Data` never contains secrets or password material.
+
+### 13.4 Health Checks
+
+Every backend service exposes two anonymous health endpoints via ASP.NET Core health checks (`Microsoft.Extensions.Diagnostics.HealthChecks`, with `AspNetCore.HealthChecks.*` packages for the dependency checks):
+
+| Endpoint | Meaning | Checks |
+|----------|---------|--------|
+| `GET /health/live` | Liveness — the process is up | None — returns 200 while the app runs |
+| `GET /health/ready` | Readiness — safe to receive traffic | The service's own backing dependencies |
+
+Readiness dependencies per service:
+
+| Service | Readiness checks |
+|---------|-----------------|
+| Auction | PostgreSQL, RabbitMQ |
+| Search | MongoDB, RabbitMQ |
+| Bidding | MongoDB, RabbitMQ |
+| Identity | PostgreSQL |
+| Gateway | None beyond the process — deliberately **no downstream fan-out** (a slow backend service must not mark the gateway unhealthy) |
+| Notification | RabbitMQ |
+| Web app | `GET /api/health` route handler returning 200 |
+
+Health endpoints exist for orchestrators: they are anonymous, excluded from rate limiting, and **not** proxied through the gateway. They are consumed by Docker Compose `healthcheck` blocks with `depends_on: condition: service_healthy` startup ordering (Phase 8) and by Kubernetes liveness/readiness probes (Phase 9).
+
+### 13.5 Logging & Observability
+
+**Structured logging.** All backend services log via `ILogger` with message templates (named placeholders — never string interpolation), so log entries carry structured fields. Output target is the container standard: stdout/stderr only (12-factor), no log files.
+
+**Output format.** Plain console in local development; **JSON console output in containers** (the built-in `JsonConsoleFormatter`, enabled via `Logging:Console:FormatterName = json` in container environment configuration) so platform log collectors can parse fields.
+
+**What to log:**
+
+| Level | Events |
+|-------|--------|
+| Information | Service startup (config summary — never values of secrets); event publish/consume (event type + entity id); bid decisions (auction id, bidder, outcome); auction finalization; admin/moderation actions (alongside their `AuditEntry`, §13.3) |
+| Warning | Auth failures, account lockouts, rate-limit rejections, gRPC/HTTP fallback retries |
+| Error | Unhandled exceptions (via the §13.1 global handler), consumer failures |
+
+**Never log:** secrets, connection strings, tokens/JWTs, password material, or email addresses outside the documented post-sale exchange flow; no full request/response bodies.
+
+**Correlation.** Services rely on .NET's built-in **W3C trace context** (`Activity`): `HttpClient` and YARP propagate `traceparent` automatically, MassTransit carries it across the bus, and ASP.NET Core puts the trace ID in logging scopes. The `traceId` in ProblemDetails responses (§13.1) is this same identifier — one ID follows a request from the gateway through a service and into its event consumers, with no custom code.
+
+**Log access.** `docker compose logs` locally; `kubectl logs` or the cloud provider's log viewer in production. No in-cluster log aggregation stack in v1.
+
+**Deferred enhancement (explicitly out of scope for v1):** OpenTelemetry OTLP export (traces/metrics/logs) with Jaeger/Prometheus/Grafana. The W3C trace-context plumbing above is exactly what OpenTelemetry exports, so this retrofits later without reworking services.

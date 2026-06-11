@@ -21,6 +21,8 @@ Because of this, after a squash merge, the `develop` branch should be reset to m
 
 ## After Squash Merging `develop` into `main`
 
+> ⚠️ The final command force-pushes `develop`. This workflow assumes a **solo developer** (see the last section) — on a shared repository, coordinate with the team before rewriting `develop`, or others' unpushed work will be orphaned.
+
 Run these commands:
 
 ```bash
@@ -33,8 +35,7 @@ git pull origin main
 git checkout develop
 git reset --hard origin/main
 
-git fetch origin develop:refs/remotes/origin/develop
-git push --force-with-lease=develop:origin/develop origin develop
+git push --force-with-lease origin develop
 ```
 
 ## What These Commands Do
@@ -75,25 +76,17 @@ Makes local `develop` exactly match `origin/main`.
 
 Warning: this removes any local uncommitted changes and any commits on `develop` that are not on `main`.
 
-### 5. Refresh remote tracking info for `develop`
+### 5. Push the cleaned `develop` branch
 
 ```bash
-git fetch origin develop:refs/remotes/origin/develop
-```
-
-Updates the local reference for `origin/develop`.
-
-This helps `--force-with-lease` verify the latest remote state correctly.
-
-### 6. Push the cleaned `develop` branch
-
-```bash
-git push --force-with-lease=develop:origin/develop origin develop
+git push --force-with-lease origin develop
 ```
 
 Updates the remote `develop` branch on GitHub so it matches the cleaned local `develop`.
 
-`--force-with-lease` is safer than plain `--force` because it refuses to overwrite the remote branch if it changed unexpectedly.
+`--force-with-lease` is safer than plain `--force`: it refuses the push if remote `develop` no longer matches your local `origin/develop` reference — that is, if anything was pushed to it since you last fetched.
+
+Note: do **not** fetch `develop` right before this push. Refreshing `origin/develop` first would make the lease check always pass, silently reducing it to a plain `--force`.
 
 ## When To Use This
 
