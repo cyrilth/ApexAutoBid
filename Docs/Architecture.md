@@ -369,6 +369,7 @@ ApexAutoBid/
 │
 ├── .github/
 │   └── workflows/
+│       ├── ci.yml                        # PR validation: build + tests + frontend lint/build
 │       ├── deploy-auction.yml
 │       ├── deploy-search.yml
 │       ├── deploy-bid.yml
@@ -462,13 +463,17 @@ docker-compose.yml
 
 ### 8.3 CI/CD Pipeline
 
-Each service has its own GitHub Actions workflow:
+**PR validation (`ci.yml`):** every pull request to `develop` or `main` (and every push to `develop`) builds the backend solution, runs all `dotnet test` projects, and lints/builds the Next.js app. `main` is branch-protected — merging requires a pull request with a green CI run.
+
+**Deploy:** each service has its own GitHub Actions workflow, triggered on push to `main` and filtered by service path:
 
 ```
-Push to main (backend/AuctionService/**) ──► Build Docker image ──► Push to Docker Hub
-Push to main (backend/SearchService/**)  ──► Build Docker image ──► Push to Docker Hub
+Push to main (backend/AuctionService/**) ──► Build image ──► Push :<sha> + :latest ──► kubectl set image (:<sha>)
+Push to main (backend/SearchService/**)  ──► Build image ──► Push :<sha> + :latest ──► kubectl set image (:<sha>)
 ...etc for each service
 ```
+
+Deployments reference immutable commit-SHA tags, so a rollback is just re-deploying a previous SHA; `latest` exists for local convenience only. The deploy job authenticates with a production kubeconfig stored in GitHub repository secrets. Services apply pending EF Core migrations at startup (`Database.Migrate()`), so rolling out a new image also upgrades the schema.
 
 ### 8.4 Docker Build Strategy
 

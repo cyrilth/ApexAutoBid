@@ -580,7 +580,7 @@ Per-environment strategy. Dev credentials are throwaway, local-only values and a
 | Local development (dotnet run) | `appsettings.Development.json` per service (connection strings, RabbitMQ, IdentityServer URLs) | Yes (dev-only values) |
 | Docker Compose | `environment:` blocks inline in `docker/docker-compose.yml` | Yes (dev-only values) |
 | Local Kubernetes | `k8s/dev-secrets.yaml` (Opaque Secrets; base64-encoded, not encrypted) | Yes (dev-only values) |
-| CI/CD | GitHub repository secrets (Docker Hub credentials) | No |
+| CI/CD | GitHub repository secrets (Docker Hub credentials, production kubeconfig) | No |
 | Production Kubernetes | Kubernetes Secrets applied directly to the cloud cluster (`kubectl apply` from a local, untracked manifest) | No |
 
 Rule: any value that grants access to a non-local resource (cloud DB, Docker Hub, production cluster, real signing keys) must never appear in the repo. `appsettings.json` (non-Development) holds only non-sensitive defaults.
@@ -601,8 +601,10 @@ External provider credentials are real credentials in **every** environment and 
 - Ingress controllers for external access
 
 ### CI/CD
-- GitHub Actions workflows for building and pushing Docker images
-- Triggered on push to `main` branch for relevant service paths
+- PR validation workflow (`ci.yml`): pull requests to `develop` and `main` (and pushes to `develop`) build the backend solution, run all `dotnet test` projects, and lint/build the Next.js app; `main` is branch-protected and requires a pull request with a green CI run before merge
+- Per-service deploy workflows: triggered on push to `main` for relevant service paths — build the Docker image, tag it with the commit SHA and `latest`, push both tags to Docker Hub, then roll the cluster to the SHA tag (`kubectl set image`) using the production kubeconfig from GitHub repository secrets
+- Image tags: deployments reference immutable commit-SHA tags (rollback = re-deploy a previous SHA); `latest` is for local convenience only
+- Database migrations: services apply pending EF Core migrations at startup (`Database.Migrate()`), so rolling out a new image also upgrades the schema — no separate migration step in the pipeline
 
 ### Next.js Dockerfile
 - Multi-stage build: deps -> builder -> runner

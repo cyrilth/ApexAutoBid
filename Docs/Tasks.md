@@ -15,9 +15,9 @@
 | 7. Frontend (Next.js) | 0 | 50 | Not started |
 | 8. Docker Compose Deployment | 0 | 10 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 17 | Not started |
-| 10. CI/CD & Cloud Deployment | 0 | 10 | Not started |
+| 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 48 | Not started |
-| **Overall** | **0** | **338** | **Not started** |
+| **Overall** | **0** | **344** | **Not started** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -484,23 +484,31 @@ Status values: `Not started` · `In progress` · `Done`
 **Purpose:** Establishes CI/CD pipelines so that pushing to `main` automatically builds, pushes Docker images, and deploys to a production cluster accessible on the internet.
 
 **Acceptance Criteria:**
-- GitHub Actions workflows trigger on push to `main` for each service
-- Docker images are built and pushed to Docker Hub automatically
+- Pull requests to `develop` and `main` run the full test suite and must pass before merge (`main` is branch-protected)
+- GitHub Actions deploy workflows trigger on push to `main` for each service
+- Docker images are built, tagged with the commit SHA (plus `latest`), and pushed to Docker Hub automatically
+- The deploy workflow rolls the cluster to the new SHA tag — no manual step after merge
 - Application is deployed and accessible on the internet
 - DNS and ingress are configured for public access
 
 ### Tasks
 
-- [ ] 1. Create GitHub Actions workflows — *main conversation*
-  - [ ] 1.1. Trigger on push to `main` for relevant service paths — *main conversation*
-  - [ ] 1.2. Build Docker image — *main conversation*
-  - [ ] 1.3. Push to Docker Hub — *main conversation*
-- [ ] 2. Configure Docker Hub secrets in GitHub repository — *main conversation*
-- [ ] 3. Set up production Kubernetes cluster (cloud provider) — *main conversation*
-- [ ] 4. Configure production secrets and environment variables (applied directly to the cluster from a local, untracked manifest — never committed) — *main conversation*
-- [ ] 5. Deploy all services to cloud Kubernetes — *main conversation*
-- [ ] 6. Configure DNS and ingress for public access — *main conversation*
-- [ ] 7. Verify production deployment end-to-end — `playwright-tester`
+- [ ] 1. Create the PR validation workflow (`.github/workflows/ci.yml`) — *main conversation*
+  - [ ] 1.1. Trigger on pull requests to `develop` and `main`, and on pushes to `develop` — *main conversation*
+  - [ ] 1.2. Backend job: restore, build, and run all `dotnet test` projects — *main conversation*
+  - [ ] 1.3. Frontend job: install, lint, and build the Next.js app — *main conversation*
+- [ ] 2. Enable branch protection on `main` — require a pull request and a green CI run before merge — *main conversation*
+- [ ] 3. Create per-service deploy workflows — *main conversation*
+  - [ ] 3.1. Trigger on push to `main` for relevant service paths — *main conversation*
+  - [ ] 3.2. Build the Docker image — *main conversation*
+  - [ ] 3.3. Tag with the commit SHA and `latest`; push both tags to Docker Hub — *main conversation*
+  - [ ] 3.4. Deploy job: roll the cluster to the SHA tag (`kubectl set image`) using the kubeconfig from repository secrets — *main conversation*
+- [ ] 4. Configure GitHub repository secrets (Docker Hub credentials, production kubeconfig) — *main conversation*
+- [ ] 5. Set up production Kubernetes cluster (cloud provider) — *main conversation*
+- [ ] 6. Configure production secrets and environment variables (applied directly to the cluster from a local, untracked manifest — never committed) — *main conversation*
+- [ ] 7. Initial deployment: apply all manifests to the cloud cluster (subsequent image updates flow through the deploy workflows) — *main conversation*
+- [ ] 8. Configure DNS and ingress for public access — *main conversation*
+- [ ] 9. Verify production deployment end-to-end — `playwright-tester`
 
 ---
 
