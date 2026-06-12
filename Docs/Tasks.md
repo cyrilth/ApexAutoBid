@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 7 | 55 | In progress |
+| 1. Auction Service | 8 | 55 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 42 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **7** | **367** | **In progress** |
+| **Overall** | **8** | **367** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -47,7 +47,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
   - [x] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
   - [x] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
-- [ ] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [x] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
 - [ ] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
   - [ ] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
   - [ ] 4.2. `Item` entity — `dotnet-service-builder`
