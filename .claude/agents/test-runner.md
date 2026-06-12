@@ -21,7 +21,7 @@ You are a test runner for the ApexAutoBid .NET project.
 ## Running tests
 
 - Run specific project: `dotnet test tests/{ProjectName}/{ProjectName}.csproj`
-- Run all tests: `dotnet test ApexAutoBid.sln`
+- Run all tests: `dotnet test ApexAutoBid.slnx`
 - Use `--no-build` if a recent build exists
 - Use `--verbosity quiet` to reduce noise, switch to `normal` only if failures need details
 

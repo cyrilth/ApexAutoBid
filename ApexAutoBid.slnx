@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/Contracts/Contracts.csproj" />
+  </Folder>
+</Solution>

@@ -402,7 +402,7 @@ ApexAutoBid/
 │
 ├── .editorconfig
 ├── .gitignore
-├── ApexAutoBid.sln
+├── ApexAutoBid.slnx
 └── README.md
 ```
 

@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 0 | 55 | Not started |
+| 1. Auction Service | 7 | 55 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 42 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **0** | **367** | **Not started** |
+| **Overall** | **7** | **367** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -40,13 +40,13 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the solution structure (`ApexAutoBid.sln`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`, `backend/Directory.Build.props` with the shared `<Version>` per `Docs/Versioning.md`) — `dotnet-service-builder`
-- [ ] 2. Create the `Contracts` shared project — `dotnet-service-builder`
-  - [ ] 2.1. `AuctionCreated` event contract — `dotnet-service-builder`
-  - [ ] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
-  - [ ] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
-  - [ ] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
-  - [ ] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
+- [x] 1. Create the solution structure (`ApexAutoBid.slnx`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`, `backend/Directory.Build.props` with the shared `<Version>` per `Docs/Versioning.md`) — `dotnet-service-builder`
+- [x] 2. Create the `Contracts` shared project — `dotnet-service-builder`
+  - [x] 2.1. `AuctionCreated` event contract — `dotnet-service-builder`
+  - [x] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
+  - [x] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
+  - [x] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
+  - [x] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
 - [ ] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
 - [ ] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
   - [ ] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
