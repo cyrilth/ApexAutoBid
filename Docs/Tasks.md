@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 12 | 56 | In progress |
+| 1. Auction Service | 16 | 56 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 42 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **12** | **369** | **In progress** |
+| **Overall** | **16** | **369** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -52,10 +52,10 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
   - [x] 4.2. `Item` entity + `ItemImage` child entity (ordered multi-image gallery, 1–10 per item; `SortOrder = 0` is the primary image) — `dotnet-service-builder`
   - [x] 4.3. `Status` enum in `AuctionService.Domain/Enums/` — `dotnet-service-builder`
-- [ ] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
-  - [ ] 5.1. `AuctionDto` — `dotnet-service-builder`
-  - [ ] 5.2. `CreateAuctionDto` (requires 1–10 `Images` entries, ordered — first is primary) — `dotnet-service-builder`
-  - [ ] 5.3. `UpdateAuctionDto` (optional `Images?` — full gallery replacement under the same 1–10 bound) — `dotnet-service-builder`
+- [x] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
+  - [x] 5.1. `AuctionDto` — `dotnet-service-builder`
+  - [x] 5.2. `CreateAuctionDto` (requires 1–10 `Images` entries, ordered — first is primary) — `dotnet-service-builder`
+  - [x] 5.3. `UpdateAuctionDto` (optional `Images?` — full gallery replacement under the same 1–10 bound) — `dotnet-service-builder`
 - [ ] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
 - [ ] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
 - [ ] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
