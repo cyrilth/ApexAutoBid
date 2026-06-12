@@ -7,5 +7,7 @@ public record AuctionUpdated(
     string Color,
     int Mileage,
     int Year,
+    string ImageUrl,
+    string? ThumbnailUrl,
     DateTime? AuctionEnd
 );
