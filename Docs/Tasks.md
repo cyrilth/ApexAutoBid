@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 17 | 56 | In progress |
+| 1. Auction Service | 26 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 42 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **17** | **369** | **In progress** |
+| **Overall** | **26** | **370** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -57,14 +57,15 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 5.2. `CreateAuctionDto` (requires 1–10 `Images` entries, ordered — first is primary) — `dotnet-service-builder`
   - [x] 5.3. `UpdateAuctionDto` (optional `Images?` — full gallery replacement under the same 1–10 bound) — `dotnet-service-builder`
 - [x] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
-- [ ] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
-- [ ] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
-  - [ ] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
-  - [ ] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
-  - [ ] 8.3. `GET api/auctions?date=` — get auctions updated from a given date — `dotnet-service-builder`
-  - [ ] 8.4. `POST api/auctions` — create auction (Auth) — `dotnet-service-builder`
-  - [ ] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
-  - [ ] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
+- [x] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
+- [x] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
+  - [x] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
+  - [x] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
+  - [x] 8.3. `GET api/auctions?date=` — get auctions updated from a given date — `dotnet-service-builder`
+  - [x] 8.4. `POST api/auctions` — create auction (Auth) — `dotnet-service-builder`
+  - [x] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
+  - [x] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
+  - [x] 8.7. Introduce repository + application-service layer per Architecture.md §7: `IAuctionRepository` (Domain/Interfaces) + `AuctionRepository` (Infrastructure/Data), `IAuctionService`/`AuctionAppService` (Application/Services) with an `AuctionWriteResult` enum; controllers depend on the service layer, not `DbContext` — `dotnet-service-builder`
 - [ ] 9. Add seed data — 10 auction items per `Requirements.md` §8.2 (relative `AuctionEnd` offsets, statuses incl. one ReserveNotMet and one sold with Winner/SoldAmount/WinnerEmail, single-image galleries with MinIO image URLs) — `dotnet-service-builder`
 - [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
 - [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`

@@ -46,8 +46,9 @@ csharp_style_conditional_delegate_call                                 = true:su
 # Modifier preferences
 csharp_preferred_modifier_order                                        = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async:suggestion
 
-# Braces
-csharp_prefer_braces                                                   = true:warning
+# Braces — require braces only for multi-line bodies; allow brace-less
+# single-line statements, e.g. `if (x is null) return;` (IDE0011)
+csharp_prefer_braces                                                   = when_multiline:warning
 
 # Spacing / new-line
 csharp_new_line_before_open_brace                                      = all
