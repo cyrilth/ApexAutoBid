@@ -1,5 +1,6 @@
 using AuctionService.Application.DTOs;
 using AuctionService.Domain.Entities;
+using Contracts;
 using Mapster;
 
 namespace AuctionService.Application.Mappings;
@@ -167,5 +168,34 @@ public class AuctionMappingConfig : IRegister
             .Ignore(dest => dest.AuctionId)
             .Ignore(dest => dest.Auction)
             .Ignore(dest => dest.Images);   // gallery swap is service-layer logic
+
+        // ── 5. AuctionDto → AuctionCreated ──────────────────────────────────────
+        //
+        // Most fields map by name (Id, CreatedAt, UpdatedAt, AuctionEnd, Seller,
+        // Make, Model, Year, Color, Mileage, Status, ReservePrice, SoldAmount,
+        // CurrentHighBid). Three require explicit expressions:
+        //
+        //   Winner:       AuctionDto.Winner is string? — the event record requires
+        //                 a non-nullable string, so null collapses to string.Empty.
+        //   ImageUrl:     Projected from the primary image (index 0 of the already-
+        //                 ordered Images list). Empty string when gallery is empty.
+        //   ThumbnailUrl: Projected from the same primary image; null when absent.
+
+        config.NewConfig<AuctionDto, AuctionCreated>()
+            .Map(dest => dest.Winner, src => src.Winner ?? string.Empty)
+            .Map(dest => dest.ImageUrl, src => src.Images.Count > 0 ? src.Images[0].Url : string.Empty)
+            .Map(dest => dest.ThumbnailUrl, src => src.Images.Count > 0 ? src.Images[0].ThumbnailUrl : null);
+
+        // ── 6. AuctionDto → AuctionUpdated ──────────────────────────────────────
+        //
+        // Id on the event is string (vs Guid on AuctionDto) — mapped explicitly.
+        // ImageUrl / ThumbnailUrl follow the same primary-image projection as above.
+        // AuctionEnd (DateTime → DateTime?) is an implicit widening; convention handles it.
+        // Make, Model, Color, Mileage, Year all map by name.
+
+        config.NewConfig<AuctionDto, AuctionUpdated>()
+            .Map(dest => dest.Id, src => src.Id.ToString())
+            .Map(dest => dest.ImageUrl, src => src.Images.Count > 0 ? src.Images[0].Url : string.Empty)
+            .Map(dest => dest.ThumbnailUrl, src => src.Images.Count > 0 ? src.Images[0].ThumbnailUrl : null);
     }
 }

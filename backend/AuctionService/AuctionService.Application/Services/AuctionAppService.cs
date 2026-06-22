@@ -1,8 +1,10 @@
 using AuctionService.Application.DTOs;
 using AuctionService.Domain.Entities;
 using AuctionService.Domain.Interfaces;
+using Contracts;
 using Mapster;
 using MapsterMapper;
+using MassTransit;
 
 namespace AuctionService.Application.Services;
 
@@ -11,7 +13,10 @@ namespace AuctionService.Application.Services;
 /// <c>AuctionService</c>) to avoid a CS0118 clash with the root namespace
 /// <c>AuctionService</c>.
 /// </summary>
-public class AuctionAppService(IAuctionRepository repository, IMapper mapper) : IAuctionService
+public class AuctionAppService(
+    IAuctionRepository repository,
+    IMapper mapper,
+    IPublishEndpoint publishEndpoint) : IAuctionService
 {
     public async Task<List<AuctionDto>> GetAuctionsAsync(DateTime? updatedAfter)
     {
@@ -36,8 +41,16 @@ public class AuctionAppService(IAuctionRepository repository, IMapper mapper) : 
 
         repository.Add(auction);
 
+        // Map the read DTO once — reused both for the outbox publish and the return value.
+        // EF Core assigns the Guid key at Add() time so Id is already populated here.
+        var auctionDto = mapper.Map<AuctionDto>(auction);
+
+        // Publish BEFORE SaveChangesAsync so the outbox message and the domain row
+        // are written in the same database transaction (bus outbox requirement).
+        await publishEndpoint.Publish(mapper.Map<AuctionCreated>(auctionDto));
+
         var saved = await repository.SaveChangesAsync();
-        return saved ? mapper.Map<AuctionDto>(auction) : null;
+        return saved ? auctionDto : null;
     }
 
     public async Task<AuctionWriteResult> UpdateAuctionAsync(
@@ -70,6 +83,11 @@ public class AuctionAppService(IAuctionRepository repository, IMapper mapper) : 
 
         auction.UpdatedAt = DateTime.UtcNow;
 
+        // Map from the updated tracked entity, then publish BEFORE SaveChangesAsync
+        // so the outbox message and the domain row commit atomically.
+        var auctionDto = mapper.Map<AuctionDto>(auction);
+        await publishEndpoint.Publish(mapper.Map<AuctionUpdated>(auctionDto));
+
         // SaveChangesAsync returns 0 when the submitted values are identical to
         // the stored ones (EF detects no dirty columns) — that is still a logical
         // success, the record is already in the requested state. Genuine failures
@@ -88,6 +106,9 @@ public class AuctionAppService(IAuctionRepository repository, IMapper mapper) : 
             return AuctionWriteResult.Forbidden;
 
         repository.Remove(auction);
+
+        // Publish BEFORE SaveChangesAsync for atomic outbox + domain commit.
+        await publishEndpoint.Publish(new AuctionDeleted(auction.Id.ToString()));
 
         return await repository.SaveChangesAsync()
             ? AuctionWriteResult.Success
