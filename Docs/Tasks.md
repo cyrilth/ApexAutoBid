@@ -6,9 +6,9 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 27 | 57 | In progress |
+| 1. Auction Service | 28 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
-| 3. Identity Service | 0 | 42 | Not started |
+| 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **27** | **370** | **In progress** |
+| **Overall** | **28** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -67,7 +67,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
   - [x] 8.7. Introduce repository + application-service layer per Architecture.md §7: `IAuctionRepository` (Domain/Interfaces) + `AuctionRepository` (Infrastructure/Data), `IAuctionService`/`AuctionAppService` (Application/Services) with an `AuctionWriteResult` enum; controllers depend on the service layer, not `DbContext` — `dotnet-service-builder`
 - [x] 9. Add seed data — 10 auction items per `Requirements.md` §8.2 (relative `AuctionEnd` offsets, statuses incl. one ReserveNotMet and one sold with Winner/SoldAmount/WinnerEmail, single-image galleries with MinIO image URLs) — `dotnet-service-builder`
-- [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
+- [x] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
 - [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
 - [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
@@ -211,6 +211,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
 - [ ] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
 - [ ] 18. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [ ] 19. Add an `EmailVerified` authorization policy (`[Authorize(Policy = "EmailVerified")]`) and apply it uniformly to all mutating auction endpoints (POST/PUT/DELETE) — replaces the ad-hoc per-endpoint email_verified check currently only on create — `dotnet-service-builder`
 
 ---
 

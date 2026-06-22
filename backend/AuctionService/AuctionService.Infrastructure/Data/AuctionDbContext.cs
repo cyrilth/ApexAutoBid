@@ -1,5 +1,6 @@
 using AuctionService.Domain.Entities;
 using AuctionService.Domain.Enums;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuctionService.Infrastructure.Data;
@@ -64,5 +65,12 @@ public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbCo
             image.HasIndex(img => new { img.ItemId, img.SortOrder })
                 .IsUnique();
         });
+
+        // MassTransit transactional Outbox / Inbox tables.
+        // These are managed by MassTransit and must live in the same DbContext so
+        // they participate in the same database transaction as domain writes.
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }
