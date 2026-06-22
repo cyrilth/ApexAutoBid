@@ -20,7 +20,11 @@ public static class ApplicationServiceExtensions
         // (e.g. AuctionMappingConfig) and register the resulting config as a
         // singleton TypeAdapterConfig, then register IMapper → ServiceMapper so
         // controllers / services can inject IMapper.
-        var config = TypeAdapterConfig.GlobalSettings;
+        //
+        // A fresh TypeAdapterConfig is used rather than the mutable static
+        // GlobalSettings singleton so each DI container (notably parallel test
+        // hosts) owns an isolated mapping configuration.
+        var config = new TypeAdapterConfig();
         config.Scan(Assembly.GetExecutingAssembly());
 
         services.AddSingleton(config);

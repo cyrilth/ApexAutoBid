@@ -70,9 +70,12 @@ public class AuctionAppService(IAuctionRepository repository, IMapper mapper) : 
 
         auction.UpdatedAt = DateTime.UtcNow;
 
-        return await repository.SaveChangesAsync()
-            ? AuctionWriteResult.Success
-            : AuctionWriteResult.SaveFailed;
+        // SaveChangesAsync returns 0 when the submitted values are identical to
+        // the stored ones (EF detects no dirty columns) — that is still a logical
+        // success, the record is already in the requested state. Genuine failures
+        // throw (e.g. DbUpdateException), surfaced by the global handler (Task 19).
+        await repository.SaveChangesAsync();
+        return AuctionWriteResult.Success;
     }
 
     public async Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser)

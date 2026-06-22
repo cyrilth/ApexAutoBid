@@ -40,7 +40,7 @@ public class AuctionsController(IAuctionService service, ILogger<AuctionsControl
 
         var auctions = await service.GetAuctionsAsync(updatedAfter);
 
-        logger.LogInformation("Returning {Count} auctions", auctions.Count);
+        logger.LogDebug("Returning {Count} auctions", auctions.Count);
 
         return Ok(auctions);
     }

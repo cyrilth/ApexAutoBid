@@ -28,10 +28,10 @@ public class CreateAuctionDto
     [Required]
     public required string Color { get; init; }
 
-    [Required]
+    // No [Required] on value types — a non-nullable int/DateTime can never be
+    // null, so the attribute is a no-op (and misleadingly implies 0 is rejected).
     public int Mileage { get; init; }
 
-    [Required]
     public int Year { get; init; }
 
     /// <summary>
@@ -49,6 +49,5 @@ public class CreateAuctionDto
     /// <summary>
     /// When the auction closes. Must satisfy the platform's min/max duration bounds.
     /// </summary>
-    [Required]
     public DateTime AuctionEnd { get; init; }
 }

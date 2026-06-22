@@ -1,4 +1,5 @@
 using AuctionService.Application.Extensions;
+using AuctionService.Infrastructure.Data;
 using AuctionService.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -39,6 +40,8 @@ builder.Services.AddAuthorization();
 // ─────────────────────────────────────────────────────────────────────────────
 
 var app = builder.Build();
+
+await DbInitializer.InitDbAsync(app.Services);
 
 app.UseAuthentication();
 app.UseAuthorization();
