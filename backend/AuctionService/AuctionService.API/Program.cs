@@ -35,6 +35,10 @@ builder.Services.AddMassTransit(x =>
         o.UseBusOutbox();
     });
 
+    // Discovers and registers BidPlacedConsumer and AuctionFinishedConsumer (and any
+    // future consumer added to this namespace) without needing to list each one by hand.
+    x.AddConsumersFromNamespaceContaining<AuctionService.Application.Consumers.BidPlacedConsumer>();
+
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("auction", false));
 
     x.UsingRabbitMq((context, cfg) =>
@@ -45,6 +49,12 @@ builder.Services.AddMassTransit(x =>
             host.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
         });
 
+        // The EF Core transactional Inbox (UseEntityFrameworkOutbox, backed by the migrated
+        // InboxState table) is intentionally NOT wired here. It could be applied to every
+        // auto-configured endpoint via x.AddConfigureEndpointsCallback(...), but the consumers
+        // are already idempotent by design — BidPlacedConsumer via an atomic conditional UPDATE,
+        // AuctionFinishedConsumer via its Status != Live guard — so broker-level exactly-once
+        // deduplication is not required for correctness. Left as a future enhancement.
         cfg.ConfigureEndpoints(context);
     });
 });

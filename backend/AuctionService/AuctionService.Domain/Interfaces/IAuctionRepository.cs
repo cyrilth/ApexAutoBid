@@ -41,4 +41,14 @@ public interface IAuctionRepository
     /// Returns <see langword="true"/> if at least one row was written.
     /// </summary>
     Task<bool> SaveChangesAsync();
+
+    /// <summary>
+    /// Atomically raises the auction's <c>CurrentHighBid</c> to <paramref name="amount"/>,
+    /// but only when the auction is still <c>Live</c> and <paramref name="amount"/> strictly
+    /// exceeds the stored high bid. The predicate is evaluated by the database in a single
+    /// UPDATE statement, so concurrent <c>BidPlaced</c> messages for the same auction cannot
+    /// lose updates, and redelivery of an older/equal bid is a no-op. Also stamps <c>UpdatedAt</c>.
+    /// Returns <see langword="true"/> when a row was updated.
+    /// </summary>
+    Task<bool> TryRaiseHighBidAsync(Guid auctionId, int amount);
 }

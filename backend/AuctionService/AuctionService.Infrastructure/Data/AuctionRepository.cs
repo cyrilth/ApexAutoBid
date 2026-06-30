@@ -1,4 +1,5 @@
 using AuctionService.Domain.Entities;
+using AuctionService.Domain.Enums;
 using AuctionService.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,5 +60,18 @@ public class AuctionRepository(AuctionDbContext dbContext) : IAuctionRepository
     public async Task<bool> SaveChangesAsync()
     {
         return await dbContext.SaveChangesAsync() > 0;
+    }
+
+    public async Task<bool> TryRaiseHighBidAsync(Guid auctionId, int amount)
+    {
+        var rows = await dbContext.Auctions
+            .Where(a => a.Id == auctionId
+                && a.Status == Status.Live
+                && (a.CurrentHighBid == null || a.CurrentHighBid < amount))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.CurrentHighBid, amount)
+                .SetProperty(a => a.UpdatedAt, DateTime.UtcNow));
+
+        return rows > 0;
     }
 }
