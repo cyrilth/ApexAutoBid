@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace AuctionService.UnitTests;
@@ -21,6 +20,7 @@ namespace AuctionService.UnitTests;
 public class AuctionsControllerTests
 {
     private readonly IAuctionService _service = Substitute.For<IAuctionService>();
+    private readonly IAuctionImageService _imageService = Substitute.For<IAuctionImageService>();
 
     // Builds the controller under test with the substituted service and an authenticated user.
     // ClaimsIdentity defaults its NameClaimType to ClaimTypes.Name, so User.Identity!.Name
@@ -36,7 +36,7 @@ public class AuctionsControllerTests
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "TestAuth"));
 
-        return new AuctionsController(_service, NullLogger<AuctionsController>.Instance)
+        return new AuctionsController(_service, _imageService, NullLogger<AuctionsController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -62,7 +62,7 @@ public class AuctionsControllerTests
     public async Task CreateAuction_WhenSaveFails_Returns400BadRequest()
     {
         _service.CreateAuctionAsync(Arg.Any<CreateAuctionDto>(), Arg.Any<string>(), Arg.Any<string>())
-            .ReturnsNull();
+            .Returns(new AuctionCreateResult(AuctionWriteResult.SaveFailed, null));
         var controller = BuildController();
 
         var result = await controller.CreateAuction(SampleCreateDto());

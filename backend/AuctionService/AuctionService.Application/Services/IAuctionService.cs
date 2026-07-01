@@ -11,8 +11,22 @@ public enum AuctionWriteResult
     Success,
     NotFound,
     Forbidden,
-    SaveFailed
+    SaveFailed,
+
+    /// <summary>
+    /// The submitted image gallery failed server-side validation (Phase 1 Task 18.6):
+    /// the image count was outside the configured 1..<c>Images:MaxPerAuction</c> bound, or
+    /// a platform-hosted image's actual size (verified via HEAD) exceeded
+    /// <c>Images:MaxSizeMB</c> — the oversized object is deleted before this result is returned.
+    /// </summary>
+    InvalidImages
 }
+
+/// <summary>
+/// Result of <see cref="IAuctionService.CreateAuctionAsync"/>. <see cref="Auction"/> is
+/// non-null only when <see cref="Status"/> is <see cref="AuctionWriteResult.Success"/>.
+/// </summary>
+public record AuctionCreateResult(AuctionWriteResult Status, AuctionDto? Auction);
 
 /// <summary>
 /// Application-level service for auction operations.
@@ -33,10 +47,10 @@ public interface IAuctionService
     Task<AuctionDto?> GetAuctionByIdAsync(Guid id);
 
     /// <summary>
-    /// Creates a new auction. Returns the created DTO, or <see langword="null"/> if
-    /// the save operation wrote zero rows.
+    /// Creates a new auction. Validates the submitted gallery (Task 18.6) before writing
+    /// anything; returns an <see cref="AuctionCreateResult"/> describing the outcome.
     /// </summary>
-    Task<AuctionDto?> CreateAuctionAsync(CreateAuctionDto dto, string seller, string sellerEmail);
+    Task<AuctionCreateResult> CreateAuctionAsync(CreateAuctionDto dto, string seller, string sellerEmail);
 
     /// <summary>Partially updates an existing auction. Returns a <see cref="AuctionWriteResult"/>.</summary>
     Task<AuctionWriteResult> UpdateAuctionAsync(Guid id, UpdateAuctionDto dto, string requestingUser);

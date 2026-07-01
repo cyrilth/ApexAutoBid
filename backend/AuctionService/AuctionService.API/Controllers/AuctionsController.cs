@@ -8,7 +8,10 @@ namespace AuctionService.API.Controllers;
 
 [ApiController]
 [Route("api/auctions")]
-public class AuctionsController(IAuctionService service, ILogger<AuctionsController> logger)
+public class AuctionsController(
+    IAuctionService service,
+    IAuctionImageService imageService,
+    ILogger<AuctionsController> logger)
     : ControllerBase
 {
     // ── 8.1 / 8.3  GET api/auctions[?date=] ──────────────────────────────────
@@ -101,24 +104,37 @@ public class AuctionsController(IAuctionService service, ILogger<AuctionsControl
         var seller = User.Identity!.Name!;
         var sellerEmail = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
 
-        var resultDto = await service.CreateAuctionAsync(dto, seller, sellerEmail);
+        var result = await service.CreateAuctionAsync(dto, seller, sellerEmail);
 
-        if (resultDto is null)
+        if (result.Status == AuctionWriteResult.Success)
         {
-            logger.LogError("CreateAuction: save failed for seller {Seller}", seller);
+            logger.LogInformation("Auction {AuctionId} created by seller {Seller}",
+                result.Auction!.Id, seller);
+
+            return CreatedAtAction(nameof(GetAuctionById), new { id = result.Auction.Id }, result.Auction);
+        }
+
+        if (result.Status == AuctionWriteResult.InvalidImages)
+        {
+            logger.LogWarning("CreateAuction: invalid image gallery for seller {Seller}", seller);
 
             return BadRequest(new ProblemDetails
             {
-                Title = "Could not save changes",
-                Detail = "The auction could not be saved. Please try again.",
+                Title = "Invalid image gallery",
+                Detail = "One or more images are invalid — check the gallery size (1–10 images) " +
+                         "and that no platform-hosted image exceeds the configured size limit.",
                 Status = StatusCodes.Status400BadRequest
             });
         }
 
-        logger.LogInformation("Auction {AuctionId} created by seller {Seller}",
-            resultDto.Id, seller);
+        logger.LogError("CreateAuction: save failed for seller {Seller}", seller);
 
-        return CreatedAtAction(nameof(GetAuctionById), new { id = resultDto.Id }, resultDto);
+        return BadRequest(new ProblemDetails
+        {
+            Title = "Could not save changes",
+            Detail = "The auction could not be saved. Please try again.",
+            Status = StatusCodes.Status400BadRequest
+        });
     }
 
     // ── 8.5  PUT api/auctions/{id} ────────────────────────────────────────────
@@ -142,6 +158,13 @@ public class AuctionsController(IAuctionService service, ILogger<AuctionsControl
                 Status = StatusCodes.Status404NotFound
             }),
             AuctionWriteResult.Forbidden => Forbid(),
+            AuctionWriteResult.InvalidImages => BadRequest(new ProblemDetails
+            {
+                Title = "Invalid image gallery",
+                Detail = "One or more images are invalid — check the gallery size (1–10 images) " +
+                         "and that no platform-hosted image exceeds the configured size limit.",
+                Status = StatusCodes.Status400BadRequest
+            }),
             AuctionWriteResult.SaveFailed => BadRequest(new ProblemDetails
             {
                 Title = "Could not save changes",
@@ -172,6 +195,15 @@ public class AuctionsController(IAuctionService service, ILogger<AuctionsControl
                 Status = StatusCodes.Status404NotFound
             }),
             AuctionWriteResult.Forbidden => Forbid(),
+            // InvalidImages is unreachable for delete (no gallery is submitted) but is
+            // handled here for exhaustiveness with the shared AuctionWriteResult enum.
+            AuctionWriteResult.InvalidImages => BadRequest(new ProblemDetails
+            {
+                Title = "Invalid image gallery",
+                Detail = "One or more images are invalid — check the gallery size (1–10 images) " +
+                         "and that no platform-hosted image exceeds the configured size limit.",
+                Status = StatusCodes.Status400BadRequest
+            }),
             AuctionWriteResult.SaveFailed => BadRequest(new ProblemDetails
             {
                 Title = "Could not save changes",
@@ -179,6 +211,96 @@ public class AuctionsController(IAuctionService service, ILogger<AuctionsControl
                 Status = StatusCodes.Status400BadRequest
             }),
             _ => Ok()
+        };
+    }
+
+    // ── 18.1  POST api/auctions/upload-url ────────────────────────────────────
+    //
+    // Issues a 5-minute presigned PUT URL for a client-declared content type and size.
+    // Requires authentication and a verified email (same enforcement as CreateAuction).
+    // Image bytes never flow through this service — the client PUTs directly to the
+    // presigned URL, then submits the returned ObjectUrl in a create/update auction request.
+
+    [Authorize]
+    [HttpPost("upload-url")]
+    public async Task<ActionResult<UploadUrlResponse>> CreateUploadUrl([FromBody] UploadUrlRequest request)
+    {
+        var emailVerified = User.FindFirstValue("email_verified");
+        if (emailVerified is not "true")
+        {
+            logger.LogWarning("upload-url blocked — email not verified for user {User}",
+                User.Identity!.Name);
+
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Email not verified",
+                Detail = "You must verify your email address before uploading images.",
+                Status = StatusCodes.Status403Forbidden
+            });
+        }
+
+        var (outcome, response) = await imageService.CreateUploadUrlAsync(request);
+
+        return outcome switch
+        {
+            UploadUrlOutcome.InvalidContentType => BadRequest(new ProblemDetails
+            {
+                Title = "Invalid content type",
+                Detail = $"Content type '{request.ContentType}' is not allowed. " +
+                         "Allowed types: image/jpeg, image/png, image/webp.",
+                Status = StatusCodes.Status400BadRequest
+            }),
+            UploadUrlOutcome.TooLarge => BadRequest(new ProblemDetails
+            {
+                Title = "File too large",
+                Detail = "The declared file size exceeds the configured per-image limit.",
+                Status = StatusCodes.Status400BadRequest
+            }),
+            _ => Ok(response)
+        };
+    }
+
+    // ── 18.4  POST api/auctions/thumbnail ─────────────────────────────────────
+    //
+    // Generates a max-400px-wide WebP thumbnail for a previously uploaded object key.
+    // Requires authentication and a verified email. SSRF guard: only a bare GUID key
+    // (the format upload-url issues) is accepted — see AuctionImageAppService.
+
+    [Authorize]
+    [HttpPost("thumbnail")]
+    public async Task<ActionResult<ThumbnailResponse>> CreateThumbnail([FromBody] ThumbnailRequest request)
+    {
+        var emailVerified = User.FindFirstValue("email_verified");
+        if (emailVerified is not "true")
+        {
+            logger.LogWarning("thumbnail blocked — email not verified for user {User}",
+                User.Identity!.Name);
+
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Email not verified",
+                Detail = "You must verify your email address before generating thumbnails.",
+                Status = StatusCodes.Status403Forbidden
+            });
+        }
+
+        var (outcome, response) = await imageService.CreateThumbnailAsync(request.Key);
+
+        return outcome switch
+        {
+            ThumbnailOutcome.InvalidKey => BadRequest(new ProblemDetails
+            {
+                Title = "Invalid image key",
+                Detail = "The image key must be a GUID returned by a prior upload-url call.",
+                Status = StatusCodes.Status400BadRequest
+            }),
+            ThumbnailOutcome.SourceNotFound => NotFound(new ProblemDetails
+            {
+                Title = "Source image not found",
+                Detail = $"No uploaded object was found for key '{request.Key}'.",
+                Status = StatusCodes.Status404NotFound
+            }),
+            _ => Ok(response)
         };
     }
 }

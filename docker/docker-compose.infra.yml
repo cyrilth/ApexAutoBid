@@ -121,6 +121,7 @@ services:
       - minio
     volumes:
       - ./seed-images:/seed-images:ro
+      - ./minio:/policy:ro
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 minioadmin minioadmin; do
@@ -128,6 +129,9 @@ services:
       done;
       mc mb --ignore-existing local/auction-images;
       mc anonymous set download local/auction-images;
+      mc admin policy create local auction-svc-rw /policy/auction-svc-policy.json || true;
+      mc admin user add local auctionsvc auctionsvc-dev-secret || true;
+      mc admin policy attach local auction-svc-rw --user auctionsvc || true;
       mc mirror --overwrite --exclude '*.md' --exclude '.gitkeep' /seed-images local/auction-images;
       echo 'MinIO init complete';
       exit 0;

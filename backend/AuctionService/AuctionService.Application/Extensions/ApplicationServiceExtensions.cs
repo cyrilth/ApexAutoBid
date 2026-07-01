@@ -31,6 +31,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IMapper, ServiceMapper>();
 
         services.AddScoped<IAuctionService, AuctionAppService>();
+        services.AddScoped<IAuctionImageService, AuctionImageAppService>();
 
         return services;
     }
