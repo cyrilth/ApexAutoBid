@@ -1,9 +1,9 @@
+using System.Text.Json;
 using AuctionService.Application.Configuration;
 using AuctionService.Application.DTOs;
 using AuctionService.Domain.Entities;
 using AuctionService.Domain.Interfaces;
 using Contracts;
-using Mapster;
 using MapsterMapper;
 using MassTransit;
 using Microsoft.Extensions.Options;
@@ -37,7 +37,8 @@ public class AuctionAppService(
     public async Task<AuctionCreateResult> CreateAuctionAsync(
         CreateAuctionDto dto,
         string seller,
-        string sellerEmail)
+        string sellerEmail,
+        bool isAdmin)
     {
         // Gallery enforcement (Task 18.6) runs before any DB work — an invalid gallery
         // must not create a partially-formed auction.
@@ -45,7 +46,14 @@ public class AuctionAppService(
         if (galleryError is not null)
             return new AuctionCreateResult(galleryError.Value, null);
 
-        var auction = dto.Adapt<Auction>();
+        // mapper.Map (not the raw dto.Adapt<Auction>() extension method) is required here:
+        // AddApplicationServices() registers AuctionMappingConfig on a fresh, DI-scoped
+        // TypeAdapterConfig rather than the static TypeAdapterConfig.GlobalSettings, so the
+        // ambient .Adapt<T>() extension method (which always resolves against GlobalSettings)
+        // would silently miss the CreateAuctionDto → Auction custom rule (in particular the
+        // nested Item mapping, which has no like-named source property to fall back to by
+        // convention) and leave Auction.Item null.
+        var auction = mapper.Map<Auction>(dto);
         auction.Seller = seller;
         auction.SellerEmail = sellerEmail;
 
@@ -59,6 +67,30 @@ public class AuctionAppService(
         // are written in the same database transaction (bus outbox requirement).
         await publishEndpoint.Publish(mapper.Map<AuctionCreated>(auctionDto));
 
+        // Append-only audit record (Requirements §13.3) — added to the context BEFORE
+        // SaveChangesAsync so it commits in the SAME transaction as the auction insert.
+        // Never includes SellerEmail or any other secret/PII.
+        repository.AddAudit(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Actor = seller,
+            ActorIsAdmin = isAdmin,
+            Action = "AuctionCreated",
+            EntityType = "Auction",
+            EntityId = auction.Id.ToString(),
+            Data = JsonSerializer.Serialize(new
+            {
+                auction.Id,
+                auction.Seller,
+                auction.Item.Make,
+                auction.Item.Model,
+                auction.Item.Year,
+                auction.ReservePrice,
+                auction.AuctionEnd
+            })
+        });
+
         var saved = await repository.SaveChangesAsync();
         return saved
             ? new AuctionCreateResult(AuctionWriteResult.Success, auctionDto)
@@ -68,7 +100,8 @@ public class AuctionAppService(
     public async Task<AuctionWriteResult> UpdateAuctionAsync(
         Guid id,
         UpdateAuctionDto dto,
-        string requestingUser)
+        string requestingUser,
+        bool isAdmin)
     {
         var auction = await repository.GetByIdAsync(id);
         if (auction is null)
@@ -96,7 +129,7 @@ public class AuctionAppService(
         if (dto.Images is not null)
         {
             var newImages = dto.Images
-                .Select(i => i.Adapt<ItemImage>())
+                .Select(i => mapper.Map<ItemImage>(i))
                 .ToList();
 
             repository.ReplaceGallery(auction.Item, newImages);
@@ -109,6 +142,29 @@ public class AuctionAppService(
         var auctionDto = mapper.Map<AuctionDto>(auction);
         await publishEndpoint.Publish(mapper.Map<AuctionUpdated>(auctionDto));
 
+        // Append-only audit record (Requirements §13.3) — summarizes only the requested
+        // changes (non-null dto fields), never SellerEmail/WinnerEmail or any secret.
+        // Added to the context BEFORE SaveChangesAsync so it commits atomically.
+        repository.AddAudit(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Actor = requestingUser,
+            ActorIsAdmin = isAdmin,
+            Action = "AuctionUpdated",
+            EntityType = "Auction",
+            EntityId = id.ToString(),
+            Data = JsonSerializer.Serialize(new
+            {
+                dto.Make,
+                dto.Model,
+                dto.Color,
+                dto.Mileage,
+                dto.Year,
+                ImagesCount = dto.Images?.Count
+            })
+        });
+
         // SaveChangesAsync returns 0 when the submitted values are identical to
         // the stored ones (EF detects no dirty columns) — that is still a logical
         // success, the record is already in the requested state. Genuine failures
@@ -117,7 +173,7 @@ public class AuctionAppService(
         return AuctionWriteResult.Success;
     }
 
-    public async Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser)
+    public async Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser, bool isAdmin)
     {
         var auction = await repository.GetByIdAsync(id);
         if (auction is null)
@@ -126,10 +182,35 @@ public class AuctionAppService(
         if (auction.Seller != requestingUser)
             return AuctionWriteResult.Forbidden;
 
+        // Snapshot the fields needed for the audit Data payload before the auction is
+        // staged for removal — Remove() doesn't clear in-memory properties, but this
+        // keeps the audit payload construction unambiguous regardless of EF behavior.
+        var auditData = JsonSerializer.Serialize(new
+        {
+            auction.Id,
+            auction.Seller,
+            auction.Item.Make,
+            auction.Item.Model
+        });
+
         repository.Remove(auction);
 
         // Publish BEFORE SaveChangesAsync for atomic outbox + domain commit.
         await publishEndpoint.Publish(new AuctionDeleted(auction.Id.ToString()));
+
+        // Append-only audit record (Requirements §13.3) — added to the context BEFORE
+        // SaveChangesAsync so it commits in the SAME transaction as the auction delete.
+        repository.AddAudit(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Actor = requestingUser,
+            ActorIsAdmin = isAdmin,
+            Action = "AuctionDeleted",
+            EntityType = "Auction",
+            EntityId = auction.Id.ToString(),
+            Data = auditData
+        });
 
         return await repository.SaveChangesAsync()
             ? AuctionWriteResult.Success

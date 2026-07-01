@@ -8,6 +8,7 @@ namespace AuctionService.Infrastructure.Data;
 public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbContext(options)
 {
     public DbSet<Auction> Auctions => Set<Auction>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +65,19 @@ public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbCo
             // for the same item (which would break primary-image selection at SortOrder 0).
             image.HasIndex(img => new { img.ItemId, img.SortOrder })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<AuditEntry>(audit =>
+        {
+            audit.HasKey(a => a.Id);
+
+            audit.Property(a => a.Actor).IsRequired();
+            audit.Property(a => a.Action).IsRequired();
+            audit.Property(a => a.EntityType).IsRequired();
+            audit.Property(a => a.EntityId).IsRequired();
+
+            // JSON payload summary stored as text — no fixed schema, never queried directly.
+            audit.Property(a => a.Data).IsRequired();
         });
 
         // MassTransit transactional Outbox / Inbox tables.

@@ -31,6 +31,13 @@ public interface IAuctionRepository
     void Remove(Auction auction);
 
     /// <summary>
+    /// Stages an append-only <see cref="AuditEntry"/> for insertion on the next
+    /// <see cref="SaveChangesAsync"/> call, so it commits atomically with the mutation
+    /// it records (Requirements §13.3).
+    /// </summary>
+    void AddAudit(AuditEntry entry);
+
+    /// <summary>
     /// Gallery swap: removes the item's existing <see cref="ItemImage"/> rows and assigns
     /// <paramref name="newImages"/> as the replacement list. Each image's
     /// <see cref="ItemImage.ItemId"/> is set to <paramref name="item"/>'s id.

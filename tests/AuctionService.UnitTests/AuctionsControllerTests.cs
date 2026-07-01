@@ -61,7 +61,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task CreateAuction_WhenSaveFails_Returns400BadRequest()
     {
-        _service.CreateAuctionAsync(Arg.Any<CreateAuctionDto>(), Arg.Any<string>(), Arg.Any<string>())
+        _service.CreateAuctionAsync(Arg.Any<CreateAuctionDto>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(new AuctionCreateResult(AuctionWriteResult.SaveFailed, null));
         var controller = BuildController();
 
@@ -75,7 +75,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task UpdateAuction_WhenSuccess_ReturnsOk()
     {
-        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>())
+        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.Success);
         var controller = BuildController();
 
@@ -88,7 +88,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task UpdateAuction_WhenForbidden_Returns403Forbid()
     {
-        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>())
+        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.Forbidden);
         var controller = BuildController();
 
@@ -101,7 +101,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task UpdateAuction_WhenNotFound_Returns404()
     {
-        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>())
+        _service.UpdateAuctionAsync(Arg.Any<Guid>(), Arg.Any<UpdateAuctionDto>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.NotFound);
         var controller = BuildController();
 
@@ -114,7 +114,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task DeleteAuction_WhenSuccess_ReturnsOk()
     {
-        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>())
+        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.Success);
         var controller = BuildController();
 
@@ -127,7 +127,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task DeleteAuction_WhenNotFound_Returns404()
     {
-        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>())
+        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.NotFound);
         var controller = BuildController();
 
@@ -140,7 +140,7 @@ public class AuctionsControllerTests
     [Fact]
     public async Task DeleteAuction_WhenForbidden_Returns403Forbid()
     {
-        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>())
+        _service.DeleteAuctionAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(AuctionWriteResult.Forbidden);
         var controller = BuildController();
 

@@ -49,12 +49,27 @@ public interface IAuctionService
     /// <summary>
     /// Creates a new auction. Validates the submitted gallery (Task 18.6) before writing
     /// anything; returns an <see cref="AuctionCreateResult"/> describing the outcome.
+    /// An append-only <c>AuditEntry</c> ("AuctionCreated") is written in the same
+    /// <c>SaveChanges</c> as the mutation (Requirements §13.3); <paramref name="isAdmin"/>
+    /// is stamped onto that record and does not otherwise affect creation.
     /// </summary>
-    Task<AuctionCreateResult> CreateAuctionAsync(CreateAuctionDto dto, string seller, string sellerEmail);
+    Task<AuctionCreateResult> CreateAuctionAsync(
+        CreateAuctionDto dto, string seller, string sellerEmail, bool isAdmin);
 
-    /// <summary>Partially updates an existing auction. Returns a <see cref="AuctionWriteResult"/>.</summary>
-    Task<AuctionWriteResult> UpdateAuctionAsync(Guid id, UpdateAuctionDto dto, string requestingUser);
+    /// <summary>
+    /// Partially updates an existing auction. Returns a <see cref="AuctionWriteResult"/>.
+    /// An append-only <c>AuditEntry</c> ("AuctionUpdated") is written in the same
+    /// <c>SaveChanges</c> as the mutation (Requirements §13.3); <paramref name="isAdmin"/>
+    /// is stamped onto that record and does not otherwise affect the update.
+    /// </summary>
+    Task<AuctionWriteResult> UpdateAuctionAsync(
+        Guid id, UpdateAuctionDto dto, string requestingUser, bool isAdmin);
 
-    /// <summary>Deletes an existing auction. Returns a <see cref="AuctionWriteResult"/>.</summary>
-    Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser);
+    /// <summary>
+    /// Deletes an existing auction. Returns a <see cref="AuctionWriteResult"/>.
+    /// An append-only <c>AuditEntry</c> ("AuctionDeleted") is written in the same
+    /// <c>SaveChanges</c> as the mutation (Requirements §13.3); <paramref name="isAdmin"/>
+    /// is stamped onto that record and does not otherwise affect deletion.
+    /// </summary>
+    Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser, bool isAdmin);
 }

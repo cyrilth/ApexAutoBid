@@ -61,7 +61,7 @@ public class GalleryEnforcementTests
         var sut = new AuctionAppService(
             repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
 
-        var result = await sut.CreateAuctionAsync(SampleDto([]), "bob", "bob@x");
+        var result = await sut.CreateAuctionAsync(SampleDto([]), "bob", "bob@x", isAdmin: false);
 
         Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
         Assert.Null(result.Auction);
@@ -81,7 +81,7 @@ public class GalleryEnforcementTests
         var sut = new AuctionAppService(
             repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
 
-        var result = await sut.CreateAuctionAsync(SampleDto(ExternalImages(11)), "bob", "bob@x");
+        var result = await sut.CreateAuctionAsync(SampleDto(ExternalImages(11)), "bob", "bob@x", isAdmin: false);
 
         Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
         Assert.Null(result.Auction);
@@ -106,7 +106,7 @@ public class GalleryEnforcementTests
             new() { Url = "http://localhost:9000/auction-images/../../evil", SortOrder = 0 }
         };
 
-        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x");
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
 
         Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
         Assert.Null(result.Auction);
@@ -133,7 +133,7 @@ public class GalleryEnforcementTests
             new() { Url = $"http://localhost:9000/auction-images/{key}", SortOrder = 0 }
         };
 
-        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x");
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
 
         Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
         Assert.Null(result.Auction);
@@ -159,7 +159,7 @@ public class GalleryEnforcementTests
             new() { Url = $"http://localhost:9000/auction-images/{key}", SortOrder = 0 }
         };
 
-        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x");
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
 
         Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
         Assert.Null(result.Auction);
@@ -198,7 +198,7 @@ public class GalleryEnforcementTests
     [Fact]
     public async Task CreateAuction_WhenGalleryInvalid_Returns400BadRequest()
     {
-        _service.CreateAuctionAsync(Arg.Any<CreateAuctionDto>(), Arg.Any<string>(), Arg.Any<string>())
+        _service.CreateAuctionAsync(Arg.Any<CreateAuctionDto>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(new AuctionCreateResult(AuctionWriteResult.InvalidImages, null));
         var controller = BuildController();
 

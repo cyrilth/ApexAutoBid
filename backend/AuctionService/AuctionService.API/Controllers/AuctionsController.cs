@@ -104,7 +104,7 @@ public class AuctionsController(
         var seller = User.Identity!.Name!;
         var sellerEmail = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
 
-        var result = await service.CreateAuctionAsync(dto, seller, sellerEmail);
+        var result = await service.CreateAuctionAsync(dto, seller, sellerEmail, User.IsInRole("admin"));
 
         if (result.Status == AuctionWriteResult.Success)
         {
@@ -147,7 +147,7 @@ public class AuctionsController(
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateAuction(Guid id, [FromBody] UpdateAuctionDto dto)
     {
-        var result = await service.UpdateAuctionAsync(id, dto, User.Identity!.Name!);
+        var result = await service.UpdateAuctionAsync(id, dto, User.Identity!.Name!, User.IsInRole("admin"));
 
         return result switch
         {
@@ -184,7 +184,7 @@ public class AuctionsController(
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAuction(Guid id)
     {
-        var result = await service.DeleteAuctionAsync(id, User.Identity!.Name!);
+        var result = await service.DeleteAuctionAsync(id, User.Identity!.Name!, User.IsInRole("admin"));
 
         return result switch
         {

@@ -45,6 +45,11 @@ public class AuctionRepository(AuctionDbContext dbContext) : IAuctionRepository
         dbContext.Auctions.Remove(auction);
     }
 
+    public void AddAudit(AuditEntry entry)
+    {
+        dbContext.AuditEntries.Add(entry);
+    }
+
     public void ReplaceGallery(Item item, List<ItemImage> newImages)
     {
         dbContext.RemoveRange(item.Images);
