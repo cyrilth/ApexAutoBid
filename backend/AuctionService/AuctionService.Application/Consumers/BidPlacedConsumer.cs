@@ -1,3 +1,4 @@
+using AuctionService.Domain.Enums;
 using AuctionService.Domain.Interfaces;
 using Contracts;
 using MassTransit;
@@ -51,18 +52,24 @@ public class BidPlacedConsumer(
         // Atomic conditional update in the database: race-safe against concurrent bids for
         // the same auction and idempotent against redelivery (the "strictly greater & still
         // Live" predicate is evaluated by Postgres, not in memory).
-        var raised = await repository.TryRaiseHighBidAsync(auctionId, message.Amount);
+        var result = await repository.TryRaiseHighBidAsync(auctionId, message.Amount);
 
-        if (raised)
+        switch (result)
         {
-            // Bidder identity is intentionally never logged.
-            logger.LogInformation(
-                "Auction {AuctionId} high bid updated to {Amount}", auctionId, message.Amount);
-        }
-        else
-        {
-            logger.LogDebug(
-                "BidPlaced for Auction {AuctionId} did not raise the high bid — ignored", auctionId);
+            case HighBidUpdateResult.Raised:
+                // Bidder identity is intentionally never logged.
+                logger.LogInformation(
+                    "Auction {AuctionId} high bid updated to {Amount}", auctionId, message.Amount);
+                break;
+
+            case HighBidUpdateResult.AuctionNotFound:
+                logger.LogWarning("Auction {AuctionId} not found for BidPlaced", auctionId);
+                break;
+
+            default: // HighBidUpdateResult.NotRaised
+                logger.LogDebug(
+                    "BidPlaced for Auction {AuctionId} did not raise the high bid — ignored", auctionId);
+                break;
         }
     }
 }

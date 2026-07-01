@@ -1,4 +1,5 @@
 using AuctionService.Domain.Entities;
+using AuctionService.Domain.Enums;
 
 namespace AuctionService.Domain.Interfaces;
 
@@ -43,12 +44,14 @@ public interface IAuctionRepository
     Task<bool> SaveChangesAsync();
 
     /// <summary>
-    /// Atomically raises the auction's <c>CurrentHighBid</c> to <paramref name="amount"/>,
-    /// but only when the auction is still <c>Live</c> and <paramref name="amount"/> strictly
-    /// exceeds the stored high bid. The predicate is evaluated by the database in a single
-    /// UPDATE statement, so concurrent <c>BidPlaced</c> messages for the same auction cannot
-    /// lose updates, and redelivery of an older/equal bid is a no-op. Also stamps <c>UpdatedAt</c>.
-    /// Returns <see langword="true"/> when a row was updated.
+    /// Atomically raises the auction's <c>CurrentHighBid</c> to <paramref name="amount"/>, but only
+    /// when the auction is still <c>Live</c> and <paramref name="amount"/> strictly exceeds the stored
+    /// high bid. The predicate is evaluated by the database in a single UPDATE, so concurrent
+    /// <c>BidPlaced</c> messages for the same auction cannot lose updates and redelivery of an
+    /// older/equal bid is a no-op. Also stamps <c>UpdatedAt</c>.
+    /// Returns <see cref="HighBidUpdateResult.Raised"/> when the high bid was updated,
+    /// <see cref="HighBidUpdateResult.NotRaised"/> when the auction exists but the bid did not qualify,
+    /// or <see cref="HighBidUpdateResult.AuctionNotFound"/> when no auction with that id exists.
     /// </summary>
-    Task<bool> TryRaiseHighBidAsync(Guid auctionId, int amount);
+    Task<HighBidUpdateResult> TryRaiseHighBidAsync(Guid auctionId, int amount);
 }

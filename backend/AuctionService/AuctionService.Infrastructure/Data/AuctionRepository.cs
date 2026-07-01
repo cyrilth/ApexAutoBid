@@ -62,7 +62,7 @@ public class AuctionRepository(AuctionDbContext dbContext) : IAuctionRepository
         return await dbContext.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> TryRaiseHighBidAsync(Guid auctionId, int amount)
+    public async Task<HighBidUpdateResult> TryRaiseHighBidAsync(Guid auctionId, int amount)
     {
         var rows = await dbContext.Auctions
             .Where(a => a.Id == auctionId
@@ -72,6 +72,15 @@ public class AuctionRepository(AuctionDbContext dbContext) : IAuctionRepository
                 .SetProperty(a => a.CurrentHighBid, amount)
                 .SetProperty(a => a.UpdatedAt, DateTime.UtcNow));
 
-        return rows > 0;
+        if (rows > 0)
+            return HighBidUpdateResult.Raised;
+
+        // The atomic update matched no row. Distinguish the common, benign no-op (auction exists
+        // but the bid didn't beat the high bid, or the auction is no longer Live) from the genuine
+        // cross-service anomaly of a BidPlaced referencing an auction absent here — the latter
+        // warrants a Warning upstream. This extra lookup only runs on the no-update path and is an
+        // index-only primary-key existence check.
+        var exists = await dbContext.Auctions.AnyAsync(a => a.Id == auctionId);
+        return exists ? HighBidUpdateResult.NotRaised : HighBidUpdateResult.AuctionNotFound;
     }
 }
