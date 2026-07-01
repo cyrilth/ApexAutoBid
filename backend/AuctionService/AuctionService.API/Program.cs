@@ -1,5 +1,6 @@
 using AuctionService.API.Handlers;
 using AuctionService.API.OpenApi;
+using AuctionService.Application.Configuration;
 using AuctionService.Application.Extensions;
 using AuctionService.Infrastructure.Data;
 using AuctionService.Infrastructure.Extensions;
@@ -13,6 +14,25 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Infrastructure services (DbContext + repositories) ───────────────────────
 
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// ── Options validation (fail fast on misconfiguration) ───────────────────────
+//
+// AddInfrastructureServices binds ImagesOptions/MinioOptions from configuration; here we
+// layer DataAnnotations validation + ValidateOnStart on top so a missing or malformed
+// Images:PublicBaseUrl, Minio endpoint, or MinIO credential aborts startup with a clear
+// OptionsValidationException — rather than silently producing non-absolute object URLs
+// (which also breaks platform-hosted image detection in gallery validation) or a broken
+// S3 client. Wired here in the composition root because ValidateOnStart lives in the
+// ASP.NET Core shared framework, keeping the Infrastructure class library free of extra
+// hosting/DataAnnotations package references.
+
+builder.Services.AddOptions<ImagesOptions>()
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<MinioOptions>()
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // ── Application services (Mapster + IAuctionService) ─────────────────────────
 

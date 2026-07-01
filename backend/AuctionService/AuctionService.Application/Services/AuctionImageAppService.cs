@@ -31,7 +31,7 @@ public class AuctionImageAppService(
         if (request.SizeBytes <= 0 || request.SizeBytes > maxBytes)
         {
             return Task.FromResult<(UploadUrlOutcome, UploadUrlResponse?)>(
-                (UploadUrlOutcome.TooLarge, null));
+                (UploadUrlOutcome.InvalidSize, null));
         }
 
         var presigned = storage.CreatePresignedUpload(request.ContentType, request.SizeBytes);

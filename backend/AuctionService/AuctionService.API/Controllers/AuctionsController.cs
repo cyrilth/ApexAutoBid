@@ -256,7 +256,7 @@ public class AuctionsController(
                          "Allowed types: image/jpeg, image/png, image/webp.",
                 Status = StatusCodes.Status400BadRequest
             }),
-            UploadUrlOutcome.TooLarge => BadRequest(new ProblemDetails
+            UploadUrlOutcome.InvalidSize => BadRequest(new ProblemDetails
             {
                 Title = "Invalid file size",
                 Detail = "The declared file size must be greater than zero and within the " +

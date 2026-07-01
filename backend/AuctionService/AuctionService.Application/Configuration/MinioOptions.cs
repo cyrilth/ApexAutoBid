@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AuctionService.Application.Configuration;
 
 /// <summary>
@@ -17,12 +19,16 @@ public class MinioOptions
     public const string SectionName = "Minio";
 
     /// <summary>The S3-compatible API endpoint, e.g. <c>http://localhost:9000</c> in dev.</summary>
+    [Required]
+    [Url]
     public string ServiceUrl { get; init; } = string.Empty;
 
     /// <summary>Access key for the Auction Service's dedicated MinIO account.</summary>
+    [Required]
     public string AccessKey { get; init; } = string.Empty;
 
     /// <summary>Secret key for the Auction Service's dedicated MinIO account.</summary>
+    [Required]
     public string SecretKey { get; init; } = string.Empty;
 
     /// <summary>
@@ -30,5 +36,6 @@ public class MinioOptions
     /// to be present to compute the SigV4 signature — any value works as long as it is
     /// consistent between requests.
     /// </summary>
+    [Required]
     public string Region { get; init; } = "us-east-1";
 }

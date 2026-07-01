@@ -44,7 +44,7 @@ public class UploadUrlTests
     }
 
     [Fact]
-    public async Task CreateUploadUrlAsync_WhenSizeExceedsLimit_ReturnsTooLarge()
+    public async Task CreateUploadUrlAsync_WhenSizeExceedsLimit_ReturnsInvalidSize()
     {
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionImageAppService(storage, Options.Create(SampleImagesOptions()));
@@ -52,7 +52,20 @@ public class UploadUrlTests
         var (outcome, response) = await sut.CreateUploadUrlAsync(
             new UploadUrlRequest { ContentType = "image/jpeg", SizeBytes = 6 * 1024 * 1024 });
 
-        Assert.Equal(UploadUrlOutcome.TooLarge, outcome);
+        Assert.Equal(UploadUrlOutcome.InvalidSize, outcome);
+        Assert.Null(response);
+    }
+
+    [Fact]
+    public async Task CreateUploadUrlAsync_WhenSizeNonPositive_ReturnsInvalidSize()
+    {
+        var storage = Substitute.For<IImageStorage>();
+        var sut = new AuctionImageAppService(storage, Options.Create(SampleImagesOptions()));
+
+        var (outcome, response) = await sut.CreateUploadUrlAsync(
+            new UploadUrlRequest { ContentType = "image/jpeg", SizeBytes = 0 });
+
+        Assert.Equal(UploadUrlOutcome.InvalidSize, outcome);
         Assert.Null(response);
     }
 
@@ -128,10 +141,10 @@ public class UploadUrlTests
     }
 
     [Fact]
-    public async Task CreateUploadUrl_WhenTooLarge_Returns400BadRequest()
+    public async Task CreateUploadUrl_WhenInvalidSize_Returns400BadRequest()
     {
         _imageService.CreateUploadUrlAsync(Arg.Any<UploadUrlRequest>())
-            .Returns((UploadUrlOutcome.TooLarge, (UploadUrlResponse?)null));
+            .Returns((UploadUrlOutcome.InvalidSize, (UploadUrlResponse?)null));
         var controller = BuildController();
 
         var result = await controller.CreateUploadUrl(

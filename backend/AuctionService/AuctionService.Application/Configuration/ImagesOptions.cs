@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AuctionService.Application.Configuration;
 
 /// <summary>
@@ -20,14 +22,19 @@ public class ImagesOptions
     /// or the production S3-compatible endpoint. Combined with <see cref="Bucket"/> and an
     /// object key to build/recognise platform-hosted image URLs.
     /// </summary>
+    [Required]
+    [Url]
     public string PublicBaseUrl { get; init; } = string.Empty;
 
     /// <summary>The bucket auction images are stored in.</summary>
+    [Required]
     public string Bucket { get; init; } = "auction-images";
 
     /// <summary>Maximum allowed size, in megabytes, for a single uploaded image.</summary>
+    [Range(1, 1024)]
     public int MaxSizeMB { get; init; } = 5;
 
     /// <summary>Maximum number of images allowed in a single auction's gallery.</summary>
+    [Range(1, 100)]
     public int MaxPerAuction { get; init; } = 10;
 }

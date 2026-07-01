@@ -49,6 +49,12 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
                 ["RabbitMq:Username"] = "apex",
                 ["RabbitMq:Password"] = "apex",
                 ["IdentityServiceUrl"] = "https://localhost:5001",
+                // Satisfy the ImagesOptions/MinioOptions ValidateOnStart checks (Program.cs) so
+                // the host boots regardless of which appsettings files the test content root loads.
+                ["Images:PublicBaseUrl"] = "http://localhost:9000",
+                ["Minio:ServiceUrl"] = "http://localhost:9000",
+                ["Minio:AccessKey"] = "test-access-key",
+                ["Minio:SecretKey"] = "test-secret-key",
             });
         });
 
