@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 32 | 57 | In progress |
+| 1. Auction Service | 33 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **32** | **371** | **In progress** |
+| **Overall** | **33** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -72,7 +72,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
   - [x] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
   - [x] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
-- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
+- [x] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
   - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
   - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`

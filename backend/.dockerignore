@@ -1,0 +1,16 @@
+# Host build artifacts must never be copied into the image — the container does
+# its own restore/build. Copying host obj/ can break the in-container build.
+**/bin/
+**/obj/
+**/out/
+
+# IDE / editor state
+.vs/
+.vscode/
+**/*.user
+
+# Docker & VCS noise (the Dockerfile is supplied via -f, not needed in context)
+**/Dockerfile
+**/.dockerignore
+.git/
+.gitignore
