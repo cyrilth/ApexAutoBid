@@ -8,4 +8,7 @@
     <Project Path="backend/AuctionService/AuctionService.Domain/AuctionService.Domain.csproj" />
     <Project Path="backend/AuctionService/AuctionService.Infrastructure/AuctionService.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
+  </Folder>
 </Solution>

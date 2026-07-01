@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 33 | 57 | In progress |
+| 1. Auction Service | 41 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **33** | **371** | **In progress** |
+| **Overall** | **41** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -73,14 +73,14 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
   - [x] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
 - [x] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
-  - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
-  - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
-  - [ ] 14.3. UpdateAuction — invalid user returns 403 — `dotnet-service-builder`
-  - [ ] 14.4. UpdateAuction — invalid GUID returns 404 — `dotnet-service-builder`
-  - [ ] 14.5. DeleteAuction — valid user returns OK — `dotnet-service-builder`
-  - [ ] 14.6. DeleteAuction — invalid GUID returns 404 — `dotnet-service-builder`
-  - [ ] 14.7. DeleteAuction — invalid user returns 403 — `dotnet-service-builder`
+- [x] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
+  - [x] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
+  - [x] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
+  - [x] 14.3. UpdateAuction — invalid user returns 403 — `dotnet-service-builder`
+  - [x] 14.4. UpdateAuction — invalid GUID returns 404 — `dotnet-service-builder`
+  - [x] 14.5. DeleteAuction — valid user returns OK — `dotnet-service-builder`
+  - [x] 14.6. DeleteAuction — invalid GUID returns 404 — `dotnet-service-builder`
+  - [x] 14.7. DeleteAuction — invalid user returns 403 — `dotnet-service-builder`
 - [ ] 15. Write integration tests (AuctionService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 15.1. CreateAuction — invalid DTO returns 400 — `dotnet-service-builder`
   - [ ] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
