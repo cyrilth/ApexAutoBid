@@ -95,3 +95,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Exposes the implicit Program class (top-level statements) to the integration test
+// project so WebApplicationFactory<Program> can bootstrap the real app in-memory.
+public partial class Program { }
