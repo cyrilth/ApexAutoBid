@@ -5,6 +5,7 @@ using AuctionService.Infrastructure.Data;
 using AuctionService.Infrastructure.Extensions;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,6 +45,12 @@ builder.Services.AddMassTransit(x =>
 
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("auction", false));
 
+    // Tags MassTransit's auto-registered bus health check "ready" so it is included in the
+    // GET /health/ready predicate below (Task 21 / Requirements §13.4) — it reports unhealthy
+    // whenever the RabbitMQ broker connection is down, giving us RabbitMQ readiness for free
+    // without a second, redundant broker connection.
+    x.ConfigureHealthCheckOptions(options => options.Tags.Add("ready"));
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", host =>
@@ -61,6 +68,22 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(context);
     });
 });
+
+// ── Health checks (Task 21) ──────────────────────────────────────────────────
+//
+// GET /health/live reports 200 as soon as the process is up (no checks — mapped with
+// Predicate = _ => false below). GET /health/ready fans out to the "ready"-tagged checks:
+// PostgreSQL via AspNetCore.HealthChecks.NpgSql, and RabbitMQ via MassTransit's own bus
+// health check (tagged "ready" above). The connection string is resolved through a deferred
+// service-provider factory — not an eager builder.Configuration.GetConnectionString(...) —
+// because the integration test host overrides ConnectionStrings:DefaultConnection via
+// configuration that is only visible after the host is built (see AddInfrastructureServices).
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")!,
+        name: "postgresql",
+        tags: ["ready"]);
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
@@ -136,6 +159,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ── Health endpoints (Task 21) ────────────────────────────────────────────────
+//
+// Anonymous per Requirements §13.4. /health/live never runs a check (Predicate = _ => false)
+// so it reflects only "is the process up". /health/ready only runs checks tagged "ready"
+// (PostgreSQL + the MassTransit/RabbitMQ bus check registered above).
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false })
+    .AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") })
+    .AllowAnonymous();
 
 // ── OpenAPI document + Scalar UI (Task 16) ────────────────────────────────────
 //
