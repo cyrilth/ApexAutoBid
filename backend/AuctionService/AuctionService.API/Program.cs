@@ -1,8 +1,10 @@
+using AuctionService.API.OpenApi;
 using AuctionService.Application.Extensions;
 using AuctionService.Infrastructure.Data;
 using AuctionService.Infrastructure.Extensions;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +65,19 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddControllers();
 
+// ── OpenAPI + Scalar (Task 16) ────────────────────────────────────────────────
+//
+// BearerSecuritySchemeTransformer declares the "Bearer" HTTP security scheme (the
+// generator does not infer it from [Authorize]) and stamps Info.Title/Version.
+// AuthorizeOperationTransformer then attaches that scheme, as a requirement, only
+// to operations whose endpoint actually requires authorization.
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+    options.AddOperationTransformer<AuthorizeOperationTransformer>();
+});
+
 // ── Authentication / Authorization ───────────────────────────────────────────
 //
 // JWT bearer authentication against Duende IdentityServer (Phase 3).
@@ -93,6 +108,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ── OpenAPI document + Scalar UI (Task 16) ────────────────────────────────────
+//
+// Mapped unconditionally (not dev-only) — see Docs/Tasks.md DoD and Architecture.md §10.
+// MapOpenApi() serves the raw document at /openapi/v1.json; MapScalarApiReference()
+// serves the interactive Scalar UI at /scalar, pointed at that document.
+
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
+{
+    options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
+});
 
 app.Run();
 

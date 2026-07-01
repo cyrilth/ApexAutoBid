@@ -65,3 +65,17 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
         await _postgres.DisposeAsync();
     }
 }
+
+/// <summary>
+/// Groups every test class that depends on <see cref="CustomWebAppFactory"/> into a single
+/// xUnit collection so they share one factory instance instead of each spinning up their own
+/// PostgreSQL/RabbitMQ containers. xUnit runs distinct test classes in parallel by default, and
+/// the RabbitMQ container is pinned to a fixed host port (see <see cref="CustomWebAppFactory"/>),
+/// so two independent instances would collide on that port. Collection members still run
+/// sequentially against the shared instance.
+/// </summary>
+[CollectionDefinition(Name)]
+public class AuctionServiceApiCollection : ICollectionFixture<CustomWebAppFactory>
+{
+    public const string Name = "AuctionService.API";
+}

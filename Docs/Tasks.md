@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 45 | 57 | In progress |
+| 1. Auction Service | 46 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **45** | **371** | **In progress** |
+| **Overall** | **46** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -85,7 +85,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 15.1. CreateAuction — invalid DTO returns 400 — `dotnet-service-builder`
   - [x] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
   - [x] 15.3. UpdateAuction — valid DTO and invalid user returns 403 — `dotnet-service-builder`
-- [ ] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
+- [x] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
 - [ ] 17. Create `docker/docker-compose.infra.yml` for local development — PostgreSQL, MongoDB, RabbitMQ, Mailpit, MinIO (+ `mc` init container creating the `auction-images` bucket and uploading the committed sample images from `docker/seed-images/`) — *main conversation*, validate with `docker-validator`
 - [ ] 18. Implement auction image upload via presigned URLs (see `Requirements.md` §3.1 Image Upload) — `dotnet-service-builder`
   - [ ] 18.1. `POST api/auctions/upload-url` (Auth): validate content type (jpeg/png/webp) AND declared size against `Images__MaxSizeMB` (default 5 MB), return a 5-minute presigned PUT URL (AWSSDK.S3 → MinIO, `Content-Length` signed) + the final object URL; GUID object keys — `dotnet-service-builder`

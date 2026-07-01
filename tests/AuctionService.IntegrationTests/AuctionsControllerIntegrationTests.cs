@@ -9,8 +9,8 @@ namespace AuctionService.IntegrationTests;
 /// Integration tests for the AuctionsController write endpoints (Phase 1 Task 15),
 /// running the full HTTP + MVC + EF Core pipeline against real containerized infrastructure.
 /// </summary>
+[Collection(AuctionServiceApiCollection.Name)]
 public class AuctionsControllerIntegrationTests(CustomWebAppFactory factory)
-    : IClassFixture<CustomWebAppFactory>
 {
     private HttpClient CreateClient(string? asUser)
     {
