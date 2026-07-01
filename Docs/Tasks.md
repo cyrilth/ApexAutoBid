@@ -6,7 +6,7 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 54 | 57 | In progress |
+| 1. Auction Service | 55 | 57 | In progress |
 | 2. Search Service | 0 | 30 | Not started |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **54** | **371** | **In progress** |
+| **Overall** | **55** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -94,7 +94,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 18.4. `POST api/auctions/thumbnail` (Auth): resize the uploaded object with SixLabors.ImageSharp (max 400px, WebP) to `thumbs/{key}.webp` and return the URL (called per image; stored on the matching `ItemImage.ThumbnailUrl`); accept only keys inside `auction-images` (no arbitrary URLs — SSRF guard) — `dotnet-service-builder`
   - [x] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
   - [x] 18.6. Server-side gallery enforcement on create/update: 1–10 image count (`Images__MaxPerAuction`) via DTO validation, HEAD-verify actual size of each platform-hosted object (reject + delete oversized uploads; plain-URL fallback images exempt from size check but counted); unit tests: zero images returns 400, over-limit count returns 400 — `dotnet-service-builder`
-- [ ] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [x] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
 - [ ] 20. Add the `AuditEntry` entity and write audit records for auction create/update/delete in the same `SaveChanges` (see `Requirements.md` §13.3) — `dotnet-service-builder`
 - [ ] 21. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 

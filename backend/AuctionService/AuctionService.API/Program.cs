@@ -1,3 +1,4 @@
+using AuctionService.API.Handlers;
 using AuctionService.API.OpenApi;
 using AuctionService.Application.Extensions;
 using AuctionService.Infrastructure.Data;
@@ -65,6 +66,28 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddControllers();
 
+// ── Global error handling (Task 19) ──────────────────────────────────────────
+//
+// AddProblemDetails() makes every error response (400 model-validation failures via
+// [ApiController], 404/403/etc. returned explicitly by controllers, and 500s from
+// GlobalExceptionHandler) RFC 7807 application/problem+json. CustomizeProblemDetails
+// stamps a traceId extension on every ProblemDetails the service writes, correlating
+// the response back to the corresponding log entry (Requirements §13.1).
+//
+// GlobalExceptionHandler (IExceptionHandler) catches unhandled exceptions, always logs
+// the full exception via ILogger, and returns a 500 ProblemDetails whose Detail is the
+// full exception in Development and a generic message in Production.
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions["traceId"] =
+            System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+    };
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 // ── OpenAPI + Scalar (Task 16) ────────────────────────────────────────────────
 //
 // BearerSecuritySchemeTransformer declares the "Bearer" HTTP security scheme (the
@@ -103,6 +126,11 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 await DbInitializer.InitDbAsync(app.Services);
+
+// UseExceptionHandler is registered first so it wraps the entire remaining pipeline —
+// any unhandled exception from authentication, authorization, controllers, or elsewhere
+// downstream is caught by GlobalExceptionHandler and returned as a ProblemDetails 500.
+app.UseExceptionHandler();
 
 app.UseAuthentication();
 app.UseAuthorization();
