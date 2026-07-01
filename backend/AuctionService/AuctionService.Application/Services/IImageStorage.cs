@@ -34,7 +34,12 @@ public interface IImageStorage
     /// </summary>
     Task<long?> TryGetObjectSizeAsync(string key, CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes an object from the bucket (used to remove oversized uploads).</summary>
+    /// <summary>
+    /// Deletes an object from the bucket. Reserved for object-lifecycle cleanup (e.g. removing an
+    /// auction's images when the auction is deleted — a later enhancement); deliberately NOT called
+    /// to remove client-referenced objects that fail create/update size validation, since the
+    /// caller's ownership of a referenced key can't be proven (see <c>Docs/Requirements.md</c> §3.1).
+    /// </summary>
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>Builds the public URL for an object key: <c>{PublicBaseUrl}/{Bucket}/{key}</c>.</summary>

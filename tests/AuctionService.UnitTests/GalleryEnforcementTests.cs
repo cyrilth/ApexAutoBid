@@ -89,6 +89,79 @@ public class GalleryEnforcementTests
         await repository.DidNotReceive().SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task CreateAuctionAsync_WhenDuplicateSortOrder_ReturnsInvalidImagesBeforeCheckingSize()
+    {
+        var repository = Substitute.For<IAuctionRepository>();
+        var mapper = Substitute.For<IMapper>();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var storage = Substitute.For<IImageStorage>();
+        var sut = new AuctionAppService(
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+
+        // Two platform-hosted images both claiming SortOrder 0 would trip the unique
+        // (ItemId, SortOrder) index at SaveChanges — reject up front as a clean 400,
+        // before any object-store HEAD round-trip.
+        var images = new List<ImageDto>
+        {
+            new() { Url = $"http://localhost:9000/auction-images/{Guid.NewGuid()}", SortOrder = 0 },
+            new() { Url = $"http://localhost:9000/auction-images/{Guid.NewGuid()}", SortOrder = 0 },
+        };
+
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
+
+        Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
+        Assert.Null(result.Auction);
+        repository.DidNotReceive().Add(Arg.Any<Auction>());
+        await repository.DidNotReceive().SaveChangesAsync();
+        await storage.DidNotReceive().TryGetObjectSizeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAuctionAsync_WhenNegativeSortOrder_ReturnsInvalidImages()
+    {
+        var repository = Substitute.For<IAuctionRepository>();
+        var mapper = Substitute.For<IMapper>();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var storage = Substitute.For<IImageStorage>();
+        var sut = new AuctionAppService(
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+
+        var images = new List<ImageDto> { new() { Url = "http://ext/img.jpg", SortOrder = -1 } };
+
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
+
+        Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
+        Assert.Null(result.Auction);
+        repository.DidNotReceive().Add(Arg.Any<Auction>());
+        await repository.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateAuctionAsync_WhenGalleryHasNoPrimaryAtSortOrderZero_ReturnsInvalidImages()
+    {
+        var repository = Substitute.For<IAuctionRepository>();
+        var mapper = Substitute.For<IMapper>();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var storage = Substitute.For<IImageStorage>();
+        var sut = new AuctionAppService(
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+
+        // No SortOrder 0 means no primary image — the listing/search projection expects one.
+        var images = new List<ImageDto>
+        {
+            new() { Url = "http://ext/a.jpg", SortOrder = 1 },
+            new() { Url = "http://ext/b.jpg", SortOrder = 2 },
+        };
+
+        var result = await sut.CreateAuctionAsync(SampleDto(images), "bob", "bob@x", isAdmin: false);
+
+        Assert.Equal(AuctionWriteResult.InvalidImages, result.Status);
+        Assert.Null(result.Auction);
+        repository.DidNotReceive().Add(Arg.Any<Auction>());
+        await repository.DidNotReceive().SaveChangesAsync();
+    }
+
     // ── Platform-hosted gallery hardening (verified code review fixes) ──────
 
     [Fact]

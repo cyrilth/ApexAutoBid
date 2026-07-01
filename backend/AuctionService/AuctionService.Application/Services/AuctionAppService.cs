@@ -238,6 +238,20 @@ public class AuctionAppService(
         if (images.Count < 1 || images.Count > max)
             return AuctionWriteResult.InvalidImages;
 
+        // SortOrder integrity. The mapping preserves client-supplied SortOrder verbatim, the DB
+        // enforces a unique (ItemId, SortOrder) index, and SortOrder 0 is the primary image. Reject
+        // galleries that would violate those invariants here (clean 400) instead of letting them
+        // surface as a DbUpdateException/500 at SaveChanges: no negatives, no duplicates, and a
+        // primary at 0 must be present. This runs before any storage HEAD so a malformed gallery
+        // is rejected without an object-store round-trip.
+        var sortOrders = images.Select(img => img.SortOrder).ToList();
+        if (sortOrders.Any(order => order < 0)
+            || sortOrders.Distinct().Count() != sortOrders.Count
+            || !sortOrders.Contains(0))
+        {
+            return AuctionWriteResult.InvalidImages;
+        }
+
         var maxBytes = (long)imagesOptions.Value.MaxSizeMB * 1024 * 1024;
         var prefix = $"{imagesOptions.Value.PublicBaseUrl.TrimEnd('/')}/{imagesOptions.Value.Bucket}/";
         foreach (var img in images)

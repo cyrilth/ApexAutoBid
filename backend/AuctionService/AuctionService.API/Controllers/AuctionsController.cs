@@ -252,8 +252,9 @@ public class AuctionsController(
             }),
             UploadUrlOutcome.TooLarge => BadRequest(new ProblemDetails
             {
-                Title = "File too large",
-                Detail = "The declared file size exceeds the configured per-image limit.",
+                Title = "Invalid file size",
+                Detail = "The declared file size must be greater than zero and within the " +
+                         "configured per-image limit.",
                 Status = StatusCodes.Status400BadRequest
             }),
             _ => Ok(response)

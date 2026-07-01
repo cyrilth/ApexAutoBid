@@ -15,9 +15,12 @@ public enum AuctionWriteResult
 
     /// <summary>
     /// The submitted image gallery failed server-side validation (Phase 1 Task 18.6):
-    /// the image count was outside the configured 1..<c>Images:MaxPerAuction</c> bound, or
-    /// a platform-hosted image's actual size (verified via HEAD) exceeded
-    /// <c>Images:MaxSizeMB</c> — the oversized object is deleted before this result is returned.
+    /// the image count was outside the configured 1..<c>Images:MaxPerAuction</c> bound, a
+    /// platform-hosted image's actual size (verified via HEAD) exceeded <c>Images:MaxSizeMB</c>,
+    /// or the gallery's <c>SortOrder</c> values were invalid (negative, duplicated, or missing
+    /// the primary <c>0</c> — which would otherwise violate the unique <c>(ItemId, SortOrder)</c>
+    /// index). The referenced objects are left untouched: the create/update is simply rejected,
+    /// never deleted, because the server can't prove the caller owns a referenced object key.
     /// </summary>
     InvalidImages
 }
