@@ -57,6 +57,50 @@ public class AuctionsControllerTests
         AuctionEnd = DateTime.UtcNow.AddDays(7),
     };
 
+    // ── 8.3  GetAllAuctions(?date=) — UTC-normalized date filtering ──────────────
+    // Regression guard for the date-parsing fix: an offset-bearing ?date must be converted to
+    // the correct UTC instant (AdjustToUniversal), not relabelled with SpecifyKind — which would
+    // mislabel a local-converted value as UTC on a non-UTC host. Note: on a UTC host the old and
+    // new code converge, so this locks in the correct contract rather than failing on the old path.
+    [Fact]
+    public async Task GetAllAuctions_WhenDateHasOffset_PassesConvertedUtcInstantToService()
+    {
+        DateTime? captured = null;
+        _service.GetAuctionsAsync(Arg.Do<DateTime?>(d => captured = d))
+            .Returns(new List<AuctionDto>());
+        var controller = BuildController();
+
+        // 2026-07-01T00:00:00+05:00 is the instant 2026-06-30T19:00:00Z.
+        await controller.GetAllAuctions("2026-07-01T00:00:00+05:00");
+
+        Assert.NotNull(captured);
+        Assert.Equal(DateTimeKind.Utc, captured!.Value.Kind);
+        Assert.Equal(new DateTime(2026, 6, 30, 19, 0, 0, DateTimeKind.Utc), captured.Value);
+    }
+
+    [Fact]
+    public async Task GetAllAuctions_WhenNoDate_PassesNullToService()
+    {
+        DateTime? captured = new DateTime(2000, 1, 1);
+        _service.GetAuctionsAsync(Arg.Do<DateTime?>(d => captured = d))
+            .Returns(new List<AuctionDto>());
+        var controller = BuildController();
+
+        await controller.GetAllAuctions(null);
+
+        Assert.Null(captured);
+    }
+
+    [Fact]
+    public async Task GetAllAuctions_WhenDateInvalid_Returns400BadRequest()
+    {
+        var controller = BuildController();
+
+        var result = await controller.GetAllAuctions("not-a-date");
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
     // ── 14.1  CreateAuction — failed save returns 400 ────────────────────────────
     [Fact]
     public async Task CreateAuction_WhenSaveFails_Returns400BadRequest()

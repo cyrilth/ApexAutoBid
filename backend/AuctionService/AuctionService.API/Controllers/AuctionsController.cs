@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using AuctionService.Application.DTOs;
 using AuctionService.Application.Services;
@@ -27,7 +28,13 @@ public class AuctionsController(
 
         if (!string.IsNullOrWhiteSpace(date))
         {
-            if (!DateTime.TryParse(date, out var parsedDate))
+            // Parse with InvariantCulture (not the host's current culture) and UTC semantics:
+            // AssumeUniversal treats an offset-less value as UTC; AdjustToUniversal converts an
+            // offset-bearing value to UTC rather than to the host's local time. The result already
+            // carries Kind=Utc, so no SpecifyKind relabel — SpecifyKind only changes the Kind flag
+            // without converting, which would mislabel a local-converted instant as UTC on a non-UTC host.
+            if (!DateTime.TryParse(date, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedDate))
             {
                 return BadRequest(new ProblemDetails
                 {
@@ -37,8 +44,7 @@ public class AuctionsController(
                 });
             }
 
-            // Treat the supplied date as UTC and filter strictly greater-than.
-            updatedAfter = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
+            updatedAfter = parsedDate; // already normalized to UTC (Kind=Utc)
         }
 
         var auctions = await service.GetAuctionsAsync(updatedAfter);
