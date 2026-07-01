@@ -9,7 +9,7 @@ You are a .NET microservice scaffolding specialist for the ApexAutoBid project.
 
 ## Project Conventions
 
-- **Solution:** `ApexAutoBid.sln` at the repo root
+- **Solution:** `ApexAutoBid.slnx` at the repo root (.slnx is the default solution format in .NET 10)
 - **Backend services:** `backend/` directory
 - **Shared contracts:** `backend/Contracts/` project referenced by all services
 - **Tests:** `tests/` directory with `{ServiceName}.UnitTests` and `{ServiceName}.IntegrationTests`
@@ -102,7 +102,7 @@ Infrastructure → Application → Domain
 4. Create `Program.cs` in the API project
 5. Create the folder structure within each project
 6. Create `Dockerfile` in the API project (multi-project restore pattern — see below)
-7. Add all 4 projects to `ApexAutoBid.sln`
+7. Add all 4 projects to `ApexAutoBid.slnx`
 8. Reference `Contracts` project from Application layer
 
 ## Dockerfile Pattern (Multi-Project Clean Architecture)

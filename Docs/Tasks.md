@@ -6,18 +6,18 @@
 
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
-| 1. Auction Service | 0 | 55 | Not started |
+| 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 0 | 30 | Not started |
-| 3. Identity Service | 0 | 42 | Not started |
+| 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
-| 7. Frontend (Next.js) | 0 | 54 | Not started |
+| 7. Frontend (Next.js) | 0 | 55 | Not started |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **0** | **367** | **Not started** |
+| **Overall** | **57** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -40,61 +40,63 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the solution structure (`ApexAutoBid.sln`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`, `backend/Directory.Build.props` with the shared `<Version>` per `Docs/Versioning.md`) — `dotnet-service-builder`
-- [ ] 2. Create the `Contracts` shared project — `dotnet-service-builder`
-  - [ ] 2.1. `AuctionCreated` event contract — `dotnet-service-builder`
-  - [ ] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
-  - [ ] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
-  - [ ] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
-  - [ ] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
-- [ ] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
-- [ ] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
-  - [ ] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
-  - [ ] 4.2. `Item` entity — `dotnet-service-builder`
-  - [ ] 4.3. `Status` enum in `AuctionService.Domain/Enums/` — `dotnet-service-builder`
-- [ ] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
-  - [ ] 5.1. `AuctionDto` — `dotnet-service-builder`
-  - [ ] 5.2. `CreateAuctionDto` — `dotnet-service-builder`
-  - [ ] 5.3. `UpdateAuctionDto` — `dotnet-service-builder`
-- [ ] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
-- [ ] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
-- [ ] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
-  - [ ] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
-  - [ ] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
-  - [ ] 8.3. `GET api/auctions?date=` — get auctions updated from a given date — `dotnet-service-builder`
-  - [ ] 8.4. `POST api/auctions` — create auction (Auth) — `dotnet-service-builder`
-  - [ ] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
-  - [ ] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
-- [ ] 9. Add seed data — 10 auction items per `Requirements.md` §8.2 (relative `AuctionEnd` offsets, statuses incl. one ReserveNotMet and one sold with Winner/SoldAmount/WinnerEmail, MinIO image URLs) — `dotnet-service-builder`
-- [ ] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
-- [ ] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
-- [ ] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
-  - [ ] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
-  - [ ] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
-- [ ] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
-  - [ ] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
-  - [ ] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
-  - [ ] 14.3. UpdateAuction — invalid user returns 403 — `dotnet-service-builder`
-  - [ ] 14.4. UpdateAuction — invalid GUID returns 404 — `dotnet-service-builder`
-  - [ ] 14.5. DeleteAuction — valid user returns OK — `dotnet-service-builder`
-  - [ ] 14.6. DeleteAuction — invalid GUID returns 404 — `dotnet-service-builder`
-  - [ ] 14.7. DeleteAuction — invalid user returns 403 — `dotnet-service-builder`
-- [ ] 15. Write integration tests (AuctionService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 15.1. CreateAuction — invalid DTO returns 400 — `dotnet-service-builder`
-  - [ ] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
-  - [ ] 15.3. UpdateAuction — valid DTO and invalid user returns 403 — `dotnet-service-builder`
-- [ ] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
-- [ ] 17. Create `docker/docker-compose.infra.yml` for local development — PostgreSQL, MongoDB, RabbitMQ, Mailpit, MinIO (+ `mc` init container creating the `auction-images` bucket and uploading the committed sample images from `docker/seed-images/`) — *main conversation*, validate with `docker-validator`
-- [ ] 18. Implement auction image upload via presigned URLs (see `Requirements.md` §3.1 Image Upload) — `dotnet-service-builder`
-  - [ ] 18.1. `POST api/auctions/upload-url` (Auth): validate content type (jpeg/png/webp), return a 5-minute presigned PUT URL (AWSSDK.S3 → MinIO) + the final object URL; GUID object keys — `dotnet-service-builder`
-  - [ ] 18.2. Dedicated MinIO access key for the Auction Service with a `PutObject`-only policy on `auction-images/*` (created by the `mc` init container; dev key committed, production via env vars) — `dotnet-service-builder`
-  - [ ] 18.3. Unit tests: unauthenticated returns 401; disallowed content type returns 400; response contains a GUID key and expiry — `dotnet-service-builder`
-  - [ ] 18.4. `POST api/auctions/thumbnail` (Auth): resize the uploaded object with SixLabors.ImageSharp (max 400px, WebP) to `thumbs/{key}.webp` and return the URL; add nullable `ThumbnailUrl` to the entity, DTOs, and `AuctionCreated` contract; accept only keys inside `auction-images` (no arbitrary URLs — SSRF guard) — `dotnet-service-builder`
-  - [ ] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
-- [ ] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
-- [ ] 20. Add the `AuditEntry` entity and write audit records for auction create/update/delete in the same `SaveChanges` (see `Requirements.md` §13.3) — `dotnet-service-builder`
-- [ ] 21. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 1. Create the solution structure (`ApexAutoBid.slnx`, `backend/`, `tests/`, `.editorconfig`, `.vscode/extensions.json`, `backend/Directory.Build.props` with the shared `<Version>` per `Docs/Versioning.md`) — `dotnet-service-builder`
+- [x] 2. Create the `Contracts` shared project — `dotnet-service-builder`
+  - [x] 2.1. `AuctionCreated` event contract — `dotnet-service-builder`
+  - [x] 2.2. `AuctionUpdated` event contract — `dotnet-service-builder`
+  - [x] 2.3. `AuctionDeleted` event contract — `dotnet-service-builder`
+  - [x] 2.4. `BidPlaced` event contract — `dotnet-service-builder`
+  - [x] 2.5. `AuctionFinished` event contract (includes `WinnerEmail?` for post-sale contact exchange) — `dotnet-service-builder`
+- [x] 3. Create the Auction Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [x] 4. Define entities in `AuctionService.Domain/Entities/` — `dotnet-service-builder`
+  - [x] 4.1. `Auction` entity (includes `SellerEmail` from the `email` claim and nullable `WinnerEmail` — never mapped into `AuctionDto` by default) — `dotnet-service-builder`
+  - [x] 4.2. `Item` entity + `ItemImage` child entity (ordered multi-image gallery, 1–10 per item; `SortOrder = 0` is the primary image) — `dotnet-service-builder`
+  - [x] 4.3. `Status` enum in `AuctionService.Domain/Enums/` — `dotnet-service-builder`
+- [x] 5. Define DTOs in `AuctionService.Application/DTOs/` — `dotnet-service-builder`
+  - [x] 5.1. `AuctionDto` — `dotnet-service-builder`
+  - [x] 5.2. `CreateAuctionDto` (requires 1–10 `Images` entries, ordered — first is primary) — `dotnet-service-builder`
+  - [x] 5.3. `UpdateAuctionDto` (optional `Images?` — full gallery replacement under the same 1–10 bound) — `dotnet-service-builder`
+- [x] 6. Set up PostgreSQL with Entity Framework in `AuctionService.Infrastructure/Data/` (DbContext, migrations) — `dotnet-service-builder`
+- [x] 7. Configure Mapster mapping configs (`IRegister`) in `AuctionService.Application/Mappings/` (Entity ↔ DTO) — `dotnet-service-builder`
+- [x] 8. Implement API endpoints in `AuctionService.API/Controllers/` — `dotnet-service-builder`
+  - [x] 8.1. `GET api/auctions` — list all auctions — `dotnet-service-builder`
+  - [x] 8.2. `GET api/auctions/{id}` — get auction by id — `dotnet-service-builder`
+  - [x] 8.3. `GET api/auctions?date=` — get auctions updated from a given date — `dotnet-service-builder`
+  - [x] 8.4. `POST api/auctions` — create auction (Auth) — `dotnet-service-builder`
+  - [x] 8.5. `PUT api/auctions/{id}` — update auction (Auth) — `dotnet-service-builder`
+  - [x] 8.6. `DELETE api/auctions/{id}` — delete auction (Auth) — `dotnet-service-builder`
+  - [x] 8.7. Introduce repository + application-service layer per Architecture.md §7: `IAuctionRepository` (Domain/Interfaces) + `AuctionRepository` (Infrastructure/Data), `IAuctionService`/`AuctionAppService` (Application/Services) with an `AuctionWriteResult` enum; controllers depend on the service layer, not `DbContext` — `dotnet-service-builder`
+- [x] 9. Add seed data — 10 auction items per `Requirements.md` §8.2 (relative `AuctionEnd` offsets, statuses incl. one ReserveNotMet and one sold with Winner/SoldAmount/WinnerEmail, single-image galleries with MinIO image URLs) — `dotnet-service-builder`
+- [x] 10. Set up RabbitMQ with MassTransit (including Outbox pattern) in `AuctionService.API/Program.cs` — `dotnet-service-builder`
+- [x] 11. Publish events: `AuctionCreated`, `AuctionUpdated`, `AuctionDeleted` — `dotnet-service-builder`
+- [x] 12. Add event consumers in `AuctionService.Application/Consumers/` — `dotnet-service-builder`
+  - [x] 12.1. `BidPlaced` consumer — `dotnet-service-builder`
+  - [x] 12.2. `AuctionFinished` consumer (sets Winner, SoldAmount, Status, and `WinnerEmail`) — `dotnet-service-builder`
+- [x] 13. Dockerize the Auction Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
+- [x] 14. Write unit tests (AuctionService.UnitTests) — `dotnet-service-builder`
+  - [x] 14.1. CreateAuction — failed save returns 400 — `dotnet-service-builder`
+  - [x] 14.2. UpdateAuction — valid DTO returns OK — `dotnet-service-builder`
+  - [x] 14.3. UpdateAuction — invalid user returns 403 — `dotnet-service-builder`
+  - [x] 14.4. UpdateAuction — invalid GUID returns 404 — `dotnet-service-builder`
+  - [x] 14.5. DeleteAuction — valid user returns OK — `dotnet-service-builder`
+  - [x] 14.6. DeleteAuction — invalid GUID returns 404 — `dotnet-service-builder`
+  - [x] 14.7. DeleteAuction — invalid user returns 403 — `dotnet-service-builder`
+- [x] 15. Write integration tests (AuctionService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 15.1. CreateAuction — invalid DTO returns 400 — `dotnet-service-builder`
+  - [x] 15.2. UpdateAuction — valid DTO and user returns 200 — `dotnet-service-builder`
+  - [x] 15.3. UpdateAuction — valid DTO and invalid user returns 403 — `dotnet-service-builder`
+- [x] 16. Add API documentation: OpenAPI generation (`Microsoft.AspNetCore.OpenApi`) + Scalar UI (`Scalar.AspNetCore`), with a Bearer security scheme document transformer for the JWT-protected endpoints — `dotnet-service-builder`
+- [x] 17. Create `docker/docker-compose.infra.yml` for local development — PostgreSQL, MongoDB, RabbitMQ, Mailpit, MinIO (+ `mc` init container creating the `auction-images` bucket and uploading the committed sample images from `docker/seed-images/`) — *main conversation*, validate with `docker-validator`
+- [x] 18. Implement auction image upload via presigned URLs (see `Requirements.md` §3.1 Image Upload) — `dotnet-service-builder`
+  - [x] 18.1. `POST api/auctions/upload-url` (Auth): validate content type (jpeg/png/webp) AND declared size against `Images__MaxSizeMB` (default 5 MB), return a 5-minute presigned PUT URL (AWSSDK.S3 → MinIO, `Content-Length` signed) + the final object URL; GUID object keys — `dotnet-service-builder`
+  - [x] 18.2. Dedicated MinIO access key for the Auction Service with a `PutObject`+`DeleteObject` policy on `auction-images/*` (created by the `mc` init container; dev key committed, production via env vars) — `dotnet-service-builder`
+  - [x] 18.3. Unit tests: unauthenticated returns 401; disallowed content type returns 400; declared size over the limit returns 400; response contains a GUID key and expiry — `dotnet-service-builder`
+  - [x] 18.4. `POST api/auctions/thumbnail` (Auth): resize the uploaded object with SixLabors.ImageSharp (max 400px, WebP) to `thumbs/{key}.webp` and return the URL (called per image; stored on the matching `ItemImage.ThumbnailUrl`); accept only keys inside `auction-images` (no arbitrary URLs — SSRF guard) — `dotnet-service-builder`
+  - [x] 18.5. Unit tests: thumbnail for a valid key returns URL; key outside the bucket returns 400 — `dotnet-service-builder`
+  - [x] 18.6. Server-side gallery enforcement on create/update: 1–10 image count (`Images__MaxPerAuction`) via DTO validation, HEAD-verify actual size of each platform-hosted object (reject oversized uploads — not delete, since the caller's ownership of a referenced key can't be verified; plain-URL fallback images exempt from size check but counted); unit tests: zero images returns 400, over-limit count returns 400 — `dotnet-service-builder`
+- [x] 19. Add global error handling: `IExceptionHandler` + ProblemDetails (validation → 400, unhandled → 500; dev = full detail, prod = generic message + `traceId` — see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [x] 20. Add the `AuditEntry` entity and write audit records for auction create/update/delete in the same `SaveChanges` (see `Requirements.md` §13.3) — `dotnet-service-builder`
+- [x] 21. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -209,6 +211,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
 - [ ] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
 - [ ] 18. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [ ] 19. Add an `EmailVerified` authorization policy (`[Authorize(Policy = "EmailVerified")]`) and apply it uniformly to all mutating auction endpoints (POST/PUT/DELETE) — replaces the ad-hoc per-endpoint email_verified check currently only on create — `dotnet-service-builder`
 
 ---
 
@@ -388,12 +391,13 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 5.3. Bid history list — `frontend-builder`
   - [ ] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
   - [ ] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
-  - [ ] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from thumbnail with full-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
+  - [ ] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from the primary image's thumbnail with primary-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
+  - [ ] 5.7. Image gallery — primary image first, click/swipe navigation through the remaining images (listing cards elsewhere show only the primary thumbnail) — `frontend-builder`
 - [ ] 6. Implement auction create/edit form — `frontend-builder`
   - [ ] 6.1. `react-hook-form` for form handling — `frontend-builder`
   - [ ] 6.2. `react-datepicker` for auction end date — `frontend-builder`
-  - [ ] 6.3. Image upload — file picker uploading direct to storage via presigned PUT (`upload-url` endpoint), with a plain URL input as fallback — `frontend-builder`
-  - [ ] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail`, previews the result) — `frontend-builder`
+  - [ ] 6.3. Image upload — multi-file picker (1–10 images, client-side ≤5 MB pre-validation) uploading each file direct to storage via presigned PUT (`upload-url` endpoint), drag-to-reorder to set the primary image, with a plain URL input as fallback — `frontend-builder`
+  - [ ] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail` per image, previews the result) — `frontend-builder`
 - [ ] 7. Implement auction delete (with confirmation) — `frontend-builder`
 - [ ] 8. Implement bid placement UI — `frontend-builder`
   - [ ] 8.1. Bid input and submit — `frontend-builder`
@@ -422,7 +426,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
   - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
   - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
-  - [ ] 15.17. Image upload — create an auction with a file upload; the image lands in storage and renders on the detail page — `frontend-builder`
+  - [ ] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
   - [ ] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
 - [ ] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
 - [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`

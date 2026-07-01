@@ -47,7 +47,7 @@ Map tasks to the appropriate agent based on content:
 | Writing docker-compose files | none (main conversation) |
 | Validating Docker builds, compose config, running stack | `docker-validator` |
 | Code review, security review | `code-reviewer` |
-| Solution structure, `.sln`, `.editorconfig`, folder creation | `dotnet-service-builder` |
+| Solution structure, `.slnx`, `.editorconfig`, folder creation | `dotnet-service-builder` |
 | Kubernetes manifests, CI/CD, GitHub Actions | none (main conversation) |
 | Seed data | `dotnet-service-builder` |
 | Verification / end-to-end checks | depends on context |

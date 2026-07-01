@@ -1,0 +1,154 @@
+# ApexAutoBid — local development infrastructure (Phase 1 Task 17).
+#
+# Brings up the backing services the .NET microservices talk to during local
+# `dotnet run` development:
+#   • PostgreSQL — Auction + Identity relational data
+#   • MongoDB    — Search + Bidding document data
+#   • RabbitMQ   — MassTransit message broker
+#   • Mailpit    — dev SMTP catcher (email verification, notifications)
+#   • MinIO      — S3-compatible auction-image storage (+ mc init container)
+#
+# Application services are NOT included here — they run on the host via
+# `dotnet run` against these containers. The full containerized stack (services
+# + gateway + web-app + nginx) is assembled later in docker/docker-compose.yml
+# (Phase 8).
+#
+# Usage:  docker compose -f docker/docker-compose.infra.yml up -d
+#
+# Every credential below is a dev-only, throwaway value committed by design
+# (Requirements §6). None of these grant access to any non-local resource.
+
+name: apexautobid-infra
+
+services:
+  # ── PostgreSQL — Auction + Identity services (each creates its own database
+  #    on first run via EF Core migrations) ──────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: apex-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+    ports:
+      # Host 5433 → container 5432; 5433 avoids clashing with a pre-existing
+      # local Postgres on 5432 (Architecture §8.1).
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── MongoDB — Search + Bidding services ─────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: apex-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: mongopw
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── RabbitMQ — MassTransit broker (management UI on :15672) ─────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: apex-rabbitmq
+    # Bound to loopback only: rabbitmq.conf sets loopback_users = none, which makes the
+    # default guest/guest usable over TCP — publishing on 0.0.0.0 would expose it to the LAN.
+    # Host `dotnet run` still reaches localhost; containers use the internal `rabbitmq` hostname.
+    ports:
+      - "127.0.0.1:5672:5672"    # AMQP
+      - "127.0.0.1:15672:15672"  # management UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+      # Lets the default `guest` user connect from non-loopback hosts. The .NET
+      # services connect from the host (`dotnet run`) or the Docker network, not
+      # 127.0.0.1, and RabbitMQ restricts `guest` to loopback by default. The dev
+      # config (appsettings.Development.json) authenticates as guest/guest.
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── Mailpit — dev email catcher (SMTP :1025, web UI :8025, no auth) ─────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: apex-mailpit
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # web UI
+    networks:
+      - apexautobid
+
+  # ── MinIO — S3-compatible object storage (S3 API :9000, console :9001) ──────
+  minio:
+    image: minio/minio:latest
+    container_name: apex-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # web console
+    volumes:
+      - miniodata:/data
+    networks:
+      - apexautobid
+
+  # ── MinIO init — one-shot: create the auction-images bucket with an anonymous
+  #    download (read) policy and upload the committed sample images. Exits 0
+  #    when done; does not stay running. Re-run on demand:
+  #      docker compose -f docker/docker-compose.infra.yml up minio-init ───────
+  minio-init:
+    image: minio/mc:latest
+    container_name: apex-minio-init
+    depends_on:
+      - minio
+    volumes:
+      - ./seed-images:/seed-images:ro
+      - ./minio:/policy:ro
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'waiting for minio...'; sleep 1;
+      done;
+      mc mb --ignore-existing local/auction-images;
+      mc anonymous set download local/auction-images;
+      mc admin policy create local auction-svc-rw /policy/auction-svc-policy.json || true;
+      mc admin user add local auctionsvc auctionsvc-dev-secret || true;
+      mc admin policy attach local auction-svc-rw --user auctionsvc || true;
+      mc mirror --overwrite --exclude '*.md' --exclude '.gitkeep' /seed-images local/auction-images;
+      echo 'MinIO init complete';
+      exit 0;
+      "
+    networks:
+      - apexautobid
+
+volumes:
+  pgdata:
+  mongodata:
+  rabbitmqdata:
+  miniodata:
+
+networks:
+  apexautobid:
+    name: apexautobid
+    driver: bridge

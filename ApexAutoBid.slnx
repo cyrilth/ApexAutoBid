@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/Contracts/Contracts.csproj" />
+  </Folder>
+  <Folder Name="/backend/AuctionService/">
+    <Project Path="backend/AuctionService/AuctionService.API/AuctionService.API.csproj" />
+    <Project Path="backend/AuctionService/AuctionService.Application/AuctionService.Application.csproj" />
+    <Project Path="backend/AuctionService/AuctionService.Domain/AuctionService.Domain.csproj" />
+    <Project Path="backend/AuctionService/AuctionService.Infrastructure/AuctionService.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AuctionService.IntegrationTests/AuctionService.IntegrationTests.csproj" />
+    <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
+  </Folder>
+</Solution>

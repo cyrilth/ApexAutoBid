@@ -145,14 +145,33 @@ The application runs inside a **Docker Host** and consists of the following comp
 | Year | int |
 | Color | string |
 | Mileage | int |
-| ImageUrl | string |
-| ThumbnailUrl? | string |
+| Images | List\<ItemImage\> (ordered by SortOrder; 1–10 per item) |
 | Auction | Auction (FK) |
 | AuctionId | Guid |
 
+**ItemImage.cs** (child of Item — the auction's image gallery)
+
+| Property | Type |
+|----------|------|
+| Id | Guid |
+| Url | string |
+| ThumbnailUrl? | string |
+| SortOrder | int (0 = primary image) |
+| Item | Item (FK) |
+| ItemId | Guid |
+
+The **primary image** (`SortOrder = 0`) is what listings, search results, and social link previews use; the detail page shows the full gallery. Event contracts and the search index carry only the primary image — the full gallery is served exclusively by `GET api/auctions/{id}`.
+
+**Image limits** (validated on create/update and at `upload-url` time):
+
+| Limit | Default | Override (env) |
+|-------|---------|----------------|
+| Images per auction | 1 min, 10 max | `Images__MaxPerAuction` |
+| Size per image | 5 MB | `Images__MaxSizeMB` |
+
 **Status Enum:** Live, Finished, ReserveNotMet, Cancelled
 
-**DTOs:** AuctionDto, CreateAuctionDto (Make, Model, Color, Mileage, Year, ReservePrice, ImageUrl, ThumbnailUrl?, AuctionEnd), UpdateAuctionDto (Make?, Model?, Color?, Mileage?, Year?)
+**DTOs:** AuctionDto (includes the ordered `Images` list), CreateAuctionDto (Make, Model, Color, Mileage, Year, ReservePrice, Images — 1–10 of { Url, ThumbnailUrl?, SortOrder }, AuctionEnd), UpdateAuctionDto (Make?, Model?, Color?, Mileage?, Year?, Images? — when present, replaces the gallery wholesale under the same 1–10 bound)
 
 **Post-Sale Contact Exchange:**
 
@@ -165,18 +184,23 @@ Email flow: `SellerEmail` is captured from the JWT `email` claim at auction crea
 
 **Image Upload (presigned URLs):**
 
-Users upload their auction/vehicle photos directly to object storage — image bytes never flow through the services:
+Users upload their auction/vehicle photos directly to object storage — image bytes never flow through the services. The flow runs **once per image** (up to the per-auction limit):
 
-1. The client calls `POST api/auctions/upload-url` (authenticated, verified email) with the desired content type
-2. The Auction Service validates the content type against a whitelist (`image/jpeg`, `image/png`, `image/webp`) and returns a **presigned PUT URL** (AWSSDK.S3 against MinIO) plus the final public object URL
+1. The client calls `POST api/auctions/upload-url` (authenticated, verified email) with the desired content type **and the file's size in bytes**
+2. The Auction Service validates the content type against a whitelist (`image/jpeg`, `image/png`, `image/webp`) and the declared size against the per-image limit (default **5 MB** — `Images__MaxSizeMB`), then returns a **presigned PUT URL** (AWSSDK.S3 against MinIO) plus the final public object URL
 3. The browser PUTs the file straight to the `auction-images` bucket using the presigned URL
-4. The client submits the create/edit form with the returned object URL as `ImageUrl`
+4. The client submits the create/edit form with the collected object URLs as the `Images` list (1–10 entries, ordered; the first is the primary image)
 
-Constraints: object keys are server-generated GUIDs (no overwrites, no user-controlled paths); presigned URLs expire after **5 minutes** and sign the content type; the Auction Service uses a dedicated MinIO access key whose policy allows `PutObject` on `auction-images/*` only (least privilege — reads, including the thumbnail generator fetching originals, go through the bucket's anonymous read access). Anonymous access to the bucket remains read-only. The plain URL input stays available as a fallback for externally hosted images.
+**Size & count enforcement (defense in depth):**
+- `upload-url` rejects a declared size over the limit (400) and signs `Content-Length` into the presigned URL, so the upload fails if the client sends a different size than declared
+- On create/update, the DTO validator enforces the 1–10 image count, and the Auction Service verifies each platform-hosted object's **actual** size via a HEAD request (public read path) before accepting it — objects over the limit cause the create/update to be **rejected (400)**. The server does **not** delete the referenced object: because auction reads are anonymous, a referenced object key can't be proven to belong to the caller (deleting it would let one user destroy another user's images), and the presigned upload already signs `Content-Length`, so a compliant upload can never exceed the limit in the first place
+- Externally hosted image URLs (the plain-URL fallback) are exempt from the size check (the platform doesn't control them) but still count toward the per-auction limit
+
+Constraints: object keys are server-generated GUIDs (no overwrites, no user-controlled paths); presigned URLs expire after **5 minutes** and sign the content type and content length; the Auction Service uses a dedicated MinIO access key whose policy allows `PutObject` and `DeleteObject` on `auction-images/*` only (least privilege — reads, including the thumbnail generator fetching originals, go through the bucket's anonymous read access; `DeleteObject` is reserved for object-lifecycle cleanup — e.g. removing an auction's images when the auction is deleted, a later enhancement — and is deliberately **not** used to delete client-referenced objects during create/update). Anonymous access to the bucket remains read-only. The plain URL input stays available as a fallback for externally hosted images.
 
 **Thumbnail Generation:**
 
-After uploading, the user can optionally generate a thumbnail: `POST api/auctions/thumbnail` takes the uploaded object key, and the Auction Service downloads the original from the bucket, resizes it with **SixLabors.ImageSharp** (max 400px wide, WebP output), uploads it as `thumbs/{key}.webp`, and returns the thumbnail URL. The auction stores it as `ThumbnailUrl?` (nullable — auctions without one fall back to `ImageUrl`). Listing/search results and social link previews use the thumbnail when present; the detail page shows the full image. Only object keys inside `auction-images` are accepted (no arbitrary URL fetching — prevents SSRF).
+After uploading, the user can optionally generate a thumbnail **per image**: `POST api/auctions/thumbnail` takes an uploaded object key, and the Auction Service downloads the original from the bucket, resizes it with **SixLabors.ImageSharp** (max 400px wide, WebP output), uploads it as `thumbs/{key}.webp`, and returns the thumbnail URL. The client stores it on the matching `Images` entry as `ThumbnailUrl?` (nullable — images without one fall back to their `Url`). Listing/search results and social link previews use the **primary image's** thumbnail when present; the detail page shows the full-size gallery. Only object keys inside `auction-images` are accepted (no arbitrary URL fetching — prevents SSRF).
 
 **Emitted Event Payloads:**
 
@@ -195,8 +219,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 | Year | int |
 | Color | string |
 | Mileage | int |
-| ImageUrl | string |
-| ThumbnailUrl? | string |
+| ImageUrl | string (primary image — `SortOrder = 0`) |
+| ThumbnailUrl? | string (primary image's thumbnail) |
 | Status | string |
 | ReservePrice | int |
 | SoldAmount? | int |
@@ -212,6 +236,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 | Color | string |
 | Mileage | int |
 | Year | int |
+| ImageUrl | string (current primary image — may change when the gallery is edited) |
+| ThumbnailUrl? | string (current primary image's thumbnail) |
 | AuctionEnd? | DateTime |
 
 *AuctionDeleted:*
@@ -244,7 +270,7 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 
 > Privacy: the `WinnerEmail` field on `AuctionFinished` is **ignored** by this service — emails are never stored in or served from the search index.
 
-**Model (Item.cs):** Mirrors AuctionDto fields (Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, ThumbnailUrl?, Status, ReservePrice, SoldAmount?, CurrentHighBid?)
+**Model (Item.cs):** Flat search document (Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, ThumbnailUrl?, Status, ReservePrice, SoldAmount?, CurrentHighBid?). `ImageUrl`/`ThumbnailUrl?` hold only the **primary image** from the events — the search index never stores the full gallery (that lives in the Auction Service and is served by `GET api/auctions/{id}`)
 
 **Search Query Parameters:**
 
@@ -275,8 +301,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 | Year | int |
 | Color | string |
 | Mileage | int |
-| ImageUrl | string |
-| ThumbnailUrl? | string |
+| ImageUrl | string (primary image — `SortOrder = 0`) |
+| ThumbnailUrl? | string (primary image's thumbnail) |
 | Status | string |
 | ReservePrice | int |
 | SoldAmount? | int |
@@ -292,6 +318,8 @@ After uploading, the user can optionally generate a thumbnail: `POST api/auction
 | Color | string |
 | Mileage | int |
 | Year | int |
+| ImageUrl | string (current primary image — may change when the gallery is edited) |
+| ThumbnailUrl? | string (current primary image's thumbnail) |
 | AuctionEnd? | DateTime |
 
 *AuctionDeleted:*
@@ -536,9 +564,10 @@ Usernames in `Winner`/`Seller` are the SignalR user identifiers — no extra loo
 - Browse and search auctions with filtering/sorting/paging
 - View auction details (make, model, year, mileage, seller, reserve price)
 - Create/update/delete auctions (authenticated)
-- Auction image upload on the create/edit form — direct-to-storage via presigned PUT URL, with a plain URL input as fallback; after uploading, an optional "Generate thumbnail" step calls `POST api/auctions/thumbnail`
+- Auction image upload on the create/edit form — multi-file picker (1–10 images, ≤5 MB each with client-side pre-validation), each uploaded direct-to-storage via presigned PUT URL, with a plain URL input as fallback; drag-to-reorder sets the primary image (first position); after uploading, an optional "Generate thumbnail" step calls `POST api/auctions/thumbnail` per image
+- Image gallery on the auction detail page (primary image first, click/swipe through the rest); listing cards show the primary image's thumbnail
 - Social sharing on the auction detail page: share-intent buttons for **Facebook** (`facebook.com/sharer`), **X/Twitter** (`twitter.com/intent/tweet`), and **WhatsApp** (`wa.me`), plus a native **Share** button using the Web Share API (`navigator.share`) — on mobile this opens the OS share sheet, which is how **Instagram** is reached (Instagram has no web share URL; links can only be shared into it via the native sheet)
-- Link previews: the auction detail page emits **Open Graph + Twitter Card metadata** via Next.js `generateMetadata` (server-rendered) — `og:title` (year make model), `og:description` (status, current high bid / sold amount, auction end), `og:image` (thumbnail, falling back to the full image), `twitter:card` = `summary_large_image` — so pasting an auction link into WhatsApp, iMessage, Slack, Facebook, X, etc. renders a rich preview. Requires absolute, publicly reachable image URLs in production
+- Link previews: the auction detail page emits **Open Graph + Twitter Card metadata** via Next.js `generateMetadata` (server-rendered) — `og:title` (year make model), `og:description` (status, current high bid / sold amount, auction end), `og:image` (the primary image's thumbnail, falling back to the primary image itself), `twitter:card` = `summary_large_image` — so pasting an auction link into WhatsApp, iMessage, Slack, Facebook, X, etc. renders a rich preview. Requires absolute, publicly reachable image URLs in production
 - Place bids on auctions (authenticated)
 - Real-time bid notifications via SignalR
 - Targeted real-time notifications: "You won" toast for the auction winner and a result toast for the seller (requires connecting to the hub with the access token when logged in)
@@ -630,6 +659,8 @@ External provider credentials are real credentials in **every** environment and 
 - PlaceBid - seller bidding on own auction returns 400
 - PlaceBid - unknown auction returns 404
 - CreateAuction - unverified email returns 403
+- CreateAuction - zero images or more than the per-auction limit returns 400
+- UploadUrl - declared size over the per-image limit returns 400
 - PlaceBid - unverified email returns 403
 - Register - sends a confirmation email (Identity Service)
 - ConfirmEmail - valid token marks the email confirmed (Identity Service)
@@ -661,7 +692,7 @@ The shared dev password is committed by design (dev-only credentials — see §6
 
 ### 8.2 Auctions (Auction Service)
 
-`AuctionEnd` is computed relative to seed time (`UtcNow` + offset) so the data never goes stale. Image URLs point to the MinIO bucket (see §8.4): `{PublicBaseUrl}/auction-images/{key}`.
+`AuctionEnd` is computed relative to seed time (`UtcNow` + offset) so the data never goes stale. Image URLs point to the MinIO bucket (see §8.4): `{PublicBaseUrl}/auction-images/{key}`. Each seed auction is created with a single-image gallery (one `ItemImage` at `SortOrder = 0` using the key below) — the multi-image path is exercised through the UI and e2e tests rather than seed data.
 
 | # | Car | Color / Year / Mileage | Reserve | Seller | AuctionEnd | Status | Image key |
 |---|-----|------------------------|---------|--------|------------|--------|-----------|
@@ -697,7 +728,7 @@ These bids explain the auction states: #1's current high bid is $18,000 (below i
 
 - **MinIO** (S3-compatible) stores auction images: a single container in dev (S3 API on :9000, web console on :9001, dev credentials `minioadmin`/`minioadmin` — committed by design). In production, run MinIO on Kubernetes **or** point at any S3-compatible cloud service (AWS S3, Cloudflare R2, DigitalOcean Spaces, Backblaze B2) — only the endpoint and credential environment variables change.
 - Bucket `auction-images` with anonymous **read** (download) policy — images are served directly by URL. Writes happen two ways only: the seed init container, and user uploads via short-lived presigned PUT URLs issued by the Auction Service (see §3.1 Image Upload).
-- Least-privilege access: the Auction Service has a dedicated MinIO access key limited to `PutObject` on `auction-images/*` (dev key committed; production keys via environment variables). The `minioadmin` root credentials are used only by the dev console/init container, never by application code.
+- Least-privilege access: the Auction Service has a dedicated MinIO access key limited to `PutObject` and `DeleteObject` on `auction-images/*` (`DeleteObject` is reserved for object-lifecycle cleanup — e.g. removing an auction's images when the auction is deleted, a later enhancement — and is deliberately **not** used to delete client-referenced objects that fail create/update size verification; see §3.1; dev key committed; production keys via environment variables). The `minioadmin` root credentials are used only by the dev console/init container, never by application code.
 - 10 royalty-free sample car images are committed at `docker/seed-images/` and uploaded to the bucket at startup by an `mc` (MinIO client) init container.
 - The Next.js image config (`remotePatterns`) must whitelist the image host (dev: `localhost:9000`; production: the storage host, from an environment variable).
 

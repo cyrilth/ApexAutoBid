@@ -112,16 +112,17 @@ Post-sale contact exchange does **not** go through SignalR: after a sale, the Au
 
 ### 3.4 Image Upload (Presigned URLs)
 
-Auction images go directly from the browser to object storage — image bytes never pass through the services:
+Auction images go directly from the browser to object storage — image bytes never pass through the services. Each auction carries an ordered gallery of 1–10 images (`ItemImage` child entities; `SortOrder = 0` is the primary image), each capped at 5 MB by default (`Images__MaxPerAuction` / `Images__MaxSizeMB`). The upload flow runs once per image:
 
 ```
-1. Client ──► POST api/auctions/upload-url (JWT) ──► Auction Service
-2. Auction Service ──► validates content type ──► returns presigned PUT URL (5 min) + object URL
+1. Client ──► POST api/auctions/upload-url (JWT, content type + size) ──► Auction Service
+2. Auction Service ──► validates content type + declared size ──► returns presigned PUT URL (5 min, signs Content-Length) + object URL
 3. Client ──► PUT image bytes ──► MinIO (auction-images bucket)
-4. Client ──► submits create/edit form with the object URL as ImageUrl
+4. Client ──► submits create/edit form with the ordered Images list (first = primary)
+5. Auction Service ──► HEAD-verifies actual object sizes on create/update ──► rejects (400) oversized objects (does not delete — can't prove the caller owns the referenced key)
 ```
 
-The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch the uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings and social link previews use the thumbnail, the detail page the full image.
+The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` + `DeleteObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed; `DeleteObject` is reserved for object-lifecycle cleanup — e.g. removing an auction's images when the auction is deleted — not for deleting client-referenced objects during create/update). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch an uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings, search results, and social link previews use the **primary image's** thumbnail, the detail page the full gallery. Events and the search index carry only the primary image; the full gallery is served by `GET api/auctions/{id}`.
 
 ### 3.5 Gateway Routing
 
@@ -402,7 +403,7 @@ ApexAutoBid/
 │
 ├── .editorconfig
 ├── .gitignore
-├── ApexAutoBid.sln
+├── ApexAutoBid.slnx
 └── README.md
 ```
 
@@ -416,7 +417,7 @@ All services, databases, and infrastructure run in Docker Compose for local deve
 
 ```
 docker-compose.yml
-├── postgres          (port 5432)
+├── postgres          (host port 5433 → container 5432; 5433 avoids clashing with a pre-existing local Postgres on 5432)
 ├── mongodb           (port 27017)
 ├── rabbitmq          (port 5672, mgmt 15672)
 ├── auction-svc       (port 7001)
@@ -495,8 +496,8 @@ The `backend/Contracts/` project contains the event contract classes shared acro
 
 | Contract | Properties |
 |----------|-----------|
-| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl, ThumbnailUrl?, Status, ReservePrice, SoldAmount?, CurrentHighBid? |
-| AuctionUpdated | Id, Make, Model, Color, Mileage, Year, AuctionEnd? |
+| AuctionCreated | Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage, ImageUrl (primary), ThumbnailUrl? (primary), Status, ReservePrice, SoldAmount?, CurrentHighBid? |
+| AuctionUpdated | Id, Make, Model, Color, Mileage, Year, ImageUrl (primary), ThumbnailUrl? (primary), AuctionEnd? |
 | AuctionDeleted | Id |
 | BidPlaced | Id, AuctionId, Bidder, BidTime, Amount, BidStatus |
 | AuctionFinished | ItemSold, AuctionId, Winner?, WinnerEmail?, Seller, Amount? |
