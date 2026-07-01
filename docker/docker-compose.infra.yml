@@ -30,9 +30,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespw
     ports:
-      # Host 5433 → container 5432; 5433 avoids clashing with a pre-existing
-      # local Postgres on 5432 (Architecture §8.1).
-      - "5433:5432"
+      # Host 5434 → container 5432. 5434 avoids clashing with pre-existing local
+      # Postgres instances on this machine: the host's own on 5432 and another
+      # project's container on 5433 (Architecture §8.1).
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
