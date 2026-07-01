@@ -19,7 +19,7 @@ public class HealthCheckTests(CustomWebAppFactory factory)
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/health/live");
+        using var response = await client.GetAsync("/health/live");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -33,17 +33,27 @@ public class HealthCheckTests(CustomWebAppFactory factory)
         // The MassTransit bus can take a moment to report healthy right after the host
         // starts (broker connection handshake), so poll briefly instead of asserting once.
         HttpResponseMessage? response = null;
-        for (var attempt = 0; attempt < 10; attempt++)
+        try
         {
-            response = await client.GetAsync("/health/ready");
-            if (response.StatusCode == HttpStatusCode.OK)
+            for (var attempt = 0; attempt < 10; attempt++)
             {
-                break;
+                // Dispose the previous attempt's response before overwriting it so repeated
+                // polls don't leak sockets/handles across attempts (and across parallel runs).
+                response?.Dispose();
+                response = await client.GetAsync("/health/ready");
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            Assert.Equal(HttpStatusCode.OK, response!.StatusCode);
         }
-
-        Assert.Equal(HttpStatusCode.OK, response!.StatusCode);
+        finally
+        {
+            response?.Dispose();
+        }
     }
 }
