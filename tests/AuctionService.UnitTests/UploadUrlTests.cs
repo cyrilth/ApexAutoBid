@@ -121,10 +121,22 @@ public class UploadUrlTests
     [Fact]
     public void CreateUploadUrl_HasAuthorizeAttribute()
     {
-        var method = typeof(AuctionsController).GetMethod(nameof(AuctionsController.CreateUploadUrl));
+        // Bind to the exact overload signature so adding a CreateUploadUrl overload later
+        // can't make this throw AmbiguousMatchException.
+        var method = typeof(AuctionsController).GetMethod(
+            nameof(AuctionsController.CreateUploadUrl), [typeof(UploadUrlRequest)]);
 
         Assert.NotNull(method);
-        Assert.True(method!.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Any());
+
+        // The endpoint is protected whether [Authorize] sits on the action method or the
+        // controller type (either placement enforces auth), so accept both — otherwise a
+        // non-behavioral refactor that hoists [Authorize] to the controller would fail this test.
+        var authorizeOnMethod = method!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Any();
+        var authorizeOnController = typeof(AuctionsController)
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Any();
+
+        Assert.True(authorizeOnMethod || authorizeOnController);
     }
 
     [Fact]
