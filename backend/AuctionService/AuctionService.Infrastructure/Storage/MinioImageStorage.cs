@@ -77,7 +77,7 @@ public class MinioImageStorage(
     public async Task<string?> CreateThumbnailAsync(string key, CancellationToken cancellationToken = default)
     {
         var sourceUrl = BuildObjectUrl(key);
-        using var response = await http.GetAsync(sourceUrl, cancellationToken);
+        using var response = await http.GetAsync(sourceUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {

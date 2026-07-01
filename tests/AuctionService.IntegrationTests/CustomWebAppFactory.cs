@@ -15,9 +15,11 @@ namespace AuctionService.IntegrationTests;
 /// Boots the real Auction Service in-memory against throwaway PostgreSQL and RabbitMQ
 /// containers. The app's MassTransit/RabbitMQ config is left untouched (MassTransit throws
 /// if AddMassTransit is called twice, so we provide a real broker rather than swap the bus);
-/// the RabbitMQ container is pinned to host port 5672 with a non-guest user because the app
-/// connects to localhost:5672 and RabbitMQ's built-in guest user is loopback-restricted.
-/// Authentication is replaced with <see cref="TestAuthHandler"/>.
+/// the RabbitMQ container is given a non-guest user because RabbitMQ's built-in guest user is
+/// loopback-restricted. Testcontainers assigns a random host port for the container's 5672,
+/// and that mapped port is fed into the app via RabbitMq:Port (Program.cs now honors a
+/// configurable port), which also means concurrent test runs on the same machine can't
+/// collide on a fixed port. Authentication is replaced with <see cref="TestAuthHandler"/>.
 /// </summary>
 public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -27,7 +29,6 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
     private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder("rabbitmq:3-management")
         .WithUsername("apex")
         .WithPassword("apex")
-        .WithPortBinding(5672, 5672)
         .Build();
 
     public async Task InitializeAsync()
@@ -43,7 +44,8 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
-                ["RabbitMq:Host"] = "localhost",
+                ["RabbitMq:Host"] = _rabbitMq.Hostname,
+                ["RabbitMq:Port"] = _rabbitMq.GetMappedPublicPort(5672).ToString(),
                 ["RabbitMq:Username"] = "apex",
                 ["RabbitMq:Password"] = "apex",
                 ["IdentityServiceUrl"] = "https://localhost:5001",
@@ -69,10 +71,12 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
 /// <summary>
 /// Groups every test class that depends on <see cref="CustomWebAppFactory"/> into a single
 /// xUnit collection so they share one factory instance instead of each spinning up their own
-/// PostgreSQL/RabbitMQ containers. xUnit runs distinct test classes in parallel by default, and
-/// the RabbitMQ container is pinned to a fixed host port (see <see cref="CustomWebAppFactory"/>),
-/// so two independent instances would collide on that port. Collection members still run
-/// sequentially against the shared instance.
+/// PostgreSQL/RabbitMQ containers. xUnit runs distinct test classes in parallel by default;
+/// sharing one factory avoids the cost of starting duplicate containers per test class. The
+/// RabbitMQ container now binds a random host port (see <see cref="CustomWebAppFactory"/>), so
+/// this collection is no longer strictly required to avoid a port collision — it remains for
+/// container-reuse efficiency. Collection members still run sequentially against the shared
+/// instance.
 /// </summary>
 [CollectionDefinition(Name)]
 public class AuctionServiceApiCollection : ICollectionFixture<CustomWebAppFactory>

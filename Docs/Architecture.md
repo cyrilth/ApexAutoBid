@@ -119,10 +119,10 @@ Auction images go directly from the browser to object storage — image bytes ne
 2. Auction Service ──► validates content type + declared size ──► returns presigned PUT URL (5 min, signs Content-Length) + object URL
 3. Client ──► PUT image bytes ──► MinIO (auction-images bucket)
 4. Client ──► submits create/edit form with the ordered Images list (first = primary)
-5. Auction Service ──► HEAD-verifies actual object sizes on create/update ──► rejects + deletes oversized objects
+5. Auction Service ──► HEAD-verifies actual object sizes on create/update ──► rejects (400) oversized objects (does not delete — can't prove the caller owns the referenced key)
 ```
 
-The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` + `DeleteObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed; delete exists solely to clean up uploads that fail size verification). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch an uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings, search results, and social link previews use the **primary image's** thumbnail, the detail page the full gallery. Events and the search index carry only the primary image; the full gallery is served by `GET api/auctions/{id}`.
+The Auction Service signs uploads with a dedicated MinIO access key scoped to `PutObject` + `DeleteObject` on the bucket only (least privilege — the bucket is anonymous read, so no read grant is needed; `DeleteObject` is reserved for object-lifecycle cleanup — e.g. removing an auction's images when the auction is deleted — not for deleting client-referenced objects during create/update). An optional follow-up call (`POST api/auctions/thumbnail`) has the Auction Service fetch an uploaded object via the public read path, resize it with ImageSharp (max 400px, WebP), and store it under `thumbs/` — listings, search results, and social link previews use the **primary image's** thumbnail, the detail page the full gallery. Events and the search index carry only the primary image; the full gallery is served by `GET api/auctions/{id}`.
 
 ### 3.5 Gateway Routing
 

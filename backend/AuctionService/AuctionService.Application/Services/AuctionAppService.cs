@@ -243,7 +243,10 @@ public class AuctionAppService(
         foreach (var img in images)
         {
             // External URLs are exempt from the size check but still counted (handled by the count check above).
-            if (!img.Url.StartsWith(prefix, StringComparison.Ordinal)) continue;
+            // Scheme/host are compared case-insensitively (URLs are case-insensitive there); the extracted
+            // key is separately Guid.TryParse-validated and canonicalized below, so a case-insensitive
+            // prefix match can't let anything unsafe through.
+            if (!img.Url.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
 
             var rawKey = img.Url[prefix.Length..];
             // Only bare GUID keys are objects we issued via upload-url. Anything else (path traversal

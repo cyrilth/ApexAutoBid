@@ -7,8 +7,14 @@ namespace AuctionService.Application.Mappings;
 
 /// <summary>
 /// Mapster <see cref="IRegister"/> configuration for all Auction-related type pairs.
-/// Registered automatically via <c>TypeAdapterConfig.GlobalSettings.Scan(...)</c>
-/// called from <c>ApplicationServiceExtensions.AddApplicationServices</c>.
+/// Registered by <c>ApplicationServiceExtensions.AddApplicationServices</c> against a fresh,
+/// DI-scoped <see cref="TypeAdapterConfig"/> (<c>new TypeAdapterConfig()</c> + <c>config.Scan(...)</c>,
+/// registered as a singleton alongside a scoped <c>IMapper</c>/<c>ServiceMapper</c>) — NOT the
+/// static <c>TypeAdapterConfig.GlobalSettings</c>. Rules within this file therefore only ever
+/// reach each other through the <c>config</c> passed into <see cref="Register"/> (nested/collection
+/// mappings resolved by Mapster automatically at map time); the ambient <c>.Adapt&lt;T&gt;()</c>
+/// extension method must not be used here since it resolves against <c>GlobalSettings</c>, which
+/// this app never populates.
 /// </summary>
 public class AuctionMappingConfig : IRegister
 {
@@ -53,7 +59,6 @@ public class AuctionMappingConfig : IRegister
             .Map(dest => dest.Images,
                 src => src.Item.Images
                     .OrderBy(img => img.SortOrder)
-                    .Select(img => img.Adapt<ImageDto>())
                     .ToList());
 
         // ── 3. CreateAuctionDto → Auction ────────────────────────────────────────
@@ -81,7 +86,7 @@ public class AuctionMappingConfig : IRegister
             })
             .Map(dest => dest.ReservePrice, src => src.ReservePrice)
             .Map(dest => dest.AuctionEnd, src => src.AuctionEnd)
-            .Map(dest => dest.Item, src => src.Adapt<Item>())
+            .Map(dest => dest.Item, src => src)
             .Ignore(dest => dest.Id)
             .Ignore(dest => dest.Seller)
             .Ignore(dest => dest.SellerEmail)
@@ -111,10 +116,7 @@ public class AuctionMappingConfig : IRegister
             .Map(dest => dest.Color, src => src.Color)
             .Map(dest => dest.Year, src => src.Year)
             .Map(dest => dest.Mileage, src => src.Mileage)
-            .Map(dest => dest.Images,
-                src => src.Images
-                    .Select(img => img.Adapt<ItemImage>())
-                    .ToList())
+            .Map(dest => dest.Images, src => src.Images)
             .Ignore(dest => dest.Id)
             .Ignore(dest => dest.AuctionId)
             .Ignore(dest => dest.Auction);
