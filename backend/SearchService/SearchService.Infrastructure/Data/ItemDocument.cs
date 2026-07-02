@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Entities;
 
@@ -28,7 +29,14 @@ namespace SearchService.Infrastructure.Data;
 [Collection("Items")]
 public sealed class ItemDocument : IEntity
 {
+    // BsonGuidRepresentation is required explicitly: without it, the driver's GuidSerializer
+    // throws "cannot deserialize a Guid when GuidRepresentation is Unspecified" the moment a
+    // real document exists (discovered during Task 5 code-review verification — reading back
+    // any Guid _id failed). Standard is BSON binary subtype 4 (RFC 4122 UUID), the modern,
+    // cross-driver-compatible representation — also what mongosh's UUID() helper produces by
+    // default, so ids written by either the app or an operator via mongosh round-trip identically.
     [BsonId]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid Id { get; set; } = Guid.Empty;
 
     /// <summary>

@@ -2,6 +2,7 @@ using System.Reflection;
 using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
+using SearchService.Application.Services;
 
 namespace SearchService.Application.Extensions;
 
@@ -29,6 +30,14 @@ public static class ApplicationServiceExtensions
 
         services.AddSingleton(config);
         services.AddScoped<IMapper, ServiceMapper>();
+
+        // TimeProvider.System (Phase 2 Task 5): SearchAppService resolves "now" through this
+        // rather than DateTime.UtcNow so the EndingSoon/Finished filter unit tests
+        // (Phase 2 Task 9) can substitute a fake clock (FakeTimeProvider) instead of racing
+        // the real one.
+        services.AddSingleton(TimeProvider.System);
+
+        services.AddScoped<ISearchService, SearchAppService>();
 
         // MassTransit consumers are registered separately, in the API's Program.cs, via
         // x.AddConsumersFromNamespaceContaining<...>() — not here.

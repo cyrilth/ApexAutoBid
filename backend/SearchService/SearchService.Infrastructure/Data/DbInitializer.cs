@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Entities;
 
@@ -69,5 +70,83 @@ public static class DbInitializer
             .CreateAsync();
 
         logger.LogInformation("Text index ready on {Collection}", "Items");
+
+        // ── Equality-filter single-field indexes ──────────────────────────────────
+        //
+        // GET api/search filters on Seller/Winner/Status by exact equality — a single-field
+        // ascending index serves each of those independently regardless of which other
+        // params are supplied.
+        logger.LogInformation("Ensuring single-field indexes on {Collection}", "Items");
+
+        await db.Index<ItemDocument>().Key(x => x.Seller, KeyType.Ascending).CreateAsync();
+        await db.Index<ItemDocument>().Key(x => x.Winner, KeyType.Ascending).CreateAsync();
+        await db.Index<ItemDocument>().Key(x => x.Status, KeyType.Ascending).CreateAsync();
+
+        logger.LogInformation("Single-field indexes ready on {Collection}", "Items");
+
+        // ── Compound sort indexes (Task 5 code review carry-forward) ─────────────
+        //
+        // GET api/search's three orderBy branches each produce a multi-key $sort — Make
+        // asc/Model asc/Id asc, AuctionEnd asc/Id asc, or CreatedAt desc/Id asc (Id is always
+        // appended as the deterministic paging tiebreaker; see ItemRepository.SearchAsync).
+        // A single-field index cannot serve a multi-key sort, so without a compound index
+        // matching the exact key sequence, Mongo falls back to an in-memory $sort (100MB
+        // limit — ItemRepository.SearchAsync also sets AllowDiskUse as a second line of
+        // defense). These compound indexes replace the single-field Make/AuctionEnd/
+        // CreatedAt indexes from the initial Task 5 pass — now redundant, since a compound
+        // index's leading field still serves any plain equality/range use of that field
+        // alone — see DropObsoleteIndexesAsync below.
+        logger.LogInformation("Ensuring compound sort indexes on {Collection}", "Items");
+
+        await db.Index<ItemDocument>()
+            .Key(x => x.Make, KeyType.Ascending)
+            .Key(x => x.Model, KeyType.Ascending)
+            .Key(x => x.Id, KeyType.Ascending)
+            .CreateAsync();
+
+        await db.Index<ItemDocument>()
+            .Key(x => x.AuctionEnd, KeyType.Ascending)
+            .Key(x => x.Id, KeyType.Ascending)
+            .CreateAsync();
+
+        await db.Index<ItemDocument>()
+            .Key(x => x.CreatedAt, KeyType.Descending)
+            .Key(x => x.Id, KeyType.Ascending)
+            .CreateAsync();
+
+        logger.LogInformation("Compound sort indexes ready on {Collection}", "Items");
+
+        await DropObsoleteIndexesAsync(db, logger);
+    }
+
+    /// <summary>
+    /// Drops the single-field Make/AuctionEnd/CreatedAt indexes created by the initial
+    /// Task 5 pass, now superseded by the compound sort indexes above. MongoDB.Entities
+    /// never drops an index automatically just because the code that created it changed, so
+    /// a dev database that already ran the old startup logic would otherwise keep these
+    /// obsolete indexes forever. Guarded by an existence check via the raw driver collection
+    /// (rather than an unconditional <c>DropAsync</c>) so this stays idempotent — a fresh
+    /// database that never created them must not throw <c>IndexNotFound</c>.
+    /// </summary>
+    private static async Task DropObsoleteIndexesAsync(DB db, ILogger logger)
+    {
+        // Auto-generated MongoDB.Entities index names follow the "{Field}(Asc|Desc)" pattern
+        // — confirmed against this collection's actual index list before this fix shipped.
+        string[] obsoleteNames = ["Make(Asc)", "AuctionEnd(Asc)", "CreatedAt(Asc)"];
+
+        var collection = db.Collection<ItemDocument>();
+        var existingNames = (await collection.Indexes.List().ToListAsync())
+            .Select(index => index["name"].AsString)
+            .ToHashSet();
+
+        foreach (var obsoleteName in obsoleteNames)
+        {
+            if (!existingNames.Contains(obsoleteName))
+                continue;
+
+            logger.LogInformation(
+                "Dropping obsolete index {IndexName} on {Collection}", obsoleteName, "Items");
+            await db.Index<ItemDocument>().DropAsync(obsoleteName);
+        }
     }
 }

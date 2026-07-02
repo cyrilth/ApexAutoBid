@@ -1,20 +1,19 @@
 using SearchService.Domain.Entities;
 using SearchService.Domain.Enums;
+using SearchService.Domain.Models;
 
 namespace SearchService.Domain.Interfaces;
 
 /// <summary>
 /// Entity-level repository abstraction for <see cref="Item"/> persistence in the search
-/// index. Defined in Domain so that Application (the event consumers) can depend on it
-/// without referencing Infrastructure. Domain has zero external NuGet dependencies — only
-/// BCL and Domain entity types appear in this interface.
+/// index. Defined in Domain so that Application (the event consumers and the search
+/// service) can depend on it without referencing Infrastructure. Domain has zero external
+/// NuGet dependencies — only BCL and Domain entity types appear in this interface.
 /// </summary>
 /// <remarks>
 /// Unlike <c>AuctionService</c>'s EF Core-backed <c>IAuctionRepository</c> (an
 /// add/remove-then-<c>SaveChangesAsync</c> unit of work), MongoDB.Entities has no
-/// change-tracking session — each operation below commits immediately. Kept to what
-/// Phase 2 Task 4's consumers need (get-by-id, upsert, delete, and the atomic high-bid
-/// raise for <c>BidPlaced</c>); search/filter methods land in Phase 2 Task 5.
+/// change-tracking session — each operation below commits immediately.
 /// </remarks>
 public interface IItemRepository
 {
@@ -49,4 +48,13 @@ public interface IItemRepository
     /// is a no-op. Also stamps <c>UpdatedAt</c>.
     /// </summary>
     Task<HighBidUpdateResult> TryRaiseHighBidAsync(Guid id, int amount, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns a page of items matching <paramref name="query"/> (Phase 2 Task 5 — <c>GET
+    /// api/search</c>). <paramref name="query"/> is already fully validated/normalized by
+    /// the caller (<c>SearchAppService</c>) — this method only translates it into a MongoDB
+    /// query and never itself reads the wall clock (see <see cref="ItemSearchQuery"/>'s
+    /// remarks on why <c>Now</c> travels in the query).
+    /// </summary>
+    Task<PagedItems> SearchAsync(ItemSearchQuery query, CancellationToken cancellationToken);
 }

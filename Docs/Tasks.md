@@ -7,7 +7,7 @@
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
-| 2. Search Service | 9 | 30 | In progress |
+| 2. Search Service | 10 | 30 | In progress |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **66** | **371** | **In progress** |
+| **Overall** | **67** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -125,7 +125,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 4.3. `AuctionDeleted` — remove item — `dotnet-service-builder`
   - [x] 4.4. `BidPlaced` — update current high bid — `dotnet-service-builder`
   - [x] 4.5. `AuctionFinished` — update status, winner, sold amount (ignore `WinnerEmail` — emails are never stored in the search index) — `dotnet-service-builder`
-- [ ] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
+- [x] 5. Implement `GET api/search` endpoint in `SearchService.API/Controllers/` (searchTerm, pageSize, pageNumber, seller, winner, orderBy, filterBy) — `dotnet-service-builder`
 - [ ] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [ ] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
 - [ ] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
