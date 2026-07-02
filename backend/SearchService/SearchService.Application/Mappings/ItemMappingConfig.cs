@@ -40,5 +40,31 @@ public class ItemMappingConfig : IRegister
         // see rule 1 of AuctionMappingConfig (ItemImage ↔ ImageDto) for the same pattern.
 
         config.NewConfig<Item, ItemDto>();
+
+        // ── AuctionSyncDto → Item (Phase 2 Task 6 HTTP polling fallback) ─────────
+        //
+        // This is DataSyncService's "full document replace" reconciliation path (see its XML
+        // doc's "Backstop rationale") — maps EVERY Item field from the upstream AuctionDto
+        // wire shape (Id, CreatedAt, UpdatedAt, AuctionEnd, Seller, Make, Model, Year, Color,
+        // Mileage, Status, ReservePrice, SoldAmount, CurrentHighBid all match by name/type),
+        // not just a subset, so the sync can actually repair CurrentHighBid/Status/Winner
+        // drift, not merely base item fields.
+        //
+        // Winner: normalized empty→null, identical rule to AuctionCreated→Item above.
+        //
+        // ImageUrl/ThumbnailUrl: AuctionSyncDto carries the full gallery (a cross-service
+        // wire payload) but Item stores only the primary image, so both are derived here by
+        // re-deriving the lowest-SortOrder image rather than trusting Images[0] blindly (see
+        // AuctionSyncDto's XML doc) — same "primary image" semantics as AuctionCreated's flat
+        // ImageUrl/ThumbnailUrl fields.
+
+        config.NewConfig<AuctionSyncDto, Item>()
+            .Map(dest => dest.Winner,
+                src => string.IsNullOrEmpty(src.Winner) ? null : src.Winner)
+            .Map(dest => dest.ImageUrl,
+                src => src.Images.OrderBy(i => i.SortOrder).Select(i => i.Url).FirstOrDefault()
+                    ?? string.Empty)
+            .Map(dest => dest.ThumbnailUrl,
+                src => src.Images.OrderBy(i => i.SortOrder).Select(i => i.ThumbnailUrl).FirstOrDefault());
     }
 }

@@ -155,4 +155,19 @@ public sealed class ItemRepository(MongoDbContext mongo) : IItemRepository
             PageCount = pageCount
         };
     }
+
+    public async Task<DateTime?> GetLatestUpdatedAtAsync(CancellationToken cancellationToken)
+    {
+        // Deliberately unindexed: DbInitializer does not provision an UpdatedAt-descending
+        // index for this. Unlike GET api/search's indexes (hit on every user request), this
+        // query runs exactly once at startup (DataSyncService) against what will realistically
+        // stay a small collection — an occasional collection scan here is an acceptable
+        // tradeoff against carrying a fourth single-purpose index.
+        var latest = await mongo.Instance.Find<ItemDocument>()
+            .Sort(x => x.UpdatedAt, Order.Descending)
+            .Limit(1)
+            .ExecuteFirstAsync(cancellationToken);
+
+        return latest?.UpdatedAt;
+    }
 }

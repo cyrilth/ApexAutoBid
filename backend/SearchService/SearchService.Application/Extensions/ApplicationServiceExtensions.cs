@@ -39,6 +39,13 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<ISearchService, SearchAppService>();
 
+        // Phase 2 Task 6: IDataSyncService orchestrates the HTTP polling fallback.
+        // IAuctionServiceClient (its collaborator) is registered in Infrastructure
+        // (AddInfrastructureServices, via AddHttpClient<IAuctionServiceClient, ...>) —
+        // registration order between the two AddXServices calls in Program.cs doesn't
+        // matter; both land in the same IServiceCollection before the container is built.
+        services.AddScoped<IDataSyncService, DataSyncService>();
+
         // MassTransit consumers are registered separately, in the API's Program.cs, via
         // x.AddConsumersFromNamespaceContaining<...>() — not here.
 

@@ -57,4 +57,13 @@ public interface IItemRepository
     /// remarks on why <c>Now</c> travels in the query).
     /// </summary>
     Task<PagedItems> SearchAsync(ItemSearchQuery query, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the maximum <c>UpdatedAt</c> across every indexed item, or <see
+    /// langword="null"/> when the index is empty. Used by <c>DataSyncService</c> (Phase 2
+    /// Task 6) to ask the Auction Service for only what changed since the last successful
+    /// sync (<c>GET api/auctions?date=</c>), rather than re-pulling the entire catalog every
+    /// startup.
+    /// </summary>
+    Task<DateTime?> GetLatestUpdatedAtAsync(CancellationToken cancellationToken);
 }

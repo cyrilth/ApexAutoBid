@@ -25,9 +25,11 @@ namespace SearchService.Application.Consumers;
 /// not-yet-indexed item (a no-op — see <c>AuctionDeletedConsumer</c>), and this consumer's
 /// later upsert then re-inserts the item with nothing left to remove it again. This service
 /// deliberately does not maintain tombstone records to close that window (it would mean
-/// permanently retaining a marker for every deleted auction). The Phase 2 Task 6 HTTP
-/// polling reconciliation against the Auction Service is the backstop that eventually
-/// corrects any index entry left resurrected this way.
+/// permanently retaining a marker for every deleted auction). <c>DataSyncService</c> (Phase 2
+/// Task 6's HTTP polling fallback, run once at startup) is the backstop that eventually
+/// corrects an index entry left resurrected this way — though see its own XML doc for why
+/// even that backstop cannot detect a resurrection where the auction was ALSO deleted
+/// upstream (a true orphan, invisible to a delta sync).
 /// </para>
 /// </remarks>
 public class AuctionCreatedConsumer(

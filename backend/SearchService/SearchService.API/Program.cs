@@ -1,5 +1,6 @@
 using MassTransit;
 using SearchService.Application.Extensions;
+using SearchService.Application.Services;
 using SearchService.Infrastructure.Data;
 using SearchService.Infrastructure.Extensions;
 
@@ -55,6 +56,38 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 await DbInitializer.InitDbAsync(app.Services);
+
+// ── Phase 2 Task 6: HTTP polling fallback sync ────────────────────────────────
+//
+// Ordering invariant (do not move this below app.Run()): AddMassTransit above only
+// registers MassTransit's hosted service — it doesn't open the RabbitMQ connection or start
+// consuming until app.Run() starts every IHostedService. Running the sync here, between
+// DbInitializer and app.Run(), guarantees it completes and establishes its baseline BEFORE
+// the bus starts. That way, any events already queued in RabbitMQ (including ones published
+// while this service was down) are applied by the event consumers ON TOP of the synced
+// baseline once the bus starts, instead of a stale sync silently overwriting event-driven
+// changes that landed first.
+//
+// Deliberately broad catch (Exception) here too: DataSyncService already contains failures
+// internally at the HTTP level and per-item level (see its "Failure policy" XML doc), but
+// this is the last line of defense at the top-level startup boundary — nothing thrown by the
+// sync path, however unexpected, may be allowed to reach here and stop app.Run() from
+// starting the host. Because this sync re-runs on every restart, an unhandled exception at
+// this point would otherwise crash the service on every single startup attempt until
+// whatever caused it is fixed out-of-band — exactly the scenario this whole failure policy
+// exists to prevent.
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        await scope.ServiceProvider.GetRequiredService<IDataSyncService>().SyncAsync(CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        scope.ServiceProvider.GetRequiredService<ILogger<Program>>()
+            .LogError(ex, "Auction Service sync threw unexpectedly — continuing startup");
+    }
+}
 
 app.MapControllers();
 

@@ -5,6 +5,12 @@
 
   <ItemGroup>
     <PackageReference Include="MongoDB.Entities" Version="25.1.0" />
+    <!-- Phase 2 Task 6 — HTTP polling fallback to the Auction Service. Current stable
+         release on the "Microsoft.Extensions.Resilience" family's own 10.x line (which
+         ships on its own, more frequent cadence than the ASP.NET Core 10.0.x packages
+         elsewhere in this repo) as of this writing; bundles Polly v8 — see
+         Docs/Requirements.md §3.2 ("Microsoft.Extensions.Http.Resilience (Polly v8)"). -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
   </ItemGroup>
 
   <ItemGroup>

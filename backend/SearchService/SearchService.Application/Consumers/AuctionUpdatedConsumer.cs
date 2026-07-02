@@ -27,7 +27,10 @@ namespace SearchService.Application.Consumers;
 /// or processed out of order, the later write wins regardless of which one was published
 /// more recently, so a stale set of field values can end up persisted. This is accepted as
 /// an eventual-consistency limitation of the read model — adding a version/timestamp is a
-/// contract change and out of scope here.
+/// contract change and out of scope here. <c>DataSyncService</c> (Phase 2 Task 6's HTTP
+/// polling fallback, run once at startup) is the backstop that eventually corrects a
+/// document left stale this way, by re-syncing the auction's full current state from the
+/// Auction Service — though only once it runs again, not immediately.
 /// </para>
 /// </remarks>
 public class AuctionUpdatedConsumer(
