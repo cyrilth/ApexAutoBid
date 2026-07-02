@@ -43,6 +43,12 @@ public static class DbInitializer
         var db = await DB.InitAsync(DatabaseName, MongoClientSettings.FromConnectionString(connectionString));
         logger.LogInformation("MongoDB connection initialized for database {DatabaseName}", DatabaseName);
 
+        // MongoDB.Entities 25.1.0 exposes Find/Save/Delete/Update/Index as instance members
+        // on the connected DB instance, not static passthroughs — hand it to the singleton
+        // holder so ItemRepository (and anything else added later) can reach it without a
+        // service locator. See MongoDbContext's XML doc for the full rationale.
+        scope.ServiceProvider.GetRequiredService<MongoDbContext>().SetInstance(db);
+
         await EnsureIndexesAsync(db, logger);
     }
 
@@ -51,6 +57,11 @@ public static class DbInitializer
         logger.LogInformation(
             "Ensuring text index on {Collection} ({Fields})", "Items", "Make, Model, Color");
 
+        // MongoDB allows only ONE text index per collection. Changing this field list later
+        // (e.g. Task 5 adding more searchable fields) is not a matter of just editing the
+        // .Key() calls below — the existing "Items" text index must be dropped explicitly
+        // first (DB.Index<ItemDocument>().DropAsync(name) / DropAllAsync()), or CreateAsync
+        // will throw on startup because a second text index can't coexist with the first.
         await db.Index<ItemDocument>()
             .Key(x => x.Make, KeyType.Text)
             .Key(x => x.Model, KeyType.Text)
