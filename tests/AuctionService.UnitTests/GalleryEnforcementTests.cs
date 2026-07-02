@@ -68,7 +68,7 @@ public class GalleryEnforcementTests
         repository.DidNotReceive().Add(Arg.Any<Auction>());
         await repository.DidNotReceive().SaveChangesAsync();
         mapper.DidNotReceive().Map<AuctionDto>(Arg.Any<Auction>());
-        await publishEndpoint.DidNotReceive().Publish(Arg.Any<AuctionCreated>());
+        await publishEndpoint.DidNotReceive().Publish(Arg.Any<AuctionCreated>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

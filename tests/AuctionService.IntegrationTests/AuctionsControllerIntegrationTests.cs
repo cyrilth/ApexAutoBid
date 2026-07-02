@@ -23,7 +23,8 @@ public class AuctionsControllerIntegrationTests(CustomWebAppFactory factory)
     private async Task<Guid> GetAuctionIdOwnedByAsync(string seller)
     {
         var client = factory.CreateClient(); // GET is anonymous
-        var auctions = await client.GetFromJsonAsync<List<AuctionDto>>("api/auctions");
+        var auctions = await client.GetFromJsonAsync<List<AuctionDto>>(
+            "api/auctions", TestContext.Current.CancellationToken);
         return auctions!.First(a => a.Seller == seller).Id;
     }
 
@@ -33,7 +34,8 @@ public class AuctionsControllerIntegrationTests(CustomWebAppFactory factory)
     {
         var client = CreateClient(asUser: "bob"); // authenticated, verified — reaches model validation
         // Empty body: required Make/Model/Color/Images are missing → model validation fails.
-        var response = await client.PostAsJsonAsync("api/auctions", new { });
+        var response = await client.PostAsJsonAsync(
+            "api/auctions", new { }, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -46,7 +48,8 @@ public class AuctionsControllerIntegrationTests(CustomWebAppFactory factory)
         var client = CreateClient(asUser: "bob"); // the owner
 
         var response = await client.PutAsJsonAsync(
-            $"api/auctions/{id}", new UpdateAuctionDto { Color = "Blue" });
+            $"api/auctions/{id}", new UpdateAuctionDto { Color = "Blue" },
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -59,7 +62,8 @@ public class AuctionsControllerIntegrationTests(CustomWebAppFactory factory)
         var client = CreateClient(asUser: "alice"); // NOT the owner
 
         var response = await client.PutAsJsonAsync(
-            $"api/auctions/{id}", new UpdateAuctionDto { Color = "Blue" });
+            $"api/auctions/{id}", new UpdateAuctionDto { Color = "Blue" },
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

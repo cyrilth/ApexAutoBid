@@ -38,10 +38,12 @@ public class AuditTrailTests(CustomWebAppFactory factory)
             AuctionEnd = DateTime.UtcNow.AddDays(7),
         };
 
-        var response = await client.PostAsJsonAsync("api/auctions", dto);
+        var response = await client.PostAsJsonAsync(
+            "api/auctions", dto, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var auction = await response.Content.ReadFromJsonAsync<AuctionDto>();
+        var auction = await response.Content.ReadFromJsonAsync<AuctionDto>(
+            TestContext.Current.CancellationToken);
         Assert.NotNull(auction);
 
         using var scope = factory.Services.CreateScope();
@@ -49,7 +51,7 @@ public class AuditTrailTests(CustomWebAppFactory factory)
 
         var entries = await dbContext.AuditEntries
             .Where(a => a.EntityId == auction!.Id.ToString())
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         var entry = Assert.Single(entries);
         Assert.Equal("AuctionCreated", entry.Action);

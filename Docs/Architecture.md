@@ -417,7 +417,7 @@ All services, databases, and infrastructure run in Docker Compose for local deve
 
 ```
 docker-compose.yml
-├── postgres          (host port 5433 → container 5432; 5433 avoids clashing with a pre-existing local Postgres on 5432)
+├── postgres          (host port 5434 → container 5432; 5434 avoids clashing with pre-existing local Postgres instances on 5432/5433)
 ├── mongodb           (port 27017)
 ├── rabbitmq          (port 5672, mgmt 15672)
 ├── auction-svc       (port 7001)
