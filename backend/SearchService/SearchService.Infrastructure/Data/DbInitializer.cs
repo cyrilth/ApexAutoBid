@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,18 @@ public static class DbInitializer
     /// </summary>
     internal const string DatabaseName = "search";
 
+    /// <summary>
+    /// Bounded startup retry window for the initial Mongo connect (Phase 2 Task 8 —
+    /// Dockerize the Search Service): 10 attempts, 3 seconds apart (~27s total), covering
+    /// the common case of this service's container starting before the mongodb container is
+    /// actually ready to accept connections. Deliberately does NOT wrap index creation
+    /// (<see cref="EnsureIndexesAsync"/>) — that only ever runs after a successful connect,
+    /// so it has nothing to retry against.
+    /// </summary>
+    private const int MaxConnectAttempts = 10;
+
+    private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromSeconds(3);
+
     public static async Task InitDbAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
@@ -38,26 +51,20 @@ public static class DbInitializer
             ?? throw new InvalidOperationException(
                 "ConnectionStrings:MongoDbConnection is not configured");
 
-        // The dev connection string carries ?directConnection=true (Phase 2 Task 7):
-        // apex-mongodb is now a single-node replica set (required for MassTransit's Mongo
-        // outbox/inbox transactions — see docker-compose.infra.yml's mongodb service
-        // comment for the full why). Without that flag, the driver's replica-set discovery
-        // mode would try to resolve the set's member(s) by their advertised hostname
-        // ("localhost:27017", per the healthcheck's rs.initiate() call), which is fine
-        // inside the Docker network but doesn't reliably resolve the same way from the
-        // Windows host running `dotnet run`; directConnection=true instead talks to exactly
-        // the one node in the connection string directly, skipping discovery entirely. This
-        // same connection string is reused verbatim for the IMongoClient/IMongoDatabase
-        // registered in InfrastructureServiceExtensions for the Mongo outbox.
-        //
-        // NOTE: connecting to a not-yet-ready MongoDB (common when the container starts
-        // before the service does) currently throws and exits. A startup retry policy is
-        // added with the Docker work in Phase 2 Task 8 (Dockerize the Search Service),
-        // where service start-ordering actually matters. (Task 6's Polly retry is for the
-        // HTTP polling fallback to the Auction Service — a different concern.)
-        logger.LogInformation("Connecting to MongoDB database {DatabaseName}", DatabaseName);
-        var db = await DB.InitAsync(DatabaseName, MongoClientSettings.FromConnectionString(connectionString));
-        logger.LogInformation("MongoDB connection initialized for database {DatabaseName}", DatabaseName);
+        // The connection string carries ?directConnection=true (Phase 2 Task 7): apex-mongodb
+        // is a single-node replica set (required for MassTransit's Mongo outbox/inbox
+        // transactions — see docker-compose.infra.yml's mongodb service comment for the full
+        // why). Without that flag, the driver's replica-set discovery mode would try to
+        // resolve the set's member(s) by their advertised hostname ("localhost:27017" in dev,
+        // "mongodb:27017" in-container — per the healthcheck's rs.initiate() call), which is
+        // fine inside the Docker network the member itself is reachable on, but doesn't
+        // reliably resolve the same way from the Windows host running `dotnet run`, nor is it
+        // guaranteed to match how a *different* container reaches this one by service name;
+        // directConnection=true instead talks to exactly the one node in the connection
+        // string directly, skipping discovery entirely, in every environment. This same
+        // connection string is reused verbatim for the IMongoClient/IMongoDatabase registered
+        // in InfrastructureServiceExtensions for the Mongo outbox.
+        var db = await ConnectWithRetryAsync(connectionString, logger);
 
         // MongoDB.Entities 25.1.0 exposes Find/Save/Delete/Update/Index as instance members
         // on the connected DB instance, not static passthroughs — hand it to the singleton
@@ -66,6 +73,58 @@ public static class DbInitializer
         scope.ServiceProvider.GetRequiredService<MongoDbContext>().SetInstance(db);
 
         await EnsureIndexesAsync(db, logger);
+    }
+
+    /// <summary>
+    /// Connects to MongoDB, retrying up to <see cref="MaxConnectAttempts"/> times
+    /// (<see cref="ConnectRetryDelay"/> apart) before giving up. Each failed attempt is
+    /// logged at Warning with its attempt number; the final attempt's exception is left to
+    /// propagate uncaught.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately fails hard (rethrows, crashing startup) once the window is exhausted —
+    /// unlike <c>DataSyncService</c>'s HTTP polling fallback (Task 6), which degrades
+    /// gracefully and lets startup continue when the Auction Service is unreachable. That's
+    /// the right call there because the Auction Service is a DIFFERENT service this one only
+    /// depends on for a best-effort baseline sync. MongoDB is this service's OWN datastore:
+    /// every <c>GET api/search</c> request and every event consumer ultimately reads or
+    /// writes it, so there is no meaningful "degraded but running" state without it —
+    /// retrying forever would just hide a genuine configuration/infrastructure problem
+    /// instead of surfacing it, and container orchestrators are built to restart a process
+    /// that exits non-zero, which is exactly what an uncaught exception here produces.
+    /// </remarks>
+    private static async Task<DB> ConnectWithRetryAsync(string connectionString, ILogger logger)
+    {
+        for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
+        {
+            try
+            {
+                logger.LogInformation(
+                    "Connecting to MongoDB database {DatabaseName} (attempt {Attempt}/{MaxAttempts})",
+                    DatabaseName, attempt, MaxConnectAttempts);
+                var db = await DB.InitAsync(
+                    DatabaseName, MongoClientSettings.FromConnectionString(connectionString));
+                logger.LogInformation(
+                    "MongoDB connection initialized for database {DatabaseName}", DatabaseName);
+                return db;
+            }
+            catch (Exception ex) when (attempt < MaxConnectAttempts)
+            {
+                // The `when (attempt < MaxConnectAttempts)` guard means the LAST attempt's
+                // exception is deliberately NOT caught here — it propagates straight out of
+                // this method (see the XML remarks above for why that's correct).
+                logger.LogWarning(ex,
+                    "MongoDB connection attempt {Attempt}/{MaxAttempts} failed — retrying in {Delay}",
+                    attempt, MaxConnectAttempts, ConnectRetryDelay);
+                await Task.Delay(ConnectRetryDelay);
+            }
+        }
+
+        // Unreachable: every loop iteration either returns on success or (on the final
+        // attempt) lets its exception propagate uncaught. This satisfies the compiler's
+        // control-flow analysis, which can't see that the loop never falls through.
+        throw new UnreachableException(
+            $"{nameof(ConnectWithRetryAsync)} loop completed without returning or throwing.");
     }
 
     private static async Task EnsureIndexesAsync(DB db, ILogger logger)
