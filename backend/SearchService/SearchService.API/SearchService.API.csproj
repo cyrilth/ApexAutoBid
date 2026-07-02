@@ -6,6 +6,11 @@
   <ItemGroup>
     <!-- 8.x line — see the MassTransit license note in AuctionService.Application.csproj. -->
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <!-- Phase 2 Task 7 — Mongo outbox/inbox. Same 8.x license pin/rationale as
+         MassTransit.RabbitMQ above: MassTransit v9+ (Massient) is commercial and refuses to
+         start without an MT_LICENSE key; 8.x remains Apache 2.0. Kept in lockstep with the
+         MassTransit/MassTransit.RabbitMQ version above. -->
+    <PackageReference Include="MassTransit.MongoDb" Version="8.5.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <!-- Security pin: Microsoft.AspNetCore.OpenApi 10.0.9 pulls Microsoft.OpenApi 2.0.0
          transitively, which has a high-severity advisory (GHSA-v5pm-xwqc-g5wc — stack

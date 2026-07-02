@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 using SearchService.Application.Services;
 using SearchService.Domain.Interfaces;
 using SearchService.Infrastructure.Data;
@@ -26,6 +27,28 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<MongoDbContext>();
 
         services.AddScoped<IItemRepository, ItemRepository>();
+
+        // ── Phase 2 Task 7 — Mongo outbox/inbox: DI-resolvable driver types ──────────
+        //
+        // MassTransit's Mongo outbox (wired in Program.cs's AddMassTransit) needs an
+        // IMongoClient/IMongoDatabase it can resolve from the container — it has no
+        // knowledge of MongoDB.Entities' own internally-held connection (see MongoDbContext's
+        // XML doc). This client is therefore intentionally SEPARATE from the one
+        // DbInitializer.InitDbAsync creates via DB.InitAsync, even though both point at the
+        // exact same server and the same "search" database (DbInitializer.DatabaseName) —
+        // two independent driver-level connections to one logical database, not a shared
+        // instance. IMongoClient is a singleton because the driver's client already pools and
+        // manages connections internally; a new one per request would be wasteful.
+        services.AddSingleton<IMongoClient>(_ =>
+        {
+            var connectionString = configuration.GetConnectionString("MongoDbConnection")
+                ?? throw new InvalidOperationException(
+                    "ConnectionStrings:MongoDbConnection is not configured");
+            return new MongoClient(connectionString);
+        });
+
+        services.AddSingleton<IMongoDatabase>(sp =>
+            sp.GetRequiredService<IMongoClient>().GetDatabase(DbInitializer.DatabaseName));
 
         // Phase 2 Task 6 — HTTP polling fallback. AuctionServiceUrl is required at startup
         // (no localhost fallback here — unlike RabbitMq:Host — since a silently-wrong default

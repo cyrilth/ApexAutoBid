@@ -1,4 +1,5 @@
 using MassTransit;
+using MongoDB.Driver;
 using SearchService.Application.Extensions;
 using SearchService.Application.Services;
 using SearchService.Infrastructure.Data;
@@ -35,6 +36,45 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumersFromNamespaceContaining<SearchService.Application.Consumers.AuctionCreatedConsumer>();
 
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("search", false));
+
+    // ── Mongo outbox/inbox (Phase 2 Task 7) ──────────────────────────────────────
+    //
+    // Reality check — this service PUBLISHES nothing (it only consumes), so the OUTBOX side
+    // of this pattern (store-and-forward of messages published from inside a consumer) is
+    // dormant today. It's configured now anyway so it's ready the moment this service (or
+    // the future BiddingService, built the same way) starts publishing, matching
+    // Architecture's resilience table (Auction, Search, Bidding all use an outbox). The side
+    // that's actually active immediately is the INBOX: UseMongoDbOutbox below wraps each
+    // receive in a Mongo session and records inbox state keyed by MessageId, deduping
+    // redelivery of the exact same message within DuplicateDetectionWindow.
+    //
+    // Honesty point (do not remove): ItemRepository's writes go through MongoDB.Entities'
+    // own client/session (see MongoDbContext's XML doc) and do NOT enlist in this outbox's
+    // Mongo transaction — an item write is therefore not atomic with the inbox-state write.
+    // Consumer idempotency (Phase 2 Task 4 — e.g. AuctionCreatedConsumer's
+    // upsert-keyed-on-Guid, BidPlacedConsumer's atomic conditional update) remains the
+    // PRIMARY correctness guarantee; the inbox is a redelivery-dedup optimization layered on
+    // top of that, not a replacement for it.
+    x.AddMongoDbOutbox(o =>
+    {
+        o.ClientFactory(provider => provider.GetRequiredService<IMongoClient>());
+        o.DatabaseFactory(provider => provider.GetRequiredService<IMongoDatabase>());
+
+        // 30 minutes — MassTransit's own default, made explicit rather than left implicit.
+        // A redelivery with the same MessageId older than this window is treated as new
+        // (re-processed) rather than deduped; this service's consumers are independently
+        // idempotent (Task 4) regardless, so a window miss is a performance concern, not a
+        // correctness one.
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
+    });
+
+    // Applies UseMongoDbOutbox to every receive endpoint MassTransit auto-configures from the
+    // discovered consumers below (all five Task 4 consumers), not just one. The retry policy
+    // configured on cfg (UseMessageRetry) runs BEFORE the inbox commit — a message that fails
+    // and retries internally still results in exactly one inbox entry once the receive
+    // pipeline as a whole succeeds or exhausts retries; the inbox records the outcome of the
+    // full pipeline, not each individual retry attempt.
+    x.AddConfigureEndpointsCallback((context, name, cfg) => cfg.UseMongoDbOutbox(context));
 
     x.UsingRabbitMq((context, cfg) =>
     {

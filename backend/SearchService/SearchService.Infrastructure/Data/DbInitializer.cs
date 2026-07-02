@@ -16,9 +16,12 @@ public static class DbInitializer
 {
     /// <summary>
     /// Database name per the database-per-service table (<c>Docs/Architecture.md</c> §4.1) —
-    /// Search Service owns the <c>search</c> MongoDB database.
+    /// Search Service owns the <c>search</c> MongoDB database. Internal (not private) so
+    /// <c>InfrastructureServiceExtensions</c>'s <c>IMongoDatabase</c> registration (Phase 2
+    /// Task 7's Mongo outbox) points at the exact same database name without a second
+    /// hardcoded <c>"search"</c> literal drifting from this one.
     /// </summary>
-    private const string DatabaseName = "search";
+    internal const string DatabaseName = "search";
 
     public static async Task InitDbAsync(IServiceProvider services)
     {
@@ -35,6 +38,18 @@ public static class DbInitializer
             ?? throw new InvalidOperationException(
                 "ConnectionStrings:MongoDbConnection is not configured");
 
+        // The dev connection string carries ?directConnection=true (Phase 2 Task 7):
+        // apex-mongodb is now a single-node replica set (required for MassTransit's Mongo
+        // outbox/inbox transactions — see docker-compose.infra.yml's mongodb service
+        // comment for the full why). Without that flag, the driver's replica-set discovery
+        // mode would try to resolve the set's member(s) by their advertised hostname
+        // ("localhost:27017", per the healthcheck's rs.initiate() call), which is fine
+        // inside the Docker network but doesn't reliably resolve the same way from the
+        // Windows host running `dotnet run`; directConnection=true instead talks to exactly
+        // the one node in the connection string directly, skipping discovery entirely. This
+        // same connection string is reused verbatim for the IMongoClient/IMongoDatabase
+        // registered in InfrastructureServiceExtensions for the Mongo outbox.
+        //
         // NOTE: connecting to a not-yet-ready MongoDB (common when the container starts
         // before the service does) currently throws and exits. A startup retry policy is
         // added with the Docker work in Phase 2 Task 8 (Dockerize the Search Service),
