@@ -95,7 +95,12 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-await DbInitializer.InitDbAsync(app.Services);
+// app.Lifetime.ApplicationStopping is threaded through both startup calls below as
+// defense-in-depth cancellation (Task 8 code review) — see DbInitializer.ConnectWithRetryAsync's
+// XML remarks ("Cancellation") for the caveat that pre-app.Run() signal delivery is
+// best-effort, since the generic host's console lifetime doesn't register its Ctrl+C/SIGTERM
+// handlers until Run()/StartAsync() actually starts.
+await DbInitializer.InitDbAsync(app.Services, app.Lifetime.ApplicationStopping);
 
 // ── Phase 2 Task 6: HTTP polling fallback sync ────────────────────────────────
 //
@@ -120,7 +125,8 @@ using (var scope = app.Services.CreateScope())
 {
     try
     {
-        await scope.ServiceProvider.GetRequiredService<IDataSyncService>().SyncAsync(CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<IDataSyncService>()
+            .SyncAsync(app.Lifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {

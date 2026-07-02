@@ -36,7 +36,8 @@ public static class DbInitializer
 
     private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromSeconds(3);
 
-    public static async Task InitDbAsync(IServiceProvider services)
+    public static async Task InitDbAsync(
+        IServiceProvider services, CancellationToken cancellationToken = default)
     {
         using var scope = services.CreateScope();
 
@@ -64,7 +65,7 @@ public static class DbInitializer
         // string directly, skipping discovery entirely, in every environment. This same
         // connection string is reused verbatim for the IMongoClient/IMongoDatabase registered
         // in InfrastructureServiceExtensions for the Mongo outbox.
-        var db = await ConnectWithRetryAsync(connectionString, logger);
+        var db = await ConnectWithRetryAsync(connectionString, logger, cancellationToken);
 
         // MongoDB.Entities 25.1.0 exposes Find/Save/Delete/Update/Index as instance members
         // on the connected DB instance, not static passthroughs — hand it to the singleton
@@ -82,6 +83,7 @@ public static class DbInitializer
     /// propagate uncaught.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Deliberately fails hard (rethrows, crashing startup) once the window is exhausted —
     /// unlike <c>DataSyncService</c>'s HTTP polling fallback (Task 6), which degrades
     /// gracefully and lets startup continue when the Auction Service is unreachable. That's
@@ -92,9 +94,39 @@ public static class DbInitializer
     /// retrying forever would just hide a genuine configuration/infrastructure problem
     /// instead of surfacing it, and container orchestrators are built to restart a process
     /// that exits non-zero, which is exactly what an uncaught exception here produces.
+    /// </para>
+    /// <para>
+    /// <b>ServerSelectionTimeout = 5s (Task 8 code review):</b> the driver's own default is
+    /// 30s, which would make the worst case here ~5.5 minutes (10 × 30s + 9 × 3s) before this
+    /// process exits — too slow for a container orchestrator's crash-loop feedback. Trimming
+    /// it to 5s brings the worst case down to ~80s (10×5s + 9×3s). CAVEAT: this setting lives
+    /// on the <see cref="MongoClientSettings"/> object baked into the returned <see cref="DB"/>
+    /// instance for its whole lifetime (MongoDB.Entities/the driver caches the underlying
+    /// client by settings value-equality), so every RUNTIME query this service makes afterward
+    /// also gets only a 5s server-selection budget, not just this startup connect. Acceptable
+    /// today because the topology is a single node — a failure hits the consumer retry policy
+    /// or the request pipeline quickly either way — but revisit (raise it, or split startup vs.
+    /// runtime settings) if a future multi-node replica set needs failover-election headroom,
+    /// which typically wants more than 10s.
+    /// </para>
+    /// <para>
+    /// <b>Cancellation:</b> <paramref name="cancellationToken"/> is only observed by the
+    /// <see cref="Task.Delay(TimeSpan,CancellationToken)"/> between attempts — <c>DB.InitAsync</c>
+    /// itself takes no token, so each attempt is a non-cancellable chunk bounded by the 5s
+    /// ServerSelectionTimeout above. This is defense-in-depth, not a guarantee: it only helps
+    /// hosts where the lifetime's shutdown signal is already wired up when this runs (e.g.
+    /// tests, or a future hosting change) — <c>Program.cs</c> calls this before
+    /// <c>app.Run()</c>, and the generic host's console lifetime doesn't register its
+    /// Ctrl+C/SIGTERM handlers until <c>Run()</c>/<c>StartAsync()</c> actually starts, so
+    /// pre-<c>Run()</c> signal delivery here is best-effort at best today.
+    /// </para>
     /// </remarks>
-    private static async Task<DB> ConnectWithRetryAsync(string connectionString, ILogger logger)
+    private static async Task<DB> ConnectWithRetryAsync(
+        string connectionString, ILogger logger, CancellationToken cancellationToken)
     {
+        var clientSettings = MongoClientSettings.FromConnectionString(connectionString);
+        clientSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
+
         for (var attempt = 1; attempt <= MaxConnectAttempts; attempt++)
         {
             try
@@ -102,8 +134,7 @@ public static class DbInitializer
                 logger.LogInformation(
                     "Connecting to MongoDB database {DatabaseName} (attempt {Attempt}/{MaxAttempts})",
                     DatabaseName, attempt, MaxConnectAttempts);
-                var db = await DB.InitAsync(
-                    DatabaseName, MongoClientSettings.FromConnectionString(connectionString));
+                var db = await DB.InitAsync(DatabaseName, clientSettings);
                 logger.LogInformation(
                     "MongoDB connection initialized for database {DatabaseName}", DatabaseName);
                 return db;
@@ -116,7 +147,7 @@ public static class DbInitializer
                 logger.LogWarning(ex,
                     "MongoDB connection attempt {Attempt}/{MaxAttempts} failed — retrying in {Delay}",
                     attempt, MaxConnectAttempts, ConnectRetryDelay);
-                await Task.Delay(ConnectRetryDelay);
+                await Task.Delay(ConnectRetryDelay, cancellationToken);
             }
         }
 

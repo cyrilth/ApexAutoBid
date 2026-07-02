@@ -70,10 +70,13 @@ public sealed class AuctionServiceHttpClient(
             // resilience pipeline's own per-attempt timeout (which manifests as a
             // cancellation) while still letting a caller-initiated cancellation (this
             // method's own cancellationToken) propagate untouched rather than being
-            // misreported as "unreachable". In practice this branch is currently vacuous —
-            // the sole caller (DataSyncService) always passes CancellationToken.None, so
-            // cancellationToken.IsCancellationRequested can never be true today — kept as
-            // correct future-proofing, not a tested path.
+            // misreported as "unreachable". No longer purely theoretical (Task 8 code
+            // review): the call chain is now Program.cs → DataSyncService.SyncAsync →
+            // here, threading app.Lifetime.ApplicationStopping — so a real (if
+            // best-effort pre-app.Run(), per DbInitializer.ConnectWithRetryAsync's
+            // "Cancellation" remarks) shutdown signal can reach this guard. Still expected
+            // to be rare in practice, since this call completes quickly relative to a
+            // shutdown window, but it is no longer structurally impossible.
             logger.LogError(ex, "Failed to reach Auction Service at {RequestUri} after retries", requestUri);
             return null;
         }
