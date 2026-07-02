@@ -5,7 +5,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="9.1.2" />
+    <!-- 8.x line — see the MassTransit license note in AuctionService.Application.csproj. -->
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.10" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <!-- Security pin: Microsoft.AspNetCore.OpenApi 10.0.9 pulls Microsoft.OpenApi 2.0.0
@@ -14,8 +15,9 @@
          Stays on the 2.x line because ASP.NET Core 10's OpenAPI stack (incl. its source
          generator) is built against Microsoft.OpenApi 2.x; 3.x is a .NET 11 change. -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />
-    <!-- Pin EF Core assemblies to 10.0.9 to resolve version conflicts with
-         MassTransit.RabbitMQ's transitive dependency on EF Core 10.0.4. -->
+    <!-- Pin EF Core assemblies to 10.0.9 so every EF Core assembly resolves to the same
+         version regardless of what floor MassTransit.EntityFrameworkCore's transitive
+         dependency declares (Npgsql.EntityFrameworkCore.PostgreSQL 10.x requires EF Core 10). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
     <!-- Required on the startup project for `dotnet ef` design-time tooling

@@ -19,7 +19,8 @@ public class ErrorHandlingTests(CustomWebAppFactory factory)
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "bob");
 
-        var response = await client.PostAsJsonAsync("api/auctions", new { }); // invalid: missing required fields
+        var response = await client.PostAsJsonAsync(
+            "api/auctions", new { }, TestContext.Current.CancellationToken); // invalid: missing required fields
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);

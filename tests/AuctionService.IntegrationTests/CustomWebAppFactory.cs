@@ -31,7 +31,7 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
         .WithPassword("apex")
         .Build();
 
-    async Task IAsyncLifetime.InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
         await _rabbitMq.StartAsync();
@@ -67,13 +67,12 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
         });
     }
 
-    // Explicit IAsyncLifetime implementation rather than `new`-hiding the base method:
-    // WebApplicationFactory already exposes a public ValueTask DisposeAsync() (IAsyncDisposable),
-    // so declaring `public new async Task DisposeAsync()` hid it, making which teardown ran depend
-    // on how xUnit disposed the fixture. As an explicit interface member, xUnit's IAsyncLifetime
-    // teardown invokes this deterministically; we dispose the containers and then await
+    // xUnit v3's IAsyncLifetime inherits IAsyncDisposable, so teardown is a ValueTask-returning
+    // DisposeAsync — the same signature WebApplicationFactory already exposes. We simply override
+    // the base method; the explicit-interface / `new`-hiding dance that v2's Task-returning
+    // DisposeAsync forced is no longer needed. Dispose the containers, then await
     // base.DisposeAsync() so the in-memory host is torn down too (base dispose is idempotent).
-    async Task IAsyncLifetime.DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         await _rabbitMq.DisposeAsync();
         await _postgres.DisposeAsync();

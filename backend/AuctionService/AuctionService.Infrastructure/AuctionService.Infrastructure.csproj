@@ -5,7 +5,8 @@
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="4.0.100.1" />
-    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="9.1.2" />
+    <!-- 8.x line — see the MassTransit license note in AuctionService.Application.csproj. -->
+    <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.5.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -6,7 +6,11 @@
   <ItemGroup>
     <PackageReference Include="Mapster" Version="10.0.10" />
     <PackageReference Include="Mapster.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="MassTransit" Version="9.1.2" />
+    <!-- Pinned to the 8.x line: MassTransit v9+ is commercial (Massient) and refuses to
+         start — app and tests alike — without an MT_LICENSE key. 8.x remains Apache 2.0
+         and exposes the same configuration API this project uses. Keep the MassTransit,
+         MassTransit.RabbitMQ, and MassTransit.EntityFrameworkCore versions in lockstep. -->
+    <PackageReference Include="MassTransit" Version="8.5.10" />
   </ItemGroup>
 
   <ItemGroup>

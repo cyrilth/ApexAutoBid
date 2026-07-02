@@ -38,7 +38,7 @@ public class ThumbnailTests
         storage.CreateThumbnailAsync(key, Arg.Any<CancellationToken>()).Returns(expectedUrl);
         var sut = new AuctionImageAppService(storage, Options.Create(SampleImagesOptions()));
 
-        var (outcome, response) = await sut.CreateThumbnailAsync(key);
+        var (outcome, response) = await sut.CreateThumbnailAsync(key, TestContext.Current.CancellationToken);
 
         Assert.Equal(ThumbnailOutcome.Success, outcome);
         Assert.NotNull(response);
@@ -54,7 +54,7 @@ public class ThumbnailTests
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionImageAppService(storage, Options.Create(SampleImagesOptions()));
 
-        var (outcome, response) = await sut.CreateThumbnailAsync(key);
+        var (outcome, response) = await sut.CreateThumbnailAsync(key, TestContext.Current.CancellationToken);
 
         Assert.Equal(ThumbnailOutcome.InvalidKey, outcome);
         Assert.Null(response);

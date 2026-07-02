@@ -19,7 +19,7 @@ public class HealthCheckTests(CustomWebAppFactory factory)
     {
         var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/health/live");
+        using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -40,13 +40,13 @@ public class HealthCheckTests(CustomWebAppFactory factory)
                 // Dispose the previous attempt's response before overwriting it so repeated
                 // polls don't leak sockets/handles across attempts (and across parallel runs).
                 response?.Dispose();
-                response = await client.GetAsync("/health/ready");
+                response = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     break;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
             }
 
             Assert.Equal(HttpStatusCode.OK, response!.StatusCode);

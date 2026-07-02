@@ -15,10 +15,11 @@ public class OpenApiDocsTests(CustomWebAppFactory factory)
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync("openapi/v1.json");
+        var response = await client.GetAsync("openapi/v1.json", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var root = doc.RootElement;
 
         // Bearer scheme is declared in components.
@@ -40,7 +41,7 @@ public class OpenApiDocsTests(CustomWebAppFactory factory)
     {
         var client = factory.CreateClient(); // HttpClient follows redirects by default
 
-        var response = await client.GetAsync("scalar");
+        var response = await client.GetAsync("scalar", TestContext.Current.CancellationToken);
 
         Assert.True(response.IsSuccessStatusCode, $"GET /scalar returned {(int)response.StatusCode}");
     }
