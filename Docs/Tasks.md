@@ -7,7 +7,7 @@
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
-| 2. Search Service | 2 | 30 | In progress |
+| 2. Search Service | 3 | 30 | In progress |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **59** | **371** | **In progress** |
+| **Overall** | **60** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -118,7 +118,7 @@ Status values: `Not started` · `In progress` · `Done`
 
 - [x] 1. Create the Search Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
 - [x] 2. Define the `Item` entity in `SearchService.Domain/Entities/` (MongoDB document mirroring AuctionDto fields) — `dotnet-service-builder`
-- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` in `SearchService.Infrastructure/Data/` — `dotnet-service-builder`
+- [x] 3. Set up MongoDB connection via `MongoDB.Entities` in `SearchService.Infrastructure/Data/` — `dotnet-service-builder`
 - [ ] 4. Implement event consumers in `SearchService.Application/Consumers/` — `dotnet-service-builder`
   - [ ] 4.1. `AuctionCreated` — insert item into MongoDB — `dotnet-service-builder`
   - [ ] 4.2. `AuctionUpdated` — update item fields — `dotnet-service-builder`
