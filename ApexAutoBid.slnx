@@ -8,6 +8,12 @@
     <Project Path="backend/AuctionService/AuctionService.Domain/AuctionService.Domain.csproj" />
     <Project Path="backend/AuctionService/AuctionService.Infrastructure/AuctionService.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/backend/SearchService/">
+    <Project Path="backend/SearchService/SearchService.API/SearchService.API.csproj" />
+    <Project Path="backend/SearchService/SearchService.Application/SearchService.Application.csproj" />
+    <Project Path="backend/SearchService/SearchService.Domain/SearchService.Domain.csproj" />
+    <Project Path="backend/SearchService/SearchService.Infrastructure/SearchService.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AuctionService.IntegrationTests/AuctionService.IntegrationTests.csproj" />
     <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
