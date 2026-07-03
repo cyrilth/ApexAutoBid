@@ -13,24 +13,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- CVE-2025-6965 / GHSA-2m69-gcr7-jv3q: SQLitePCLRaw.lib.e_sqlite3 (pulled in transitively
-         by Microsoft.EntityFrameworkCore.Sqlite) bundles a vulnerable SQLite build (aggregate-terms
-         memory corruption; fixed upstream in SQLite 3.50.2+). As of this writing the advisory's
-         first_patched_version is null — no patched SQLitePCLRaw.lib.e_sqlite3 NuGet package
-         exists to override to (unlike the Microsoft.OpenApi pin in AuctionService.API.csproj,
-         where a patched version was available). SQLite is only the template's placeholder store —
-         Phase 3 Task 2 replaces it with PostgreSQL/Npgsql, removing this dependency entirely.
-         Suppressed by advisory URL (not a blanket NoWarn) so any other NuGet audit finding still
-         fails the build. -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+    <!-- Phase 3 Task 2 — same version pin as AuctionService.Infrastructure.csproj. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
   </ItemGroup>
 
 </Project>

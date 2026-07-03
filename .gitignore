@@ -420,3 +420,8 @@ FodyWeavers.xsd
 
 #Ignore Initial Planning Folder
 Initial_Planning/
+
+# Duende IdentityServer Automatic Key Management — signing keys persisted to disk on
+# startup (Data Protection-encrypted, machine-specific; regenerated automatically if
+# absent). Never committed — same class as bin/obj, not a configured secret.
+backend/IdentityService/keys/

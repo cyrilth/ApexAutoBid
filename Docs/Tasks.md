@@ -8,7 +8,7 @@
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
-| 3. Identity Service | 1 | 43 | In progress |
+| 3. Identity Service | 2 | 43 | In progress |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **88** | **371** | **In progress** |
+| **Overall** | **89** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -170,7 +170,7 @@ Status values: `Not started` · `In progress` · `Done`
 ### Tasks
 
 - [x] 1. Create the Identity Service project from Duende IdentityServer template with ASP.NET Core Identity — `dotnet-service-builder`
-- [ ] 2. Configure PostgreSQL as the identity store (Npgsql) — `dotnet-service-builder`
+- [x] 2. Configure PostgreSQL as the identity store (Npgsql) — `dotnet-service-builder`
 - [ ] 3. Configure IdentityServer — `dotnet-service-builder`
   - [ ] 3.1. Clients — `dotnet-service-builder`
   - [ ] 3.2. Scopes — `dotnet-service-builder`
