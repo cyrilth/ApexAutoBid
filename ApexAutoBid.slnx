@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/backend/">
     <Project Path="backend/Contracts/Contracts.csproj" />
+    <Project Path="backend/IdentityService/IdentityService.csproj" />
   </Folder>
   <Folder Name="/backend/AuctionService/">
     <Project Path="backend/AuctionService/AuctionService.API/AuctionService.API.csproj" />
