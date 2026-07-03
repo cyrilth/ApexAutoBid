@@ -45,6 +45,14 @@ services:
       - apexautobid
 
   # ── MongoDB — Search + Bidding services ─────────────────────────────────────
+  #
+  # Single-node REPLICA SET (not a plain standalone server), solely because MassTransit's
+  # Mongo outbox/inbox (Phase 2 Task 7 — SearchService, and the future BiddingService built
+  # the same way) issues Mongo multi-document transactions, and a standalone mongod rejects
+  # those with "Standalone servers do not support transactions". That failure only surfaces
+  # on the FIRST consumed message (not at connection/startup time), which is exactly why
+  # real-message verification matters and why this is easy to miss in a smoke test. A
+  # replica set — even a one-member one — is the minimum topology that supports transactions.
   mongodb:
     image: mongo:7
     container_name: apex-mongodb
@@ -52,11 +60,41 @@ services:
       MONGO_INITDB_ROOT_USERNAME: mongoadmin
       MONGO_INITDB_ROOT_PASSWORD: mongopw
     ports:
-      - "27017:27017"
+      # Bound to loopback only, same posture as rabbitmq below: host `dotnet run` still
+      # reaches localhost; containers use the internal `mongodb` hostname. Publishing on
+      # 0.0.0.0 would expose this dev instance (auth or not) to the LAN.
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodata:/data/db
+    # A replica set with auth enabled needs mongod's internal-auth keyFile (specifying
+    # --keyFile also implicitly enables client auth). The keyFile is generated INSIDE the
+    # container at every start — never host-mounted — because mongod rejects a keyFile that
+    # isn't strictly owner-readable-only, and Windows bind mounts can't express Unix
+    # file-mode bits, which makes a host-mounted keyFile painful to get right. Regenerating
+    # it on every container start is fine for a SINGLE-node set specifically: there are no
+    # peer members that need to agree on the same key, since there's nothing else to
+    # authenticate to. /data/keyfile deliberately lives outside the mongodata volume (only
+    # /data/db is persisted) so it's always freshly regenerated, never stale.
+    entrypoint:
+      - bash
+      - -c
+      - >-
+        openssl rand -base64 756 > /data/keyfile &&
+        chown mongodb:mongodb /data/keyfile &&
+        chmod 400 /data/keyfile &&
+        exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/keyfile --bind_ip_all
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      # Self-healing init: every healthcheck tick asks for replica set status; if the set has
+      # never been initiated (rs.status() throws), initiate a single-member set right here,
+      # so the container brings itself to a working PRIMARY state with no separate init step
+      # or script to run by hand. Member host "localhost:27017" is correct (not a mistake) —
+      # every client that talks to this container (this compose file's other services, and
+      # every .NET service's dev connection string) connects with directConnection=true,
+      # which addresses this node directly rather than asking it to discover/redirect to
+      # replica set members by their advertised hostnames — hostnames that wouldn't resolve
+      # from the Windows host anyway. Kubernetes (Phase 9) will use real per-pod stable
+      # hostnames and a proper multi-step replica set init job instead of this pattern.
+      test: ["CMD-SHELL", "mongosh -u mongoadmin -p mongopw --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]}).ok }\""]
       interval: 10s
       timeout: 5s
       retries: 5
