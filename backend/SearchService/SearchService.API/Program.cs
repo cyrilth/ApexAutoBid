@@ -22,8 +22,9 @@ builder.Services.AddApplicationServices();
 //
 // The five Phase 2 Task 4 consumers (AuctionCreated/Updated/Deleted, BidPlaced,
 // AuctionFinished) keep the search index in sync with the Auction/Bidding Services.
-// No EF/Mongo transactional outbox-inbox here yet — that lands with the Mongo change-
-// stream/outbox work in Phase 2 Task 7.
+// They are paired with MassTransit's MongoDB transactional inbox/outbox, configured in
+// AddMongoDbOutbox below (Phase 2 Task 7) — see that block's comment for the exact
+// consistency guarantees it does and does not provide.
 //
 // KebabCaseEndpointNameFormatter with the "search" prefix produces queue names like
 // "search-auction-created", mirroring AuctionService.API's "auction-<consumer-name>"
