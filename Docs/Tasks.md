@@ -7,7 +7,7 @@
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
-| 2. Search Service | 29 | 30 | In progress |
+| 2. Search Service | 30 | 30 | Done |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **86** | **371** | **In progress** |
+| **Overall** | **87** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -145,7 +145,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 11. Verify end-to-end: create auction → appears in Search Service via event — `test-runner`
 - [x] 12. Add API documentation: OpenAPI generation + Scalar UI (anonymous-only API — no security scheme needed) — `dotnet-service-builder`
 - [x] 13. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1) — `dotnet-service-builder`
-- [ ] 14. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 14. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 

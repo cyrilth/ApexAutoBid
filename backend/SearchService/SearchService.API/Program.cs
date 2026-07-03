@@ -1,4 +1,5 @@
 using MassTransit;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using MongoDB.Driver;
 using Scalar.AspNetCore;
 using SearchService.API.Handlers;
@@ -38,6 +39,13 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumersFromNamespaceContaining<SearchService.Application.Consumers.AuctionCreatedConsumer>();
 
     x.SetEndpointNameFormatter(new KebabCaseEndpointNameFormatter("search", false));
+
+    // Tags MassTransit's auto-registered bus health check "ready" so it is included in the
+    // GET /health/ready predicate below (Phase 2 Task 14 / Requirements §13.4) — it reports
+    // unhealthy whenever the RabbitMQ broker connection is down, giving us RabbitMQ readiness
+    // for free without a second, redundant broker connection. Mirrors AuctionService.API's
+    // identical Task 21 wiring.
+    x.ConfigureHealthCheckOptions(options => options.Tags.Add("ready"));
 
     // ── Mongo outbox/inbox (Phase 2 Task 7) ──────────────────────────────────────
     //
@@ -92,6 +100,39 @@ builder.Services.AddMassTransit(x =>
         cfg.ConfigureEndpoints(context);
     });
 });
+
+// ── Health checks (Phase 2 Task 14) ───────────────────────────────────────────
+//
+// GET /health/live reports 200 as soon as the process is up (no checks — mapped with
+// Predicate = _ => false below). GET /health/ready fans out to the "ready"-tagged checks:
+// MongoDB via AspNetCore.HealthChecks.MongoDb, and RabbitMQ via MassTransit's own bus health
+// check (tagged "ready" above). Mirrors AuctionService.API's Task 21 pattern with MongoDB in
+// place of PostgreSQL. The MongoDB check pings the same "search" IMongoDatabase singleton
+// Task 7's outbox wiring already registers (see InfrastructureServiceExtensions) rather than
+// opening a third driver-level connection — resolved lazily via the service provider (not
+// eagerly at registration time), so it picks up whatever connection the integration test host
+// overrides ConnectionStrings:MongoDbConnection to, the same way AuctionService's deferred
+// NpgSql connection-string factory does.
+//
+// Explicit timeout: HealthCheckRegistration otherwise defaults Timeout to InfiniteTimeSpan
+// (no framework-applied bound), and MongoDbHealthCheck internally retries its {ping:1} command
+// up to twice — with Task 7's IMongoClient on the driver's default 30s ServerSelectionTimeout,
+// a down Mongo would otherwise block /health/ready for ~60s worst case, far beyond the
+// 1-5s timeoutSeconds Phase 9's Kubernetes probes will use. The timeout spans the whole check
+// invocation (the framework's linked cancellation token cuts through both ping attempts, and
+// cancellation is not retried), bounding that worst case to ~5s.
+// (AuctionService's AddNpgSql shares the same omitted-timeout root cause but is single-attempt
+// and so only ~15s-bounded; bringing it in line is tracked for a future cross-service
+// consistency pass, deliberately not changed here.)
+
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        sp => sp.GetRequiredService<IMongoDatabase>(),
+        name: "mongodb",
+        tags: ["ready"],
+        timeout: TimeSpan.FromSeconds(5));
+
+// ── Controllers ───────────────────────────────────────────────────────────────
 
 builder.Services.AddControllers();
 
@@ -189,6 +230,18 @@ app.UseExceptionHandler();
 app.MapControllers();
 
 app.MapGet("/", () => Results.Ok("SearchService is running."));
+
+// ── Health endpoints (Phase 2 Task 14) ────────────────────────────────────────
+//
+// Anonymous per Requirements §13.4. /health/live never runs a check (Predicate = _ => false)
+// so it reflects only "is the process up". /health/ready only runs checks tagged "ready"
+// (MongoDB + the MassTransit/RabbitMQ bus check registered above). Mirrors AuctionService.API's
+// Task 21 wiring exactly — same route names, same predicates, same AllowAnonymous() call.
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false })
+    .AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") })
+    .AllowAnonymous();
 
 // ── OpenAPI document + Scalar UI (Phase 2 Task 12) ────────────────────────────
 //

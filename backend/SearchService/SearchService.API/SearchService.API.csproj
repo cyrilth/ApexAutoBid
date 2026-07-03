@@ -4,6 +4,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Phase 2 Task 14 — GET /health/ready's MongoDB check. Same "AspNetCore.HealthChecks.*"
+         family and major version (9.0.0) as AuctionService.API's AspNetCore.HealthChecks.NpgSql
+         pin, kept in lockstep for the same reason. Its MongoDB.Driver floor (>= 3.0.0) is
+         already satisfied by the 3.9.0 MongoDB.Entities 25.1.0 resolves transitively — no
+         version conflict. -->
+    <PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <!-- 8.x line — see the MassTransit license note in AuctionService.Application.csproj. -->
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.10" />
     <!-- Phase 2 Task 7 — Mongo outbox/inbox. Same 8.x license pin/rationale as
