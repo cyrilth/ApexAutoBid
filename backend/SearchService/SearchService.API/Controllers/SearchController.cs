@@ -27,7 +27,13 @@ public class SearchController(ISearchService service, ILogger<SearchController> 
     // InvalidPageSize only cover in-range-type-but-out-of-range values (e.g. pageSize=0 or
     // 999) — this is accepted, not a gap to close here.
 
+    // ProducesResponseType (Phase 2 Task 12): the OpenAPI generator infers the 200 shape from
+    // the ActionResult<SearchResultDto> return type on its own, but it has no way to know
+    // about the 400 ProblemDetails path returned inline below (BadRequest(...)) without being
+    // told explicitly.
     [HttpGet]
+    [ProducesResponseType(typeof(SearchResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<SearchResultDto>> Search(
         [FromQuery] SearchParamsDto request, CancellationToken cancellationToken)
     {

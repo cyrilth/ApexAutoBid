@@ -1,5 +1,6 @@
 using MassTransit;
 using MongoDB.Driver;
+using Scalar.AspNetCore;
 using SearchService.Application.Extensions;
 using SearchService.Application.Services;
 using SearchService.Infrastructure.Data;
@@ -93,6 +94,16 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddControllers();
 
+// ── OpenAPI + Scalar (Phase 2 Task 12) ────────────────────────────────────────
+//
+// Deliberately no security scheme / document or operation transformers here — unlike
+// AuctionService.API's BearerSecuritySchemeTransformer + AuthorizeOperationTransformer pair,
+// this service has no authentication middleware wired up at all (see SearchController's own
+// comment): GET api/search is anonymous-only, so there is no [Authorize] endpoint for a
+// security requirement to ever attach to and nothing to declare a Bearer scheme for.
+
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 
 // app.Lifetime.ApplicationStopping is threaded through both startup calls below as
@@ -138,6 +149,20 @@ using (var scope = app.Services.CreateScope())
 app.MapControllers();
 
 app.MapGet("/", () => Results.Ok("SearchService is running."));
+
+// ── OpenAPI document + Scalar UI (Phase 2 Task 12) ────────────────────────────
+//
+// Mapped unconditionally (not dev-only) — mirrors AuctionService.API's Task 16 decision
+// (see Docs/Tasks.md DoD and Architecture.md §10). MapOpenApi() serves the raw document at
+// /openapi/v1.json; MapScalarApiReference() serves the interactive Scalar UI at /scalar,
+// pointed at that document. Both are anonymous by default here since this service has no
+// authentication middleware to require in the first place.
+
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
+{
+    options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
+});
 
 app.Run();
 
