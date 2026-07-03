@@ -1,4 +1,5 @@
 using Mapster;
+using MongoDB.Driver;
 using MongoDB.Entities;
 using SearchService.Domain.Entities;
 using SearchService.Domain.Enums;
@@ -34,9 +35,34 @@ public sealed class ItemRepository(MongoDbContext mongo) : IItemRepository
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
-        // DeleteAsync matching zero documents (id already gone, or never existed) completes
-        // without error — exactly the silent-success idempotency IItemRepository documents.
-        await mongo.Instance.DeleteAsync<ItemDocument>(id, cancellationToken);
+        // Uses the raw driver collection (DB.Collection<T>() — public) instead of
+        // MongoDB.Entities' own DeleteAsync<T> (which internally calls DeleteCascadingAsync).
+        // DeleteCascadingAsync throws NotSupportedException ("Cancellation is only supported
+        // within transactions for delete operations!") when given a real cancellation token
+        // outside an active session/transaction — and this write deliberately does NOT enlist
+        // in the Mongo outbox's transaction (see MongoDbContext's XML doc / Program.cs's
+        // outbox "honesty point"), so it is always outside one. Found by the Phase 2 Task 10
+        // integration tests, which — unlike every prior manual verification — actually drove
+        // AuctionDeletedConsumer through the real MassTransit pipeline with a genuine,
+        // non-default ConsumeContext.CancellationToken.
+        //
+        // Bypassing DeleteCascadingAsync loses nothing here: ItemDocument declares no
+        // MongoDB.Entities relationship properties (one-to-many/many-to-many) and this
+        // service configures no global filters, so there is no cascading-delete or
+        // global-filter behavior for that path to provide that a plain DeleteOneAsync
+        // wouldn't already do on its own.
+        //
+        // Unlike the earlier fix (which just dropped the token), this preserves it: a
+        // hanging delete — e.g. during a network partition to Mongo — should still be
+        // cancellable via the receive pipeline's own timeout/shutdown signal, same as every
+        // other call in this class. The raw driver's DeleteOneAsync has no restriction on
+        // accepting a real token outside a transaction.
+        var filter = Builders<ItemDocument>.Filter.Eq(x => x.Id, id);
+
+        // Matching zero documents (id already gone, or never existed) completes with
+        // DeletedCount=0, no throw — exactly the silent-success idempotency IItemRepository
+        // documents.
+        await mongo.Instance.Collection<ItemDocument>().DeleteOneAsync(filter, cancellationToken);
     }
 
     public async Task<HighBidUpdateResult> TryRaiseHighBidAsync(

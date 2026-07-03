@@ -7,7 +7,7 @@
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
-| 2. Search Service | 21 | 30 | In progress |
+| 2. Search Service | 26 | 30 | In progress |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **78** | **371** | **In progress** |
+| **Overall** | **83** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -137,11 +137,11 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 9.5. Search — sorts by make — `dotnet-service-builder`
   - [x] 9.6. Search — sorts by endingSoon — `dotnet-service-builder`
   - [x] 9.7. Search — filters by status (live, finished, endingSoon) — `dotnet-service-builder`
-- [ ] 10. Write integration tests (SearchService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 10.1. AuctionCreated consumer — inserts item into MongoDB — `dotnet-service-builder`
-  - [ ] 10.2. AuctionUpdated consumer — updates item fields — `dotnet-service-builder`
-  - [ ] 10.3. AuctionDeleted consumer — removes item — `dotnet-service-builder`
-  - [ ] 10.4. Search endpoint — returns filtered results — `dotnet-service-builder`
+- [x] 10. Write integration tests (SearchService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 10.1. AuctionCreated consumer — inserts item into MongoDB — `dotnet-service-builder`
+  - [x] 10.2. AuctionUpdated consumer — updates item fields — `dotnet-service-builder`
+  - [x] 10.3. AuctionDeleted consumer — removes item — `dotnet-service-builder`
+  - [x] 10.4. Search endpoint — returns filtered results — `dotnet-service-builder`
 - [ ] 11. Verify end-to-end: create auction → appears in Search Service via event — `test-runner`
 - [ ] 12. Add API documentation: OpenAPI generation + Scalar UI (anonymous-only API — no security scheme needed) — `dotnet-service-builder`
 - [ ] 13. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1) — `dotnet-service-builder`
