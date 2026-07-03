@@ -1,6 +1,7 @@
 using MassTransit;
 using MongoDB.Driver;
 using Scalar.AspNetCore;
+using SearchService.API.Handlers;
 using SearchService.Application.Extensions;
 using SearchService.Application.Services;
 using SearchService.Infrastructure.Data;
@@ -94,6 +95,38 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddControllers();
 
+// ── Global error handling (Phase 2 Task 13) ──────────────────────────────────
+//
+// AddProblemDetails() makes every error response (400 model-validation failures via
+// [ApiController], SearchController's own handcrafted 400s, and 500s from
+// GlobalExceptionHandler) RFC 7807 application/problem+json. CustomizeProblemDetails stamps a
+// traceId extension on framework-generated ProblemDetails — the automatic [ApiController]
+// model-validation 400s and the 500s GlobalExceptionHandler writes via IProblemDetailsService —
+// correlating those responses back to the corresponding log entry (Requirements §13.1).
+// SearchController's own hand-constructed 400s (BadRequest(new ProblemDetails{...})) are
+// serialized directly by the normal output formatter and bypass IProblemDetailsService/
+// ProblemDetailsFactory entirely, so they do NOT get a traceId — they carry a self-explanatory
+// Title/Detail instead and have no corresponding log entry to correlate to, matching
+// AuctionService's identical behavior. (Routing them through ProblemDetailsFactory too is a
+// deliberate non-goal here — tracked as a future cross-service consistency pass.)
+//
+// GlobalExceptionHandler (IExceptionHandler) catches unhandled exceptions, always logs the
+// full exception via ILogger, and returns a 500 ProblemDetails whose Detail is the full
+// exception in Development and a generic message in Production. It mirrors
+// AuctionService.API's GlobalExceptionHandler (Phase 1 Task 19) verbatim; SearchController's
+// handcrafted 400s (invalid orderBy/filterBy/pageNumber/pageSize) are normal returned results,
+// not exceptions, so they are unaffected by — and never reach — this handler.
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions["traceId"] =
+            System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+    };
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 // ── OpenAPI + Scalar (Phase 2 Task 12) ────────────────────────────────────────
 //
 // Deliberately no security scheme / document or operation transformers here — unlike
@@ -145,6 +178,13 @@ using (var scope = app.Services.CreateScope())
             .LogError(ex, "Auction Service sync threw unexpectedly — continuing startup");
     }
 }
+
+// UseExceptionHandler is registered first so it wraps the entire remaining pipeline — any
+// unhandled exception from controllers or elsewhere downstream is caught by
+// GlobalExceptionHandler and returned as a ProblemDetails 500 (Phase 2 Task 13). This service
+// has no authentication middleware to sit ahead of (see the OpenAPI/Scalar comment below), so
+// unlike AuctionService.API there is nothing between this call and MapControllers().
+app.UseExceptionHandler();
 
 app.MapControllers();
 
