@@ -7,7 +7,7 @@
 | Phase | Done | Total | Status |
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
-| 2. Search Service | 13 | 30 | In progress |
+| 2. Search Service | 21 | 30 | In progress |
 | 3. Identity Service | 0 | 43 | Not started |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **70** | **371** | **In progress** |
+| **Overall** | **78** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -129,14 +129,14 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 6. Add HTTP polling fallback in `SearchService.Infrastructure/` to Auction Service (`GetAuctionsFromDate`) with Polly retry — `dotnet-service-builder`
 - [x] 7. Configure MassTransit Outbox pattern — `dotnet-service-builder`
 - [x] 8. Dockerize the Search Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 9. Write unit tests (SearchService.UnitTests) — `dotnet-service-builder`
-  - [ ] 9.1. Search — returns paged results — `dotnet-service-builder`
-  - [ ] 9.2. Search — filters by searchTerm — `dotnet-service-builder`
-  - [ ] 9.3. Search — filters by seller — `dotnet-service-builder`
-  - [ ] 9.4. Search — filters by winner — `dotnet-service-builder`
-  - [ ] 9.5. Search — sorts by make — `dotnet-service-builder`
-  - [ ] 9.6. Search — sorts by endingSoon — `dotnet-service-builder`
-  - [ ] 9.7. Search — filters by status (live, finished, endingSoon) — `dotnet-service-builder`
+- [x] 9. Write unit tests (SearchService.UnitTests) — `dotnet-service-builder`
+  - [x] 9.1. Search — returns paged results — `dotnet-service-builder`
+  - [x] 9.2. Search — filters by searchTerm — `dotnet-service-builder`
+  - [x] 9.3. Search — filters by seller — `dotnet-service-builder`
+  - [x] 9.4. Search — filters by winner — `dotnet-service-builder`
+  - [x] 9.5. Search — sorts by make — `dotnet-service-builder`
+  - [x] 9.6. Search — sorts by endingSoon — `dotnet-service-builder`
+  - [x] 9.7. Search — filters by status (live, finished, endingSoon) — `dotnet-service-builder`
 - [ ] 10. Write integration tests (SearchService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 10.1. AuctionCreated consumer — inserts item into MongoDB — `dotnet-service-builder`
   - [ ] 10.2. AuctionUpdated consumer — updates item fields — `dotnet-service-builder`
