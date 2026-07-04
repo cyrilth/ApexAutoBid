@@ -1,0 +1,61 @@
+/* ════════════════════════════════════════════════════════════════════════
+   ApexAutoBid brand accents — Phase 3 Task 4
+   ────────────────────────────────────────────────────────────────────────
+   Re-skins stock, unmodified Bootstrap v4.5 with the ApexAutoBid palette
+   (Docs/DesignGuide.md §2 "Teal Breeze") WITHOUT touching any HTML.
+   Loaded last in Pages/Shared/_Layout.cshtml, after bootstrap.min.css and
+   site.css, so these rules win the cascade.
+
+   Scope is intentionally modest per DesignGuide.md §7: "Not Tailwind; apply
+   #1f898e to its buttons/links via its own CSS for brand continuity, keep
+   the rest default." Only primary buttons, links, focus rings, and the
+   navbar brand text are re-themed here — everything else (cards, alerts,
+   forms layout, etc.) stays stock Bootstrap.
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    --apexautobid-primary:       #1f898e; /* DesignGuide primary-600 "Elm" — brand anchor: links, active nav, primary buttons */
+    --apexautobid-primary-hover: #1c6e74; /* DesignGuide primary-700 — button hover, AA-safe link text on white */
+    --apexautobid-focus-ring:    #4ccdc4; /* DesignGuide primary-400 "Puerto Rico" — focus rings, highlights */
+}
+
+/* Links */
+a {
+    color: var(--apexautobid-primary);
+}
+a:hover, a:focus {
+    color: var(--apexautobid-primary-hover);
+}
+a.navbar-brand, a.btn, a.dropdown-item {
+    /* Buttons/nav rendered as <a> shouldn't inherit the plain link color above —
+       .btn-primary and the navbar rules below already set their own color. */
+    color: inherit;
+}
+
+/* Primary buttons (Login / Register submit, etc.) */
+.btn-primary {
+    background-color: var(--apexautobid-primary);
+    border-color: var(--apexautobid-primary);
+}
+.btn-primary:hover {
+    background-color: var(--apexautobid-primary-hover);
+    border-color: var(--apexautobid-primary-hover);
+}
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled).active {
+    background-color: var(--apexautobid-primary-hover);
+    border-color: var(--apexautobid-primary-hover);
+}
+
+/* Focus rings (DesignGuide.md §9 Accessibility: "Keep visible focus rings") */
+.btn:focus, .btn.focus,
+.form-control:focus {
+    border-color: var(--apexautobid-focus-ring);
+    box-shadow: 0 0 0 0.2rem rgba(76, 205, 196, 0.5);
+}
+
+/* Navbar brand text (Pages/Shared/_Nav.cshtml) */
+.navbar-dark .navbar-brand {
+    color: #ffffff;
+    font-weight: 600;
+}

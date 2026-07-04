@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" />
 
-    <title>Duende IdentityServer</title>
+    <title>ApexAutoBid</title>
 
     <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
     <link rel="shortcut icon" type="image/x-icon" href="~/favicon.ico" />
@@ -13,6 +13,12 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
+    <!-- ApexAutoBid brand accents (Phase 3 Task 4 / DesignGuide.md §2, §9) — layered on top of
+         stock Bootstrap 4.5, loaded last so its rules win the cascade. Modest by design: only
+         buttons/links/focus rings/navbar brand text are re-themed, everything else stays
+         Bootstrap default (DesignGuide.md §7: "Not Tailwind; apply #1f898e to its buttons/links
+         via its own CSS for brand continuity, keep the rest default"). -->
+    <link rel="stylesheet" href="~/css/apexautobid-theme.css" />
 </head>
 <body>
     <partial name="_Nav" />
