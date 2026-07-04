@@ -19,6 +19,16 @@
     </PackageReference>
     <!-- Phase 3 Task 2 — same version pin as AuctionService.Infrastructure.csproj. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <!-- Phase 3 Task 6 — startup DB-connection retry (Data/DbInitializer.cs). Current stable
+         Polly 8.x (dotnet package search, confirmed 2026-07-04). BSD-licensed — no
+         commercial-license gate, unlike the MassTransit/ImageSharp pins elsewhere in this repo.
+         Polly.Core (not the full "Polly" metapackage) is enough: it has the v8
+         ResiliencePipelineBuilder API this project uses and skips the legacy v7-compat
+         Policy/PolicyRegistry surface the metapackage also carries. No project in the repo
+         referenced Polly directly yet to match versions against — SearchService.Infrastructure
+         only pulls Polly v8 transitively via Microsoft.Extensions.Http.Resilience, an
+         HttpClient-specific package not applicable to a raw DbContext connection retry. -->
+    <PackageReference Include="Polly.Core" Version="8.7.0" />
   </ItemGroup>
 
 </Project>

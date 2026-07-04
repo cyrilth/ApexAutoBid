@@ -10,7 +10,13 @@ var app = builder
 // Applies pending EF Core migrations unconditionally on every startup (Phase 3 Task 2)
 // — not gated behind /seed, so the apexautobid_identity database and schema exist on a
 // plain `dotnet run` too, mirroring AuctionService.API's DbInitializer.InitDbAsync call.
-await DbInitializer.InitDbAsync(app.Services);
+// Retries a bounded ~27s window via Polly if PostgreSQL isn't accepting connections yet
+// (Phase 3 Task 6) — see DbInitializer's XML remarks for the retry-predicate and fail-hard
+// rationale. app.Lifetime.ApplicationStopping is threaded through as defense-in-depth
+// cancellation, same caveat as SearchService.API's identical pre-app.Run() wiring (its
+// DbInitializer.ConnectWithRetryAsync XML remarks explain why pre-Run() signal delivery is
+// best-effort only).
+await DbInitializer.InitDbAsync(app.Services, app.Lifetime.ApplicationStopping);
 
 // Seeds the Requirements.md §8.1 dev/demo users (bob, alice, tom, admin) on every startup
 // (Phase 3 Task 5) — on-startup rather than the template's original `/seed`-gated, one-shot
