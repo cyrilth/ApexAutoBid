@@ -8,7 +8,7 @@
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
-| 3. Identity Service | 8 | 43 | In progress |
+| 3. Identity Service | 9 | 43 | In progress |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **95** | **371** | **In progress** |
+| **Overall** | **96** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -177,7 +177,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 3.3. Resources — `dotnet-service-builder`
   - [x] 3.4. Include `username`, `email`, and `role` claims in access tokens (email for post-sale contact exchange; role for the admin dashboard in Phase 11) — `dotnet-service-builder`
 - [x] 4. Add Razor Pages for login/register UI — `dotnet-service-builder`
-- [ ] 5. Seed default users per `Requirements.md` §8.1 (bob, alice, tom + admin with the `admin` role — confirmed emails, shared dev password) — `dotnet-service-builder`
+- [x] 5. Seed default users per `Requirements.md` §8.1 (bob, alice, tom + admin with the `admin` role — confirmed emails, shared dev password) — `dotnet-service-builder`
 - [ ] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [ ] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`

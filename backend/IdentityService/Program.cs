@@ -12,15 +12,21 @@ var app = builder
 // plain `dotnet run` too, mirroring AuctionService.API's DbInitializer.InitDbAsync call.
 await DbInitializer.InitDbAsync(app.Services);
 
-// this seeding is only for the template to bootstrap the DB and users.
-// in production you will likely want a different approach.
-if (args.Contains("/seed"))
+// Seeds the Requirements.md §8.1 dev/demo users (bob, alice, tom, admin) on every startup
+// (Phase 3 Task 5) — on-startup rather than the template's original `/seed`-gated, one-shot
+// invocation (Requirements.md §8: "Each service seeds its own store on startup"; a manual
+// `/seed` arg is also awkward once this service runs as a container (Task 9) — there's no
+// interactive step to append extra CLI args to a Dockerfile ENTRYPOINT). EnsureSeedDataAsync
+// is idempotent (find-by-username, create-if-absent; role-assignment only if missing).
+//
+// Development-only, unlike the sibling services' unconditional seeding: §8's sample data is
+// "for development and demos", and what this seeds is not demo *data* but working ACCOUNTS
+// with the publicly-committed shared password — including one holding the `admin` role. An
+// environment mix-up that seeded fake auctions into production would be cosmetic; one that
+// created admin/<committed password> in production would be a standing credential backdoor.
+if (app.Environment.IsDevelopment())
 {
-    var seedLogger = app.Services.GetRequiredService<ILogger<Program>>();
-    seedLogger.LogInformation("Seeding database");
-    SeedData.EnsureSeedData(app);
-    seedLogger.LogInformation("Done seeding database, exiting");
-    return;
+    await SeedData.EnsureSeedDataAsync(app.Services);
 }
 
 app.Run();

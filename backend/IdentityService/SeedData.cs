@@ -1,86 +1,89 @@
-using System.Security.Claims;
-using Duende.IdentityModel;
-using IdentityService.Data;
 using IdentityService.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService;
 
+/// <summary>
+/// Seeds the default dev/demo users (Requirements.md §8.1: bob, alice, tom, admin — a shared
+/// dev password, confirmed emails, admin additionally gets the "admin" role). Idempotent —
+/// each user is looked up by username first and only created if absent, and the admin role
+/// assignment is only applied if missing — so this is safe to call on every startup, the same
+/// pattern AuctionService.Infrastructure.Data.DbInitializer uses for its own seed data.
+/// </summary>
 public class SeedData
 {
-    public static void EnsureSeedData(WebApplication app)
-    {
-        using (var scope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateScope())
-        {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<SeedData>>();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            context.Database.Migrate();
+    // Requirements.md §6: dev-only credentials are committed by design — this is the exact
+    // shared password from §8.1. Never pass this to ILogger; every log call below logs
+    // usernames only.
+    private const string SharedDevPassword = "Pass123$";
 
-            var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var alice = userMgr.FindByNameAsync("alice").Result;
-            if (alice == null)
+    // Requirements.md §10: the "admin" role gates the admin dashboard / api/admin/* endpoints.
+    private const string AdminRole = "admin";
+
+    private static readonly (string Username, string Email, bool IsAdmin)[] SeedUsers =
+    [
+        ("bob", "bob@apexautobid.local", false),
+        ("alice", "alice@apexautobid.local", false),
+        ("tom", "tom@apexautobid.local", false),
+        ("admin", "admin@apexautobid.local", true),
+    ];
+
+    public static async Task EnsureSeedDataAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<SeedData>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        if (!await roleManager.RoleExistsAsync(AdminRole))
+        {
+            var roleResult = await roleManager.CreateAsync(new IdentityRole(AdminRole));
+            if (!roleResult.Succeeded)
             {
-                alice = new ApplicationUser
+                throw new InvalidOperationException(
+                    $"Failed to create the '{AdminRole}' role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+            }
+
+            logger.LogInformation("Created role {Role}", AdminRole);
+        }
+
+        foreach (var (username, email, isAdmin) in SeedUsers)
+        {
+            var user = await userManager.FindByNameAsync(username);
+            if (user is null)
+            {
+                user = new ApplicationUser
                 {
-                    UserName = "alice",
-                    Email = "AliceSmith@example.com",
+                    UserName = username,
+                    Email = email,
                     EmailConfirmed = true,
                 };
-                var result = userMgr.CreateAsync(alice, "Pass123$").Result;
-                if (!result.Succeeded)
+
+                var createResult = await userManager.CreateAsync(user, SharedDevPassword);
+                if (!createResult.Succeeded)
                 {
-                    throw new Exception(result.Errors.First().Description);
+                    throw new InvalidOperationException(
+                        $"Failed to create seed user {username}: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
                 }
 
-                result = userMgr.AddClaimsAsync(alice, new Claim[]{
-                            new Claim(JwtClaimTypes.Name, "Alice Smith"),
-                            new Claim(JwtClaimTypes.GivenName, "Alice"),
-                            new Claim(JwtClaimTypes.FamilyName, "Smith"),
-                            new Claim(JwtClaimTypes.WebSite, "http://alice.example.com"),
-                        }).Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-                logger.LogDebug("alice created");
+                logger.LogInformation("Seeded user {Username}", username);
             }
             else
             {
-                logger.LogDebug("alice already exists");
+                logger.LogDebug("Seed user {Username} already exists — skipping", username);
             }
 
-            var bob = userMgr.FindByNameAsync("bob").Result;
-            if (bob == null)
+            if (isAdmin && !await userManager.IsInRoleAsync(user, AdminRole))
             {
-                bob = new ApplicationUser
+                var roleAssignResult = await userManager.AddToRoleAsync(user, AdminRole);
+                if (!roleAssignResult.Succeeded)
                 {
-                    UserName = "bob",
-                    Email = "BobSmith@example.com",
-                    EmailConfirmed = true
-                };
-                var result = userMgr.CreateAsync(bob, "Pass123$").Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
+                    throw new InvalidOperationException(
+                        $"Failed to assign the '{AdminRole}' role to {username}: {string.Join(", ", roleAssignResult.Errors.Select(e => e.Description))}");
                 }
 
-                result = userMgr.AddClaimsAsync(bob, new Claim[]{
-                            new Claim(JwtClaimTypes.Name, "Bob Smith"),
-                            new Claim(JwtClaimTypes.GivenName, "Bob"),
-                            new Claim(JwtClaimTypes.FamilyName, "Smith"),
-                            new Claim(JwtClaimTypes.WebSite, "http://bob.example.com"),
-                            new Claim("location", "somewhere")
-                        }).Result;
-                if (!result.Succeeded)
-                {
-                    throw new Exception(result.Errors.First().Description);
-                }
-                logger.LogDebug("bob created");
-            }
-            else
-            {
-                logger.LogDebug("bob already exists");
+                logger.LogInformation("Assigned role {Role} to {Username}", AdminRole, username);
             }
         }
     }
