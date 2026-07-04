@@ -1,10 +1,9 @@
-using Duende.IdentityServer;
 using IdentityService.Data;
 using IdentityService.Models;
+using IdentityService.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService;
 
@@ -38,28 +37,23 @@ internal static class HostingExtensions
             })
             .AddInMemoryIdentityResources(Config.IdentityResources)
             .AddInMemoryApiScopes(Config.ApiScopes)
+            .AddInMemoryApiResources(Config.ApiResources)
             .AddInMemoryClients(Config.Clients)
             .AddAspNetIdentity<ApplicationUser>()
+            // Replaces AddAspNetIdentity's default IProfileService registration with
+            // Services/ProfileService.cs, which adds the username/email/email_verified/role
+            // access-token claims (Phase 3 Task 3 / Requirements.md §3.4).
+            .AddProfileService<ProfileService>()
             .AddLicenseSummary();
 
-        _ = builder.Services.AddAuthentication()
-            .AddOpenIdConnect("oidc", "Sign-in with demo.duendesoftware.com", options =>
-            {
-                options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
-                options.SignOutScheme = IdentityServerConstants.SignoutScheme;
-                options.SaveTokens = true;
-
-                options.Authority = "https://demo.duendesoftware.com";
-                options.ClientId = "interactive.confidential";
-                options.ClientSecret = "secret";
-                options.ResponseType = "code";
-
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    NameClaimType = "name",
-                    RoleClaimType = "role"
-                };
-            });
+        // No external authentication provider is registered here. The template's demo
+        // "Sign-in with demo.duendesoftware.com" OIDC provider has been removed (Phase 3 Task 1
+        // review follow-up) — it rendered a live login button that auto-provisioned local
+        // accounts for anyone with a demo.duendesoftware.com login, which has no place in this
+        // app even in dev. Google external login is a later, separate task (Phase 3 Task 15);
+        // Pages/ExternalLogin/* are left in place for it — the login page only lists external
+        // providers it discovers via IAuthenticationSchemeProvider (Pages/Account/Login/Index.cshtml.cs),
+        // so with no scheme registered here, those pages are simply unreachable, not broken.
 
         // add `.PersistKeysTo…()` and `.ProtectKeysWith…()` calls
         // see more at https://docs.duendesoftware.com/general/data-protection

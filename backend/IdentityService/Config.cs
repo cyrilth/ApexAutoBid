@@ -1,9 +1,32 @@
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 
 namespace IdentityService;
 
 public static class Config
 {
+    /// <summary>
+    /// Non-standard custom claim type carrying the ASP.NET Identity username. Every backend
+    /// service's JwtBearer config sets NameClaimType to this literal string (see
+    /// AuctionService.API's Program.cs comment: "NameClaimType is set to 'username' so that
+    /// User.Identity!.Name returns the username claim"). The standard OIDC equivalent would be
+    /// preferred_username, but the rest of the platform is already built against "username", so
+    /// this constant — not a string literal — is what ProfileService.cs and the UserClaims list
+    /// below both reference, to keep them from drifting out of sync.
+    /// </summary>
+    public const string UsernameClaimType = "username";
+
+    /// <summary>
+    /// Single platform-wide API scope/resource covering all ApexAutoBid backend services
+    /// (Auction, Search, Bidding). Requirements.md never defines separate per-service scopes —
+    /// every backend endpoint only needs "is this a valid ApexAutoBid access token" plus the
+    /// role claim for admin gating (Requirements.md §10) — so one combined scope is what the
+    /// docs actually call for, not per-service scopes invented ahead of need. The name matches
+    /// the "apexautobid" audience already used for ad-hoc dev-JWT testing before this service
+    /// existed (see the now-superseded dev-jwt-recipe memory).
+    /// </summary>
+    public const string ApiScopeName = "apexautobid";
+
     public static IEnumerable<IdentityResource> IdentityResources =>
         new IdentityResource[]
         {
@@ -14,39 +37,78 @@ public static class Config
     public static IEnumerable<ApiScope> ApiScopes =>
         new ApiScope[]
         {
-            new ApiScope("scope1"),
-            new ApiScope("scope2"),
+            new ApiScope(ApiScopeName, "ApexAutoBid backend services"),
+        };
+
+    public static IEnumerable<ApiResource> ApiResources =>
+        new ApiResource[]
+        {
+            new ApiResource(ApiScopeName, "ApexAutoBid backend services")
+            {
+                Scopes = { ApiScopeName },
+                // Claims added to the ACCESS token when this resource's scope is requested.
+                // ProfileService.GetProfileDataAsync (Services/ProfileService.cs) only issues
+                // claims that are actually present in context.RequestedClaimTypes, and Duende
+                // populates RequestedClaimTypes from the UserClaims declared on the
+                // resources/scopes tied to the request — so these four must be listed here
+                // (Requirements.md §3.4: username, email, role; email_verified is additionally
+                // required by AuctionService.API's existing email-verified policy — see the
+                // doc-alignment note in this task's report).
+                UserClaims =
+                {
+                    UsernameClaimType,
+                    JwtClaimTypes.Email,
+                    JwtClaimTypes.EmailVerified,
+                    JwtClaimTypes.Role,
+                }
+            }
         };
 
     public static IEnumerable<Client> Clients =>
         new Client[]
         {
-            // m2m client credentials flow client
+            // Requirements.md §3.4 "IdentityServer Clients": "Next.js web app (authorization
+            // code flow via next-auth)". next-auth's OIDC provider exchanges the authorization
+            // code server-side (inside the Next.js server, never in the browser), so this is a
+            // CONFIDENTIAL client with a secret — unlike the `scalar` public/PKCE client, which
+            // Tasks.md assigns to a separate later task (13.1) and is deliberately NOT added
+            // here. ClientId/RedirectUris are a judgment call: the frontend (Phase 7) doesn't
+            // exist yet, so these are provisional dev defaults (the "webapp" name matches
+            // Architecture.md's docker-compose/k8s naming) — revisit once the frontend's actual
+            // next-auth provider config is written.
             new Client
             {
-                ClientId = "m2m.client",
-                ClientName = "Client Credentials Client",
-
-                AllowedGrantTypes = GrantTypes.ClientCredentials,
-                ClientSecrets = { new Secret("511536EF-F270-4058-80CA-1C89C192F69A".Sha256()) },
-
-                AllowedScopes = { "scope1" }
-            },
-
-            // interactive client using code flow + pkce
-            new Client
-            {
-                ClientId = "interactive",
-                ClientSecrets = { new Secret("49C1A7E1-0C79-4A89-A3D6-A37998FB86B0".Sha256()) },
+                ClientId = "webapp",
+                ClientName = "ApexAutoBid Web App",
+                // Dev-only, committable secret (Requirements.md §6) — not an external-provider
+                // credential, so it's fine to commit like the MinIO/RabbitMQ dev credentials
+                // elsewhere in the repo.
+                ClientSecrets = { new Secret("webapp-dev-secret".Sha256()) },
 
                 AllowedGrantTypes = GrantTypes.Code,
+                // Duende defaults RequirePkce to true already; set explicitly for readability.
+                RequirePkce = true,
 
-                RedirectUris = { "https://localhost:44300/signin-oidc" },
-                FrontChannelLogoutUri = "https://localhost:44300/signout-oidc",
-                PostLogoutRedirectUris = { "https://localhost:44300/signout-callback-oidc" },
+                RedirectUris = { "http://localhost:3000/api/auth/callback/identityserver" },
+                FrontChannelLogoutUri = "http://localhost:3000/signout-oidc",
+                PostLogoutRedirectUris = { "http://localhost:3000" },
 
+                // Lets a signed-in session refresh its access token without forcing the user
+                // back through the login page — a reasonable default for a persistent web app
+                // session; Requirements.md doesn't mandate it either way.
                 AllowOfflineAccess = true,
-                AllowedScopes = { "openid", "profile", "scope2" }
+                // Rotate the refresh token on every use instead of Duende's default ReUse
+                // (same handle valid for the full 30-day absolute lifetime). Rotation limits
+                // how long a leaked handle stays usable and makes reuse-after-rotation
+                // detectable as a compromise signal.
+                RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                AllowedScopes =
+                {
+                    "openid",
+                    "profile",
+                    "offline_access",
+                    ApiScopeName,
+                }
             },
         };
 }
