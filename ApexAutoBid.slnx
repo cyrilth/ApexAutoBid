@@ -19,6 +19,7 @@
     <Project Path="tests/AuctionService.IntegrationTests/AuctionService.IntegrationTests.csproj" />
     <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
     <Project Path="tests/SearchService.UnitTests/SearchService.UnitTests.csproj" />
+    <Project Path="tests/IdentityService.UnitTests/IdentityService.UnitTests.csproj" />
     <Project Path="tests/SearchService.IntegrationTests/SearchService.IntegrationTests.csproj" />
   </Folder>
 </Solution>
