@@ -8,7 +8,7 @@
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
-| 3. Identity Service | 13 | 43 | In progress |
+| 3. Identity Service | 18 | 43 | In progress |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **100** | **371** | **In progress** |
+| **Overall** | **105** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -182,11 +182,11 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
 - [x] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
 - [x] 9. Dockerize the Identity Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 10. Write unit tests (IdentityService.UnitTests) — `dotnet-service-builder`
-  - [ ] 10.1. Login — valid credentials returns token — `dotnet-service-builder`
-  - [ ] 10.2. Login — invalid credentials returns 401 — `dotnet-service-builder`
-  - [ ] 10.3. Register — valid data creates user — `dotnet-service-builder`
-  - [ ] 10.4. Register — duplicate username returns error — `dotnet-service-builder`
+- [x] 10. Write unit tests (IdentityService.UnitTests) — `dotnet-service-builder`
+  - [x] 10.1. Login — valid credentials returns token — `dotnet-service-builder`
+  - [x] 10.2. Login — invalid credentials returns 401 — `dotnet-service-builder`
+  - [x] 10.3. Register — valid data creates user — `dotnet-service-builder`
+  - [x] 10.4. Register — duplicate username returns error — `dotnet-service-builder`
 - [ ] 11. Write integration tests (IdentityService.IntegrationTests) — `dotnet-service-builder`
   - [ ] 11.1. Token endpoint — returns valid JWT with correct claims — `dotnet-service-builder`
   - [ ] 11.2. Protected endpoint — rejects request without token — `dotnet-service-builder`
