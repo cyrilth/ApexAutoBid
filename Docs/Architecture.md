@@ -177,6 +177,7 @@ Services maintain local projections of data they need from other services, synch
 **Duende IdentityServer** with **ASP.NET Core Identity** serves as the central Security Token Service (STS).
 
 - Issues JWT access tokens via OAuth2/OpenID Connect (claims: `username`, `email`, `email_verified`, `role` — the `admin` role gates `api/admin/*` and the admin dashboard)
+- Defines a **single platform-wide ApiScope/ApiResource named `apexautobid`** covering all backend services (Auction, Search, Bidding) — no per-service scopes; every consumer validates the same audience (see §5.5)
 - Manages user registration and authentication, with **email verification** (`RequireConfirmedEmail`): confirmation emails go to Mailpit in dev, a real SMTP provider in production; the Auction and Bidding Services require the `email_verified` claim for creating auctions and placing bids
 - **Google external login** on the login/register pages (client ID/secret via environment variables only — never committed; disabled when absent). Google-verified emails count as confirmed.
 - PostgreSQL stores user accounts and identity data
@@ -211,6 +212,28 @@ Resource-level authorization (e.g., only the seller can update/delete their auct
 | Gateway | `Microsoft.AspNetCore.RateLimiting` — per-IP general policy, stricter on mutating endpoints (429 on excess) | API abuse, bid spam, scraping |
 
 Dev/Docker use Cloudflare's official always-pass Turnstile test keys (committable); production keys come from environment variables. Authenticated actions need no captcha — lockout, rate limits, and the verified-email requirement cover them.
+
+### 5.5 JWT Bearer Consumer Configuration
+
+Every backend service that validates access tokens (Auction Service — Phase 3 Task 7; Bidding Service — Phase 5 Task 13) configures `AddJwtBearer` identically:
+
+```csharp
+options.Authority = builder.Configuration["IdentityServiceUrl"];
+options.TokenValidationParameters.ValidAudience = "apexautobid";
+options.TokenValidationParameters.NameClaimType = "username";
+options.TokenValidationParameters.ValidTypes = ["at+jwt"];
+```
+
+- **`Authority`** — from the `IdentityServiceUrl` config value (per-environment; dev is `https://localhost:5001`), never hardcoded.
+- **`ValidAudience`** — the literal `"apexautobid"` (§5.1's single platform-wide ApiScope/ApiResource, covering Auction, Search, and Bidding). A repo convention, not a shared code constant — services are independently deployable and must not reference each other's projects.
+- **`ValidTypes = ["at+jwt"]`** — restricts acceptance to Duende's access-token `typ` header (RFC 9068), so an id_token can't be replayed as an access token.
+- **`NameClaimType = "username"`** — so `User.Identity.Name` returns the username claim.
+
+**Claim mapping — do not rediscover this in Phase 5:** ASP.NET Core's `JwtBearerOptions` maps inbound claims by default (`MapInboundClaims` defaults to `true`, inherited from the legacy `JwtSecurityTokenHandler`, not `JsonWebTokenHandler`'s own default of `false`). The wire claim `role` is therefore auto-remapped to `ClaimTypes.Role` — `User.IsInRole("admin")` works with **no `RoleClaimType` override**; adding one (`= "role"`) actively breaks it (live-verified in Task 7). Likewise the wire claim `email` arrives as `ClaimTypes.Email` — read it via that constant, not the literal `"email"` string (the Bidding Service needs this for `Bid.BidderEmail`, Requirements.md §3.3). `username` and `email_verified` are not in the legacy claim map, so both stay literal strings.
+
+**Startup requirement:** `RequireHttpsMetadata` defaults to `true` and fails startup outright if `Authority` isn't `https://`. Whether the containerized `IdentityServiceUrl` uses in-network TLS or explicitly disables this check is a Dockerize/Kubernetes decision (Phase 3 Task 9 / Phase 9), not this pattern's concern.
+
+This is the exact configuration Phase 5 Task 13 mirrors for `BiddingService.API`, layering its own `email_verified` 403 gate (Requirements.md §3.3) on top.
 
 ---
 

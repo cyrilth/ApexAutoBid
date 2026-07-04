@@ -174,7 +174,7 @@ builder.Services.AddOpenApi(options =>
 // 3–5's verification). ValidAudience is a hardcoded literal rather than shared via a
 // project reference to IdentityService.Config: these are independently deployable
 // services that must not reference each other's code, so "apexautobid" is a repo
-// convention (Requirements.md §3.4 / Architecture.md §5.1), not a shared constant.
+// convention (Architecture.md §5.1/§5.5), not a shared constant.
 //
 // ValidTypes restricts accepted tokens to Duende's access-token typ header
 // ("at+jwt", per RFC 9068 — verified against a real minted token's header during

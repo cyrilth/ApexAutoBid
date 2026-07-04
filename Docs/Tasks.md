@@ -8,7 +8,7 @@
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
-| 3. Identity Service | 11 | 43 | In progress |
+| 3. Identity Service | 12 | 43 | In progress |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **98** | **371** | **In progress** |
+| **Overall** | **99** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -180,7 +180,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 5. Seed default users per `Requirements.md` §8.1 (bob, alice, tom + admin with the `admin` role — confirmed emails, shared dev password) — `dotnet-service-builder`
 - [x] 6. Configure Polly retry for database connections during startup — `dotnet-service-builder`
 - [x] 7. Add JWT bearer authentication to Auction Service — `dotnet-service-builder`
-- [ ] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
+- [x] 8. Add JWT bearer authentication to Bidding Service (prep for Phase 5) — `dotnet-service-builder`
 - [ ] 9. Dockerize the Identity Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
 - [ ] 10. Write unit tests (IdentityService.UnitTests) — `dotnet-service-builder`
   - [ ] 10.1. Login — valid credentials returns token — `dotnet-service-builder`
