@@ -152,15 +152,42 @@ builder.Services.AddOpenApi(options =>
 // username claim emitted by IdentityServer — this keeps Seller stamping and
 // ownership checks consistent throughout the controller.
 //
-// ValidateAudience is false because the IdentityServer resource configuration
-// is added in Phase 3; enabling it now would reject all tokens with no audience.
+// No RoleClaimType override is needed for User.IsInRole("admin") to work — and
+// adding one ("role") actively BREAKS it (verified live during Task 7).
+// JwtBearerOptions' default token handler sets MapInboundClaims from
+// JwtSecurityTokenHandler.DefaultMapInboundClaims, which defaults to TRUE (confirmed
+// via decompilation — NOT JsonWebTokenHandler's own static default, which is false;
+// JwtBearerOptions deliberately overrides it). With mapping on, the inbound "role"
+// claim Duende stamps (IdentityService's ProfileService uses JwtClaimTypes.Role =
+// "role") is auto-remapped to the long ClaimTypes.Role URI — exactly what
+// User.IsInRole's default RoleClaimType already checks. (The same default mapping is
+// why the controller can read the seller's email via the plain ClaimTypes.Email
+// constant even though Duende's wire claim is the short "email" — no NameClaimType-style
+// override was ever needed for it. "username" and "email_verified" aren't standard
+// short claim names in that legacy map, which is why NameClaimType alone still needs
+// the explicit override below, and why the controller reads "email_verified" as a
+// literal string.)
+//
+// ValidateAudience is now enabled (Task 7 — the precondition the original comment
+// deferred on is resolved: IdentityService's "apexautobid" ApiResource/ApiScope,
+// Phase 3 Task 3, is live, and real tokens have carried aud=apexautobid since Tasks
+// 3–5's verification). ValidAudience is a hardcoded literal rather than shared via a
+// project reference to IdentityService.Config: these are independently deployable
+// services that must not reference each other's code, so "apexautobid" is a repo
+// convention (Requirements.md §3.4 / Architecture.md §5.1), not a shared constant.
+//
+// ValidTypes restricts accepted tokens to Duende's access-token typ header
+// ("at+jwt", per RFC 9068 — verified against a real minted token's header during
+// this task's live verification, not assumed) so an id_token cannot be replayed as
+// an access token against this API.
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = builder.Configuration["IdentityServiceUrl"];
-        options.TokenValidationParameters.ValidateAudience = false;
+        options.TokenValidationParameters.ValidAudience = "apexautobid";
         options.TokenValidationParameters.NameClaimType = "username";
+        options.TokenValidationParameters.ValidTypes = ["at+jwt"];
     });
 
 builder.Services.AddAuthorization();
