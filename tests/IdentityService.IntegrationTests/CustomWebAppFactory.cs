@@ -1,0 +1,133 @@
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Testcontainers.PostgreSql;
+using Xunit;
+
+namespace IdentityService.IntegrationTests;
+
+/// <summary>
+/// Boots the real Identity Service in-memory against a throwaway PostgreSQL container (no
+/// RabbitMQ — IdentityService doesn't use MassTransit). Mirrors
+/// AuctionService.IntegrationTests/CustomWebAppFactory.cs's shape exactly, with two
+/// IdentityService-specific additions documented on the members below: a test-only
+/// Resource-Owner-Password-Credentials client (<see cref="ConfigureWebHost"/>) and a
+/// redirected content root so Duende's Automatic Key Management doesn't write into the repo's
+/// real backend/IdentityService/keys/ directory.
+/// </summary>
+public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16")
+        .Build();
+
+    // Duende's Automatic Key Management (Config.cs / HostingExtensions.cs — unchanged in this
+    // task) persists its RS256 signing key to <ContentRoot>/keys at runtime (see
+    // backend/IdentityService/keys/ in local dev, gitignored). WebApplicationFactory's default
+    // content-root discovery walks up from the test assembly looking for the SUT's own project
+    // directory, which would resolve to the REAL backend/IdentityService/ folder — writing a
+    // test-run signing key on top of (or alongside) the developer's actual dev key. Redirected
+    // to a fresh temp directory per factory instance instead; nothing lands in the repo tree.
+    private readonly string _contentRoot = Directory.CreateTempSubdirectory("identityservice-inttests-").FullName;
+
+    /// <summary>
+    /// Client ID for the test-only Resource Owner Password Credentials client added in
+    /// <see cref="ConfigureWebHost"/> — see that method's remarks for why ROPC, not the
+    /// browser-interactive authorization-code+PKCE `webapp` client, is used to obtain a
+    /// user-bound token non-interactively in these tests.
+    /// </summary>
+    public const string TestClientId = "integration-test-ropc";
+    public const string TestClientSecret = "integration-test-ropc-secret";
+
+    public async ValueTask InitializeAsync() => await _postgres.StartAsync();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseContentRoot(_contentRoot);
+
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
+            });
+        });
+
+        builder.ConfigureTestServices(services =>
+        {
+            // Test-only Resource Owner Password Credentials (ROPC) client. The `webapp` client
+            // registered in the real Config.cs is authorization-code+PKCE — browser-interactive
+            // by design (login page redirect, antiforgery token, cookies) — which is exactly
+            // right for production but not worth reimplementing headlessly here (that's the
+            // established Postman/curl PKCE recipe used for manual/live verification in Tasks
+            // 3-7, not something to re-drive through WebApplicationFactory's TestServer).
+            //
+            // The honest, minimal-footprint alternative: IdentityService.csproj already calls
+            // .AddAspNetIdentity<ApplicationUser>() in HostingExtensions.cs (unchanged in this
+            // task), which — per Duende.IdentityServer.AspNetIdentity's own AddAspNetIdentity
+            // extension (verified via decompilation, not assumed) — already registers a REAL,
+            // production IResourceOwnerPasswordValidator backed by
+            // SignInManager.CheckPasswordSignInAsync. The ONLY thing missing for the password
+            // grant to work is a CLIENT allowed to request it — that's what's added here, as a
+            // test-only override, so this test project needs zero changes to Config.cs,
+            // HostingExtensions.cs, or any appsettings file. Every claim (username, email,
+            // email_verified, role) and the "apexautobid" audience still flow through the exact
+            // real production Config.ApiResources / ProfileService wiring — only the CLIENT's
+            // allowed grant type is test-only.
+            //
+            // AddInMemoryClients (Duende.IdentityServer, verified via decompilation) does a
+            // plain services.AddSingleton(clients) — calling it again here, after the app's own
+            // ConfigureServices already ran, registers a SECOND IEnumerable<Client> that wins
+            // over the first for InMemoryClientStore's single-instance constructor injection.
+            // This replaces the "webapp" client for the test host entirely; that's fine, no
+            // test in this project needs it.
+            var testClients = new List<Client>
+            {
+                new()
+                {
+                    ClientId = TestClientId,
+                    ClientSecrets = { new Secret(TestClientSecret.Sha256()) },
+                    AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+                    AccessTokenType = AccessTokenType.Jwt,
+                    AllowedScopes = { "openid", "profile", "apexautobid" },
+                },
+            };
+
+            services.AddSingleton<IEnumerable<Client>>(testClients);
+            services.AddTransient<IClientStore, InMemoryClientStore>();
+        });
+    }
+
+    // xUnit v3's IAsyncLifetime inherits IAsyncDisposable, so teardown is a ValueTask-returning
+    // DisposeAsync — mirrors AuctionService.IntegrationTests/CustomWebAppFactory.cs's identical
+    // reasoning. Also removes the redirected content-root temp directory (including whatever
+    // Duende's key management wrote there) so repeated local test runs don't accumulate them.
+    public override async ValueTask DisposeAsync()
+    {
+        await _postgres.DisposeAsync();
+        await base.DisposeAsync();
+
+        try
+        {
+            Directory.Delete(_contentRoot, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Best-effort cleanup only — a locked file here must not fail the test run.
+        }
+    }
+}
+
+/// <summary>
+/// Groups every test class that depends on <see cref="CustomWebAppFactory"/> into a single
+/// xUnit collection so they share one factory instance instead of each spinning up its own
+/// PostgreSQL container — mirrors AuctionServiceApiCollection's identical rationale.
+/// </summary>
+[CollectionDefinition(Name)]
+public class IdentityServiceApiCollection : ICollectionFixture<CustomWebAppFactory>
+{
+    public const string Name = "IdentityService.API";
+}
