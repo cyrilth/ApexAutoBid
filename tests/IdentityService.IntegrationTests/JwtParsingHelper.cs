@@ -27,6 +27,7 @@ internal static class JwtParsingHelper
         }
 
         var json = Convert.FromBase64String(padded);
-        return JsonDocument.Parse(json).RootElement.Clone();
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.Clone();
     }
 }
