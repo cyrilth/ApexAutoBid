@@ -41,8 +41,16 @@ public class SeedData
             var roleResult = await roleManager.CreateAsync(new IdentityRole(AdminRole));
             if (!roleResult.Succeeded)
             {
+                // Error CODES, not Descriptions — Phase 3 Task 14 landmine (b): some
+                // IdentityErrorDescriber messages (DuplicateEmail, InvalidEmail) embed the raw
+                // email in .Description, which would reach process logs via this exception's
+                // Message once RequireUniqueEmail is enabled below (Requirements.md §13.5 never
+                // allows email addresses in process logs). None of these three throw sites
+                // actually involve an email-carrying error today, but all three use the same
+                // "join .Description" shape, so all three are switched to .Code for consistency
+                // and to not silently regress if that ever changes.
                 throw new InvalidOperationException(
-                    $"Failed to create the '{AdminRole}' role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                    $"Failed to create the '{AdminRole}' role: {string.Join(", ", roleResult.Errors.Select(e => e.Code))}");
             }
 
             logger.LogInformation("Created role {Role}", AdminRole);
@@ -63,8 +71,9 @@ public class SeedData
                 var createResult = await userManager.CreateAsync(user, SharedDevPassword);
                 if (!createResult.Succeeded)
                 {
+                    // .Code, not .Description — see the role-creation throw above.
                     throw new InvalidOperationException(
-                        $"Failed to create seed user {username}: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                        $"Failed to create seed user {username}: {string.Join(", ", createResult.Errors.Select(e => e.Code))}");
                 }
 
                 logger.LogInformation("Seeded user {Username}", username);
@@ -79,8 +88,9 @@ public class SeedData
                 var roleAssignResult = await userManager.AddToRoleAsync(user, AdminRole);
                 if (!roleAssignResult.Succeeded)
                 {
+                    // .Code, not .Description — see the role-creation throw above.
                     throw new InvalidOperationException(
-                        $"Failed to assign the '{AdminRole}' role to {username}: {string.Join(", ", roleAssignResult.Errors.Select(e => e.Description))}");
+                        $"Failed to assign the '{AdminRole}' role to {username}: {string.Join(", ", roleAssignResult.Errors.Select(e => e.Code))}");
                 }
 
                 logger.LogInformation("Assigned role {Role} to {Username}", AdminRole, username);

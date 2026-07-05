@@ -3,7 +3,9 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using IdentityService.Models;
 using IdentityService.Pages.Account.Register;
+using IdentityService.Services;
 using RegisterPage = IdentityService.Pages.Account.Register.Index;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace IdentityService.UnitTests;
@@ -31,6 +34,9 @@ public class RegisterPageTests
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IIdentityServerInteractionService _interaction = Substitute.For<IIdentityServerInteractionService>();
+    private readonly IEmailSender<ApplicationUser> _emailSender = Substitute.For<IEmailSender<ApplicationUser>>();
+    private readonly IAuthenticationSchemeProvider _schemeProvider = Substitute.For<IAuthenticationSchemeProvider>();
+    private readonly ITurnstileValidator _turnstileValidator = Substitute.For<ITurnstileValidator>();
 
     public RegisterPageTests()
     {
@@ -40,12 +46,30 @@ public class RegisterPageTests
         // No pending OIDC authorize request — a direct visit to the register page.
         _interaction.GetAuthorizationContextAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns((AuthorizationRequest?)null);
+
+        // Phase 3 Task 15 — no Google (or any other) scheme registered in these tests; the page
+        // must still render/redisplay correctly with an empty external-provider list, not NRE on
+        // an unconfigured NSubstitute Task<T> default.
+        _schemeProvider.GetAllSchemesAsync().Returns(Enumerable.Empty<AuthenticationScheme>());
+
+        // Phase 3 Task 16.1 — default to "passes" so every PRE-EXISTING test (which supplies a
+        // TurnstileResponse token via BuildPageModel below) keeps exercising the same behavior
+        // it always did; TurnstileValidatorTests.cs covers the validator's own logic in
+        // isolation, and the two new tests below override this per-test to cover the gating
+        // logic specifically (missing token, failed validation).
+        _turnstileValidator.ValidateAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(true);
     }
 
     private RegisterPage BuildPageModel()
     {
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
-        return new RegisterPage(_userManager, _signInManager, _interaction, NullLogger<RegisterPage>.Instance)
+        var turnstileOptions = Options.Create(new TurnstileOptions
+        {
+            SiteKey = "1x00000000000000000000AA",
+            SecretKey = "1x0000000000000000000000000000000AA",
+        });
+        return new RegisterPage(_userManager, _signInManager, _interaction, _emailSender, _schemeProvider, _turnstileValidator, turnstileOptions, NullLogger<RegisterPage>.Instance)
         {
             PageContext = new PageContext
             {
@@ -53,6 +77,11 @@ public class RegisterPageTests
                 ViewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary()),
             },
             Url = Substitute.For<IUrlHelper>(),
+            // Cloudflare's widget always posts a non-empty token when it succeeds — every
+            // pre-existing test represents that "happy path" default; the two new
+            // Turnstile-specific tests below override this to exercise the missing/rejected
+            // cases instead.
+            TurnstileResponse = "test-turnstile-token",
         };
     }
 
@@ -83,9 +112,17 @@ public class RegisterPageTests
         Assert.NotNull(created);
         Assert.Equal("newuser@apexautobid.local", created!.Email);
 
-        // Signed in immediately post-registration (Task 4's interim design, ahead of email
-        // verification landing in Task 14) — verified as a call, not a real cookie write.
+        // Signed in immediately post-registration — unconfirmed accounts can still log in and
+        // browse (Requirements.md §3.4); only mutating actions require email_verified (Task
+        // 14.4, enforced by AuctionsController.cs, not this page). Verified as a call, not a
+        // real cookie write.
         await _signInManager.Received(1).SignInAsync(created, false, Arg.Any<string?>());
+
+        // Phase 3 Task 14.1 — a confirmation email was queued for the new user (not a canned
+        // no-op skip). The link content itself is exercised live against real Mailpit/Postgres
+        // infra, not asserted here (see Task 14's report).
+        await _emailSender.Received(1).SendConfirmationLinkAsync(
+            created, "newuser@apexautobid.local", Arg.Any<string>());
     }
 
     // ── 10.4  Register — duplicate username returns error ────────────────────────
@@ -118,6 +155,101 @@ public class RegisterPageTests
         // No second user was created, and the sign-in step never ran.
         var stillOnlyOne = await _userManager.FindByNameAsync("dupeuser");
         Assert.Equal("dupe1@apexautobid.local", stillOnlyOne!.Email);
+        await _signInManager.DidNotReceive().SignInAsync(Arg.Any<ApplicationUser>(), Arg.Any<bool>(), Arg.Any<string?>());
+    }
+
+    // ── 14 landmine (a) — RequireUniqueEmail rejects a second account with the same email ──
+    [Fact]
+    public async Task OnPostAsync_DuplicateEmail_ReturnsModelStateErrorWithoutCreatingSecondUser()
+    {
+        var existing = new ApplicationUser { UserName = "emailowner", Email = "shared@apexautobid.local" };
+        var seedResult = await _userManager.CreateAsync(existing, "Pass123$");
+        Assert.True(seedResult.Succeeded, string.Join(", ", seedResult.Errors.Select(e => e.Code)));
+
+        var pageModel = BuildPageModel();
+        pageModel.Input = new InputModel
+        {
+            Username = "differentusername",
+            Email = "shared@apexautobid.local",
+            Password = "Pass123$",
+            ConfirmPassword = "Pass123$",
+            Button = "register",
+        };
+
+        var result = await pageModel.OnPostAsync(CancellationToken.None);
+
+        // Options.User.RequireUniqueEmail = true (HostingExtensions, Phase 3 Task 14 landmine
+        // (a)) — UserValidator surfaces this the same way as a duplicate username: a
+        // ModelState error and a re-rendered page, never a 500.
+        Assert.IsType<PageResult>(result);
+        Assert.False(pageModel.ModelState.IsValid);
+        var error = Assert.Single(pageModel.ModelState[string.Empty]!.Errors);
+        Assert.Equal("Email 'shared@apexautobid.local' is already taken.", error.ErrorMessage);
+
+        // No second user was created, no email was sent, and the sign-in step never ran.
+        var stillOnlyOne = await _userManager.FindByNameAsync("differentusername");
+        Assert.Null(stillOnlyOne);
+        await _emailSender.DidNotReceive().SendConfirmationLinkAsync(
+            Arg.Any<ApplicationUser>(), Arg.Any<string>(), Arg.Any<string>());
+        await _signInManager.DidNotReceive().SignInAsync(Arg.Any<ApplicationUser>(), Arg.Any<bool>(), Arg.Any<string?>());
+    }
+
+    // ── 16.1 — missing Turnstile token rejects WITHOUT calling the validator ─────
+    [Fact]
+    public async Task OnPostAsync_MissingTurnstileToken_RejectsWithoutCallingValidator()
+    {
+        var pageModel = BuildPageModel();
+        pageModel.TurnstileResponse = null; // widget didn't run / JS disabled / direct POST
+        pageModel.Input = new InputModel
+        {
+            Username = "turnstileuser1",
+            Email = "turnstileuser1@apexautobid.local",
+            Password = "Pass123$",
+            ConfirmPassword = "Pass123$",
+            Button = "register",
+        };
+
+        var result = await pageModel.OnPostAsync(CancellationToken.None);
+
+        Assert.IsType<PageResult>(result);
+        Assert.False(pageModel.ModelState.IsValid);
+        var error = Assert.Single(pageModel.ModelState[string.Empty]!.Errors);
+        Assert.Equal("Please complete the verification challenge.", error.ErrorMessage);
+
+        // The whole point of rejecting early: never burn a siteverify call on an obviously
+        // incomplete submission.
+        await _turnstileValidator.DidNotReceive().ValidateAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+
+        var noUserCreated = await _userManager.FindByNameAsync("turnstileuser1");
+        Assert.Null(noUserCreated);
+    }
+
+    // ── 16.1 — a token that fails siteverify rejects the same way ────────────────
+    [Fact]
+    public async Task OnPostAsync_TurnstileValidationFails_RejectsWithoutCreatingUser()
+    {
+        _turnstileValidator.ValidateAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        var pageModel = BuildPageModel();
+        pageModel.Input = new InputModel
+        {
+            Username = "turnstileuser2",
+            Email = "turnstileuser2@apexautobid.local",
+            Password = "Pass123$",
+            ConfirmPassword = "Pass123$",
+            Button = "register",
+        };
+
+        var result = await pageModel.OnPostAsync(CancellationToken.None);
+
+        Assert.IsType<PageResult>(result);
+        Assert.False(pageModel.ModelState.IsValid);
+        var error = Assert.Single(pageModel.ModelState[string.Empty]!.Errors);
+        Assert.Equal("Verification challenge failed. Please try again.", error.ErrorMessage);
+
+        var noUserCreated = await _userManager.FindByNameAsync("turnstileuser2");
+        Assert.Null(noUserCreated);
         await _signInManager.DidNotReceive().SignInAsync(Arg.Any<ApplicationUser>(), Arg.Any<bool>(), Arg.Any<string?>());
     }
 }

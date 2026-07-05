@@ -5,6 +5,15 @@ namespace IdentityService.Pages;
 
 public sealed class SecurityHeadersAttribute : ActionFilterAttribute
 {
+    // Phase 3 Task 16.1 — the Turnstile widget (Register page only) needs its script AND its
+    // (invisible) challenge iframe allowed through CSP, or it silently fails to render/verify.
+    // Deliberately settable per-attribute-usage (e.g. [SecurityHeaders(ExtraScriptSrc = "...",
+    // ExtraFrameSrc = "...")] on just Register/Index.cshtml.cs) rather than widened globally —
+    // every OTHER page keeps the exact original CSP, unchanged.
+    public string? ExtraScriptSrc { get; init; }
+
+    public string? ExtraFrameSrc { get; init; }
+
     public override void OnResultExecuting(ResultExecutingContext context)
     {
         ArgumentNullException.ThrowIfNull(context, nameof(context));
@@ -30,6 +39,20 @@ public sealed class SecurityHeadersAttribute : ActionFilterAttribute
             //csp += "upgrade-insecure-requests;";
             // also an example if you need client images to be displayed from twitter
             // csp += "img-src 'self' https://pbs.twimg.com;";
+
+            // No script-src/frame-src directive existed before Task 16 — both fell back to
+            // default-src 'self' (CSP's documented fallback behavior), which silently blocked
+            // Turnstile's script AND its challenge iframe. Only added when the attribute usage
+            // opts in; every other page's CSP string is byte-for-byte unchanged.
+            if (!string.IsNullOrEmpty(ExtraScriptSrc))
+            {
+                csp += $" script-src 'self' {ExtraScriptSrc};";
+            }
+
+            if (!string.IsNullOrEmpty(ExtraFrameSrc))
+            {
+                csp += $" frame-src {ExtraFrameSrc};";
+            }
 
             // once for standards compliant browsers
             if (!context.HttpContext.Response.Headers.ContainsKey("Content-Security-Policy"))

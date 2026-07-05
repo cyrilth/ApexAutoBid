@@ -1,5 +1,4 @@
 using Duende.IdentityServer.Models;
-using Duende.IdentityServer.Stores;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -48,11 +47,36 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
     {
         builder.UseContentRoot(_contentRoot);
 
+        // Relies on WebApplicationFactory's default Development environment (it calls
+        // UseEnvironment(Development) unconditionally): that's what makes Program.cs's
+        // IsDevelopment()-gated SeedData run against the fresh Testcontainers database,
+        // seeding the users these tests authenticate as. Don't override the environment here.
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DefaultConnection"] = _postgres.GetConnectionString(),
+
+                // UseContentRoot(_contentRoot) above points WebApplicationBuilder's JSON config
+                // providers (appsettings.json / appsettings.Development.json — both optional, so
+                // this fails silently, not loudly) at a directory that has neither file, so
+                // nothing from either file is actually loaded in this test host — this in-memory
+                // override is standing in for BOTH, not just the Smtp section, but the DB
+                // connection string above is the only other setting anything here depends on.
+                // A syntactically valid but unreachable host is enough: Phase 3 Task 14's
+                // SmtpOptions only needs to pass ValidateOnStart's DataAnnotations checks at
+                // boot — no test in this project exercises Register/SmtpEmailSender, so nothing
+                // here ever actually dials out to it.
+                ["Smtp:Host"] = "smtp.invalid",
+                ["Smtp:FromAddress"] = "noreply@apexautobid.local",
+                ["Smtp:FromName"] = "ApexAutoBid (Integration Tests)",
+
+                // Same reasoning as Smtp above — Phase 3 Task 16's TurnstileOptions only needs
+                // to pass ValidateOnStart at boot; no test in this project exercises
+                // Register/TurnstileValidator, so Cloudflare's real always-pass test keys aren't
+                // even necessary here (any non-empty values satisfy [Required]).
+                ["Turnstile:SiteKey"] = "1x00000000000000000000AA",
+                ["Turnstile:SecretKey"] = "1x0000000000000000000000000000000AA",
             });
         });
 
@@ -79,11 +103,13 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             // allowed grant type is test-only.
             //
             // AddInMemoryClients (Duende.IdentityServer, verified via decompilation) does a
-            // plain services.AddSingleton(clients) — calling it again here, after the app's own
-            // ConfigureServices already ran, registers a SECOND IEnumerable<Client> that wins
-            // over the first for InMemoryClientStore's single-instance constructor injection.
-            // This replaces the "webapp" client for the test host entirely; that's fine, no
-            // test in this project needs it.
+            // plain services.AddSingleton(clients) — registering a SECOND IEnumerable<Client>
+            // here, after the app's own ConfigureServices already ran, wins over the first for
+            // InMemoryClientStore's single-instance constructor injection. This replaces the
+            // "webapp" client for the test host entirely (fine — no test here needs it) while
+            // leaving the app's IClientStore registration untouched, so Duende's
+            // ValidatingClientStore decorator (client-configuration validation on every lookup)
+            // still applies exactly as in production.
             var testClients = new List<Client>
             {
                 new()
@@ -97,7 +123,6 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             };
 
             services.AddSingleton<IEnumerable<Client>>(testClients);
-            services.AddTransient<IClientStore, InMemoryClientStore>();
         });
     }
 
@@ -114,9 +139,10 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
         {
             Directory.Delete(_contentRoot, recursive: true);
         }
-        catch (IOException)
+        catch (Exception)
         {
-            // Best-effort cleanup only — a locked file here must not fail the test run.
+            // Best-effort cleanup only — a locked file (IOException) or a permission/read-only
+            // hiccup (UnauthorizedAccessException) here must not fail the test run.
         }
     }
 }

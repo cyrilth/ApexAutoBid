@@ -4,6 +4,7 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
 using IdentityService.Models;
+using IdentityService.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -44,9 +45,25 @@ public class Index : PageModel
         _events = events;
     }
 
-    public async Task<IActionResult> OnGetAsync(string? returnUrl, CancellationToken ct)
+    public async Task<IActionResult> OnGetAsync(string? returnUrl, string? externalLoginError, CancellationToken ct)
     {
         await BuildModelAsync(returnUrl, ct);
+
+        // Phase 3 Task 15 — Pages/ExternalLogin/Callback.cshtml.cs redirects here with this
+        // parameter set when ExternalLoginProvisioningService refuses to auto-provision (see its
+        // remarks). Deliberately a closed enum round-tripped through the query string, mapped
+        // here to a fixed, pre-written message — never the raw provisioning-failure text, and
+        // never anything else attacker/query-string-controlled ends up in the rendered page.
+        if (externalLoginError is not null &&
+            Enum.TryParse<ExternalLoginRejectedReason>(externalLoginError, out var reason))
+        {
+            ModelState.AddModelError(string.Empty, reason switch
+            {
+                ExternalLoginRejectedReason.EmailAlreadyRegistered =>
+                    "An account with this email already exists. Please sign in with your password instead.",
+                _ => "Sign-in with that provider isn't available right now.",
+            });
+        }
 
         if (View.IsExternalLoginOnly)
         {
@@ -136,10 +153,26 @@ public class Index : PageModel
                 }
             }
 
-            const string error = "invalid credentials";
+            // Phase 3 Task 16.3 — a distinct message for the locked-out case.
+            //
+            // Enumeration-parity tradeoff (deliberate, disclosed): PasswordSignInAsync only ever
+            // returns LockedOut for an EXISTING account (a username that doesn't exist can never
+            // accumulate failed attempts to lock), so showing this message at all is a narrower,
+            // well-known information leak — it confirms "this username exists AND you've just
+            // locked it" to whoever triggered it. This is the same tradeoff virtually every
+            // system with visible lockout messaging accepts (GitHub, Google, etc.): the
+            // alternative — never surfacing lockout state — leaves a legitimate user stuck
+            // seeing "invalid credentials" forever with no indication they should stop trying
+            // and wait, which is a worse outcome for a FAR more common case (a real user
+            // mistyping their password several times) than the narrow enumeration signal costs.
+            // Full parity is preserved for the non-locked-out path below: wrong password and
+            // unknown username still produce the exact same InvalidCredentialsErrorMessage.
+            var error = result.IsLockedOut ? "locked out" : "invalid credentials";
             await _events.RaiseAsync(new UserLoginFailureEvent(Input.Username, error, clientId: context?.Client.ClientId), ct);
             Telemetry.Metrics.UserLoginFailure(context?.Client.ClientId, IdentityServerConstants.LocalIdentityProvider, error);
-            ModelState.AddModelError(string.Empty, LoginOptions.InvalidCredentialsErrorMessage);
+            ModelState.AddModelError(
+                string.Empty,
+                result.IsLockedOut ? LoginOptions.AccountLockedErrorMessage : LoginOptions.InvalidCredentialsErrorMessage);
         }
 
         // something went wrong, show form with error

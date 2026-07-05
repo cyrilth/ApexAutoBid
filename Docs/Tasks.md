@@ -8,7 +8,7 @@
 |-------|------|-------|--------|
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
-| 3. Identity Service | 18 | 43 | In progress |
+| 3. Identity Service | 43 | 43 | Done |
 | 4. Gateway Service | 0 | 25 | Not started |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **105** | **371** | **In progress** |
+| **Overall** | **130** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -187,31 +187,31 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 10.2. Login — invalid credentials returns 401 — `dotnet-service-builder`
   - [x] 10.3. Register — valid data creates user — `dotnet-service-builder`
   - [x] 10.4. Register — duplicate username returns error — `dotnet-service-builder`
-- [ ] 11. Write integration tests (IdentityService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 11.1. Token endpoint — returns valid JWT with correct claims — `dotnet-service-builder`
-  - [ ] 11.2. Protected endpoint — rejects request without token — `dotnet-service-builder`
-  - [ ] 11.3. Protected endpoint — accepts request with valid token — `dotnet-service-builder`
-- [ ] 12. Verify end-to-end: obtain token → call authenticated Auction Service endpoints — `test-runner`
-- [ ] 13. Enable login-from-docs (Scalar ↔ IdentityServer) — `dotnet-service-builder`
-  - [ ] 13.1. Register a `scalar` client in `Config.cs` (authorization code + PKCE, public client without secret, redirect URIs for the Scalar docs pages) — `dotnet-service-builder`
-  - [ ] 13.2. Enable CORS on the IdentityServer token endpoint for browser-based code exchange from the docs pages — `dotnet-service-builder`
-  - [ ] 13.3. Switch the Auction Service Scalar config to the OAuth2 authorization code flow with PKCE (`AddAuthorizationCodeFlow`) — `dotnet-service-builder`
-- [ ] 14. Add email verification — `dotnet-service-builder`
-  - [ ] 14.1. Enable `RequireConfirmedEmail` and the confirmation flow in the register UI (confirmation link) — `dotnet-service-builder`
-  - [ ] 14.2. Email sender: SMTP to Mailpit in dev (`localhost:1025`, no credentials); production SMTP credentials via environment variables — `dotnet-service-builder`
-  - [ ] 14.3. Include the `email_verified` claim in access tokens — `dotnet-service-builder`
-  - [ ] 14.4. Require the `email_verified` claim for `POST api/auctions` in the Auction Service (403 otherwise) — `dotnet-service-builder`
-- [ ] 15. Add Google external login — `dotnet-service-builder`
-  - [ ] 15.1. Add `Microsoft.AspNetCore.Authentication.Google`; client ID/secret from environment variables only (real external credentials — never committed; Google login is disabled when the variables are absent) — `dotnet-service-builder`
-  - [ ] 15.2. "Sign in with Google" on the login/register pages; treat Google-asserted verified emails as confirmed — `dotnet-service-builder`
-- [ ] 16. Add bot protection — `dotnet-service-builder`
-  - [ ] 16.1. Cloudflare Turnstile widget on the register page + server-side `siteverify` validation of the token (plain `HttpClient`) — `dotnet-service-builder`
-  - [ ] 16.2. Dev/Docker use Cloudflare's official always-pass test keys (committed — published for this purpose); production keys via environment variables — `dotnet-service-builder`
-  - [ ] 16.3. Enable ASP.NET Core Identity account lockout on repeated failed logins — `dotnet-service-builder`
-  - [ ] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
-- [ ] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
-- [ ] 18. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL — see `Requirements.md` §13.4) — `dotnet-service-builder`
-- [ ] 19. Add an `EmailVerified` authorization policy (`[Authorize(Policy = "EmailVerified")]`) and apply it uniformly to all mutating auction endpoints (POST/PUT/DELETE) — replaces the ad-hoc per-endpoint email_verified check currently only on create — `dotnet-service-builder`
+- [x] 11. Write integration tests (IdentityService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 11.1. Token endpoint — returns valid JWT with correct claims — `dotnet-service-builder`
+  - [x] 11.2. Protected endpoint — rejects request without token — `dotnet-service-builder`
+  - [x] 11.3. Protected endpoint — accepts request with valid token — `dotnet-service-builder`
+- [x] 12. Verify end-to-end: obtain token → call authenticated Auction Service endpoints — `test-runner`
+- [x] 13. Enable login-from-docs (Scalar ↔ IdentityServer) — `dotnet-service-builder`
+  - [x] 13.1. Register a `scalar` client in `Config.cs` (authorization code + PKCE, public client without secret, redirect URIs for the Scalar docs pages) — `dotnet-service-builder`
+  - [x] 13.2. Enable CORS on the IdentityServer token endpoint for browser-based code exchange from the docs pages — `dotnet-service-builder`
+  - [x] 13.3. Switch the Auction Service Scalar config to the OAuth2 authorization code flow with PKCE (`AddAuthorizationCodeFlow`) — `dotnet-service-builder`
+- [x] 14. Add email verification — `dotnet-service-builder`
+  - [x] 14.1. Enable `RequireConfirmedEmail` and the confirmation flow in the register UI (confirmation link) — `dotnet-service-builder`
+  - [x] 14.2. Email sender: SMTP to Mailpit in dev (`localhost:1025`, no credentials); production SMTP credentials via environment variables — `dotnet-service-builder`
+  - [x] 14.3. Include the `email_verified` claim in access tokens — `dotnet-service-builder`
+  - [x] 14.4. Require the `email_verified` claim for `POST api/auctions` in the Auction Service (403 otherwise) — `dotnet-service-builder`
+- [x] 15. Add Google external login — `dotnet-service-builder`
+  - [x] 15.1. Add `Microsoft.AspNetCore.Authentication.Google`; client ID/secret from environment variables only (real external credentials — never committed; Google login is disabled when the variables are absent) — `dotnet-service-builder`
+  - [x] 15.2. "Sign in with Google" on the login/register pages; treat Google-asserted verified emails as confirmed — `dotnet-service-builder`
+- [x] 16. Add bot protection — `dotnet-service-builder`
+  - [x] 16.1. Cloudflare Turnstile widget on the register page + server-side `siteverify` validation of the token (plain `HttpClient`) — `dotnet-service-builder`
+  - [x] 16.2. Dev/Docker use Cloudflare's official always-pass test keys (committed — published for this purpose); production keys via environment variables — `dotnet-service-builder`
+  - [x] 16.3. Enable ASP.NET Core Identity account lockout on repeated failed logins — `dotnet-service-builder`
+  - [x] 16.4. Rate limit the login, register, and token endpoints (`Microsoft.AspNetCore.RateLimiting`, limits from configuration) — `dotnet-service-builder`
+- [x] 17. Add global error handling: `IExceptionHandler` + ProblemDetails for the API endpoints (see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [x] 18. Add health endpoints: `GET /health/live` + `GET /health/ready` (PostgreSQL — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 19. Add an `EmailVerified` authorization policy (`[Authorize(Policy = "EmailVerified")]`) and apply it uniformly to all mutating auction endpoints (POST/PUT/DELETE) — replaces the ad-hoc per-endpoint email_verified check currently only on create — `dotnet-service-builder`
 
 ---
 

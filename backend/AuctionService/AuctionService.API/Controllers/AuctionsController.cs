@@ -85,28 +85,17 @@ public class AuctionsController(
     // "username" claim (NameClaimType is set to "username" in Program.cs).
     // SellerEmail comes from the standard ClaimTypes.Email ("email") claim.
     //
-    // email_verified enforcement (§3.1/§3.4): only verified accounts may create
-    // auctions. The "email_verified" claim must be present and equal "true".
+    // email_verified enforcement (§3.1/§3.4): only verified accounts may create auctions —
+    // enforced by the "EmailVerified" authorization policy (Program.cs, Phase 3 Task 19),
+    // which replaces the ad-hoc in-body check this endpoint used to do itself. A caller failing
+    // the policy never reaches this method body at all — ASP.NET Core's authorization
+    // middleware short-circuits to a framework Forbid() (403, no response body) before model
+    // binding/the action runs, unlike the old ad-hoc check's handcrafted ProblemDetails 403.
 
-    [Authorize]
+    [Authorize(Policy = "EmailVerified")]
     [HttpPost]
     public async Task<ActionResult<AuctionDto>> CreateAuction([FromBody] CreateAuctionDto dto)
     {
-        // Enforce email_verified before any DB work.
-        var emailVerified = User.FindFirstValue("email_verified");
-        if (emailVerified is not "true")
-        {
-            logger.LogWarning("Auction creation blocked — email not verified for user {User}",
-                User.Identity!.Name);
-
-            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
-            {
-                Title = "Email not verified",
-                Detail = "You must verify your email address before creating an auction.",
-                Status = StatusCodes.Status403Forbidden
-            });
-        }
-
         var seller = User.Identity!.Name!;
         var sellerEmail = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
 
@@ -148,8 +137,13 @@ public class AuctionsController(
     // Partially updates an existing auction. Only non-null DTO fields are applied.
     // Gallery swap: when dto.Images is non-null, replaces the existing image rows.
     // Ownership: only the seller may update. Returns 403 if caller is not the seller.
+    //
+    // email_verified enforcement (Phase 3 Task 19): the "EmailVerified" policy (Program.cs) is
+    // IN ADDITION TO the ownership check below, not instead of it — an authenticated, verified
+    // caller who isn't the auction's seller (or an admin) still gets AuctionWriteResult.Forbidden
+    // -> Forbid() from the ownership logic in AuctionAppService, unchanged by this task.
 
-    [Authorize]
+    [Authorize(Policy = "EmailVerified")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateAuction(Guid id, [FromBody] UpdateAuctionDto dto)
     {
@@ -185,8 +179,11 @@ public class AuctionsController(
     //
     // Deletes an existing auction. Requires authentication.
     // 404 if not found, 403 if caller is not the seller.
+    //
+    // email_verified enforcement (Phase 3 Task 19): same as UpdateAuction above — the
+    // "EmailVerified" policy is in addition to, not instead of, the ownership check.
 
-    [Authorize]
+    [Authorize(Policy = "EmailVerified")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAuction(Guid id)
     {
@@ -223,28 +220,21 @@ public class AuctionsController(
     // ── 18.1  POST api/auctions/upload-url ────────────────────────────────────
     //
     // Issues a 5-minute presigned PUT URL for a client-declared content type and size.
-    // Requires authentication and a verified email (same enforcement as CreateAuction).
-    // Image bytes never flow through this service — the client PUTs directly to the
-    // presigned URL, then submits the returned ObjectUrl in a create/update auction request.
+    // Requires authentication and a verified email. Image bytes never flow through this
+    // service — the client PUTs directly to the presigned URL, then submits the returned
+    // ObjectUrl in a create/update auction request.
+    //
+    // email_verified enforcement (Phase 3 Task 19 follow-up): this endpoint's ad-hoc in-body
+    // check has been converted to the "EmailVerified" policy (Program.cs), same as
+    // CreateAuction/UpdateAuction/DeleteAuction — it is now THE single mechanism gating
+    // email-verified across all five mutating endpoints, not one of several independent copies.
+    // A caller failing the policy never reaches this method body — see CreateAuction's remarks
+    // for the exact framework Forbid()-vs-old-handcrafted-ProblemDetails behavior change.
 
-    [Authorize]
+    [Authorize(Policy = "EmailVerified")]
     [HttpPost("upload-url")]
     public async Task<ActionResult<UploadUrlResponse>> CreateUploadUrl([FromBody] UploadUrlRequest request)
     {
-        var emailVerified = User.FindFirstValue("email_verified");
-        if (emailVerified is not "true")
-        {
-            logger.LogWarning("upload-url blocked — email not verified for user {User}",
-                User.Identity!.Name);
-
-            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
-            {
-                Title = "Email not verified",
-                Detail = "You must verify your email address before uploading images.",
-                Status = StatusCodes.Status403Forbidden
-            });
-        }
-
         var (outcome, response) = await imageService.CreateUploadUrlAsync(request);
 
         return outcome switch
@@ -272,25 +262,14 @@ public class AuctionsController(
     // Generates a max-400px-wide WebP thumbnail for a previously uploaded object key.
     // Requires authentication and a verified email. SSRF guard: only a bare GUID key
     // (the format upload-url issues) is accepted — see AuctionImageAppService.
+    //
+    // email_verified enforcement (Phase 3 Task 19 follow-up): converted to the "EmailVerified"
+    // policy — see CreateUploadUrl's remarks above.
 
-    [Authorize]
+    [Authorize(Policy = "EmailVerified")]
     [HttpPost("thumbnail")]
     public async Task<ActionResult<ThumbnailResponse>> CreateThumbnail([FromBody] ThumbnailRequest request)
     {
-        var emailVerified = User.FindFirstValue("email_verified");
-        if (emailVerified is not "true")
-        {
-            logger.LogWarning("thumbnail blocked — email not verified for user {User}",
-                User.Identity!.Name);
-
-            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
-            {
-                Title = "Email not verified",
-                Detail = "You must verify your email address before generating thumbnails.",
-                Status = StatusCodes.Status403Forbidden
-            });
-        }
-
         var (outcome, response) = await imageService.CreateThumbnailAsync(request.Key);
 
         return outcome switch

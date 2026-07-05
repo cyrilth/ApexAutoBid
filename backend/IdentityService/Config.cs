@@ -110,5 +110,56 @@ public static class Config
                     ApiScopeName,
                 }
             },
+
+            // Requirements.md §3.4 "IdentityServer Clients": "scalar — API docs pages
+            // (authorization code + PKCE, public client without secret); requires CORS on the
+            // token endpoint for browser-based code exchange" (Phase 3 Task 13).
+            //
+            // PUBLIC client: RequireClientSecret = false (Duende defaults this to true, so it
+            // must be explicitly disabled) — the Scalar UI runs entirely in the browser with no
+            // backend to keep a secret confidential, so PKCE (required below) is the only
+            // credential, exactly like a SPA/native app client.
+            //
+            // Redirect URI is a judgment call, resolved via decompilation, not guesswork:
+            // Scalar.AspNetCore 2.16.7's own OAuth2 flow (decompiled/decompressed its embedded
+            // scalar.js bundle) defaults the redirect to the CURRENT page's own URL
+            // (window.location.origin + window.location.pathname) if none is configured — but
+            // that default is ambiguous here, since /scalar, /scalar/, and /scalar/v1 are all
+            // URLs a user could land on depending on trailing-slash/document-name routing. To
+            // remove that ambiguity, AuctionService.API's Program.cs pins an explicit, fixed
+            // redirect URI via ScalarOptions.AddAuthorizationCodeFlow(...).WithRedirectUri(...)
+            // — the single value here must match that exactly. Only AuctionService's docs page
+            // is wired for Scalar login today; Search/Bidding/the Gateway's aggregated docs
+            // (Phase 4/8) will add their own redirect URIs to this same client when their own
+            // Task-13-equivalent work lands. Like the `webapp` client, this dev URL is
+            // provisional — Phase 8/9 containerization may change the host.
+            new Client
+            {
+                ClientId = "scalar",
+                ClientName = "ApexAutoBid API Docs (Scalar)",
+                RequireClientSecret = false,
+
+                AllowedGrantTypes = GrantTypes.Code,
+                RequirePkce = true,
+
+                RedirectUris = { "http://localhost:5054/scalar" },
+
+                // Task 13.2: Duende's InMemoryCorsPolicyService (swapped in automatically by
+                // AddInMemoryClients — verified via decompilation) allows an origin for
+                // /connect/token (and discovery/userinfo/revocation — CorsOptions.CorsPaths'
+                // documented defaults) if ANY registered client lists it in
+                // AllowedCorsOrigins. UseIdentityServer() already calls app.ConfigureCors()
+                // internally (also verified via decompilation), so no ASP.NET Core CORS
+                // middleware/policy needs to be registered anywhere — this property is the
+                // entire mechanism.
+                AllowedCorsOrigins = { "http://localhost:5054" },
+
+                // No offline_access: a docs page doesn't need a long-lived session — each
+                // "Authorize" click is expected to mint a fresh token, unlike the webapp's
+                // persistent user session. Like ClientId and RedirectUris above, this scope
+                // list must match AuctionService.API Program.cs's WithSelectedScopes exactly
+                // (no shared constant is possible across independently deployable services).
+                AllowedScopes = { "openid", "profile", ApiScopeName },
+            },
         };
 }

@@ -4,6 +4,7 @@ using Duende.IdentityServer;
 using Duende.IdentityServer.Events;
 using Duende.IdentityServer.Services;
 using IdentityService.Models;
+using IdentityService.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -21,19 +22,22 @@ public class Callback : PageModel
     private readonly IIdentityServerInteractionService _interaction;
     private readonly ILogger<Callback> _logger;
     private readonly IEventService _events;
+    private readonly ExternalLoginProvisioningService _provisioningService;
 
     public Callback(
         IIdentityServerInteractionService interaction,
         IEventService events,
         ILogger<Callback> logger,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        SignInManager<ApplicationUser> signInManager,
+        ExternalLoginProvisioningService provisioningService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _interaction = interaction;
         _logger = logger;
         _events = events;
+        _provisioningService = provisioningService;
     }
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
@@ -50,7 +54,20 @@ public class Callback : PageModel
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            var externalClaims = externalUser.Claims.Select(c => $"{c.Type}: {c.Value}");
+            // Phase 3 Task 15 landmine (b): this call site has existed since the template was
+            // scaffolded (Task 1) but was unreachable dead code until this task — no external
+            // provider was ever registered, so no external principal ever reached here. Claim
+            // TYPES are always safe/useful to see at Debug level (that's the whole point — did
+            // the expected claim arrive at all); claim VALUES for email-shaped claim types are
+            // redacted (Requirements.md §13.5 — email addresses may not appear in process logs
+            // outside the post-sale contact exchange). Other claim values (name, picture link,
+            // locale, etc.) are left as-is — Debug is disabled by default in every environment
+            // (appsettings.json's LogLevel:Default is "Information"), so this is an
+            // explicitly-opted-into diagnostic surface, not one enabled by default.
+            var externalClaims = externalUser.Claims.Select(c =>
+                c.Type is JwtClaimTypes.Email or ClaimTypes.Email
+                    ? $"{c.Type}: (redacted)"
+                    : $"{c.Type}: {c.Value}");
             _logger.ExternalClaims(externalClaims);
         }
 
@@ -69,14 +86,31 @@ public class Callback : PageModel
         var user = await _userManager.FindByLoginAsync(provider, providerUserId);
         if (user == null)
         {
-            // this might be where you might initiate a custom workflow for user registration
-            // in this sample we don't show how that would be done, as our sample implementation
-            // simply auto-provisions new external user
-            //
             // remove the user id and name identifier claims so we don't include it as an extra claim if/when we provision the user
             var claims = externalUser.Claims.ToList();
             _ = claims.RemoveAll(c => c.Type is JwtClaimTypes.Subject or ClaimTypes.NameIdentifier);
-            user = await AutoProvisionUserAsync(provider, providerUserId, claims.ToList());
+
+            try
+            {
+                user = await _provisioningService.ProvisionAsync(provider, providerUserId, claims);
+            }
+            catch (ExternalLoginRejectedException ex)
+            {
+                // Phase 3 Task 15 landmine (a) — safe rejection, not silent account-linking (see
+                // ExternalLoginProvisioningService's remarks). Log the reason CODE and provider
+                // scheme only, never any claim value (Requirements.md §13.5). Clean up the
+                // temporary external cookie before leaving — the visitor never actually gets
+                // signed in, so it shouldn't linger.
+                _logger.LogWarning(
+                    "External login rejected for provider {Provider}: {Reason}",
+                    provider, ex.Reason);
+                await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
+
+                var rejectReturnUrl = result.Properties.Items.TryGetValue("returnUrl", out var ru) ? ru : null;
+                return RedirectToPage(
+                    "/Account/Login/Index",
+                    new { returnUrl = rejectReturnUrl, externalLoginError = ex.Reason });
+            }
         }
 
         // this allows us to collect any additional claims or properties
@@ -111,78 +145,6 @@ public class Callback : PageModel
         }
 
         return Redirect(returnUrl);
-    }
-
-    private async Task<ApplicationUser> AutoProvisionUserAsync(string provider, string providerUserId, List<Claim> claims)
-    {
-        var sub = Guid.NewGuid().ToString();
-
-        var user = new ApplicationUser
-        {
-            Id = sub,
-            UserName = sub, // don't need a username, since the user will be using an external provider to login
-        };
-
-        // email
-        var email = claims.FirstOrDefault(x => x.Type == JwtClaimTypes.Email)?.Value ??
-                    claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
-        if (email != null)
-        {
-            user.Email = email;
-        }
-
-        // create a list of claims that we want to transfer into our store
-        var filtered = new List<Claim>();
-
-        // user's display name
-        var name = claims.FirstOrDefault(x => x.Type == JwtClaimTypes.Name)?.Value ??
-                   claims.FirstOrDefault(x => x.Type == ClaimTypes.Name)?.Value;
-        if (name != null)
-        {
-            filtered.Add(new Claim(JwtClaimTypes.Name, name));
-        }
-        else
-        {
-            var first = claims.FirstOrDefault(x => x.Type == JwtClaimTypes.GivenName)?.Value ??
-                        claims.FirstOrDefault(x => x.Type == ClaimTypes.GivenName)?.Value;
-            var last = claims.FirstOrDefault(x => x.Type == JwtClaimTypes.FamilyName)?.Value ??
-                       claims.FirstOrDefault(x => x.Type == ClaimTypes.Surname)?.Value;
-            if (first != null && last != null)
-            {
-                filtered.Add(new Claim(JwtClaimTypes.Name, first + ' ' + last));
-            }
-            else if (first != null)
-            {
-                filtered.Add(new Claim(JwtClaimTypes.Name, first));
-            }
-            else if (last != null)
-            {
-                filtered.Add(new Claim(JwtClaimTypes.Name, last));
-            }
-        }
-
-        var identityResult = await _userManager.CreateAsync(user);
-        if (!identityResult.Succeeded)
-        {
-            throw new InvalidOperationException(identityResult.Errors.First().Description);
-        }
-
-        if (filtered.Count != 0)
-        {
-            identityResult = await _userManager.AddClaimsAsync(user, filtered);
-            if (!identityResult.Succeeded)
-            {
-                throw new InvalidOperationException(identityResult.Errors.First().Description);
-            }
-        }
-
-        identityResult = await _userManager.AddLoginAsync(user, new UserLoginInfo(provider, providerUserId, provider));
-        if (!identityResult.Succeeded)
-        {
-            throw new InvalidOperationException(identityResult.Errors.First().Description);
-        }
-
-        return user;
     }
 
     // if the external login is OIDC-based, there are certain things we need to preserve to make logout work

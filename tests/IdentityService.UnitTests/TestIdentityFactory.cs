@@ -1,5 +1,6 @@
 using IdentityService.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,10 +28,19 @@ namespace IdentityService.UnitTests;
 /// </summary>
 internal static class TestIdentityFactory
 {
-    public static UserManager<ApplicationUser> CreateUserManager(InMemoryUserStore store) =>
-        new(
+    public static UserManager<ApplicationUser> CreateUserManager(InMemoryUserStore store)
+    {
+        var identityOptions = new IdentityOptions
+        {
+            // Matches HostingExtensions.ConfigureServices' Configure<IdentityOptions> (Phase 3
+            // Task 14 landmine (a)) so RegisterPageTests exercises the same duplicate-email
+            // rejection the real app enforces.
+            User = { RequireUniqueEmail = true },
+        };
+
+        var userManager = new UserManager<ApplicationUser>(
             store,
-            Options.Create(new IdentityOptions()),
+            Options.Create(identityOptions),
             new PasswordHasher<ApplicationUser>(),
             [new UserValidator<ApplicationUser>()],
             [new PasswordValidator<ApplicationUser>()],
@@ -38,6 +48,22 @@ internal static class TestIdentityFactory
             new IdentityErrorDescriber(),
             Substitute.For<IServiceProvider>(),
             NullLogger<UserManager<ApplicationUser>>.Instance);
+
+        // AddIdentity<>().AddDefaultTokenProviders() (HostingExtensions) is what registers this
+        // in the real app via DI — bypassed by this constructor call, so it's registered by
+        // hand here. Needed for GenerateEmailConfirmationTokenAsync/ConfirmEmailAsync (Phase 3
+        // Task 14), which Register/Index.cshtml.cs now calls unconditionally on every successful
+        // registration. EphemeralDataProtectionProvider is an in-memory-only IDataProtectionProvider
+        // built exactly for scenarios like this (no key persistence needed across a single test run).
+        userManager.RegisterTokenProvider(
+            TokenOptions.DefaultProvider,
+            new DataProtectorTokenProvider<ApplicationUser>(
+                new EphemeralDataProtectionProvider(),
+                Options.Create(new DataProtectionTokenProviderOptions()),
+                NullLogger<DataProtectorTokenProvider<ApplicationUser>>.Instance));
+
+        return userManager;
+    }
 
     public static SignInManager<ApplicationUser> CreateSignInManagerSubstitute(UserManager<ApplicationUser> userManager) =>
         Substitute.For<SignInManager<ApplicationUser>>(
