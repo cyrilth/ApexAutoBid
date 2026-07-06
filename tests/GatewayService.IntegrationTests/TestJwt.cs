@@ -55,7 +55,9 @@ internal static class TestJwt
             claims:
             [
                 new Claim("username", username),
-                new Claim("email_verified", emailVerified ? "true" : "false"),
+                // ClaimValueTypes.Boolean matches IdentityService's ProfileService, so the test
+                // token carries email_verified as a JSON boolean exactly like a real Duende one.
+                new Claim("email_verified", emailVerified ? "true" : "false", ClaimValueTypes.Boolean),
             ],
             notBefore: DateTime.UtcNow,
             expires: DateTime.UtcNow.AddMinutes(5));

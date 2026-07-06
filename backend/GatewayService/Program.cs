@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Threading.RateLimiting;
 using GatewayService.Handlers;
@@ -205,7 +206,10 @@ builder.Services.AddRateLimiter(rateLimiterOptions =>
 
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
-            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+            // Ceiling, not truncation — rounding down would invite clients to retry up to a
+            // second before the fixed window actually resets, earning a pointless second 429.
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
         }
 
         // Rejection-path visibility (phase-end code review follow-up) — method + path, plus the
