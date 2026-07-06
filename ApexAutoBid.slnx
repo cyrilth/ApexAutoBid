@@ -16,9 +16,17 @@
     <Project Path="backend/SearchService/SearchService.Domain/SearchService.Domain.csproj" />
     <Project Path="backend/SearchService/SearchService.Infrastructure/SearchService.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/backend/BiddingService/">
+    <Project Path="backend/BiddingService/BiddingService.API/BiddingService.API.csproj" />
+    <Project Path="backend/BiddingService/BiddingService.Application/BiddingService.Application.csproj" />
+    <Project Path="backend/BiddingService/BiddingService.Domain/BiddingService.Domain.csproj" />
+    <Project Path="backend/BiddingService/BiddingService.Infrastructure/BiddingService.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AuctionService.IntegrationTests/AuctionService.IntegrationTests.csproj" />
     <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
+    <Project Path="tests/BiddingService.IntegrationTests/BiddingService.IntegrationTests.csproj" />
+    <Project Path="tests/BiddingService.UnitTests/BiddingService.UnitTests.csproj" />
     <Project Path="tests/SearchService.UnitTests/SearchService.UnitTests.csproj" />
     <Project Path="tests/IdentityService.IntegrationTests/IdentityService.IntegrationTests.csproj" />
     <Project Path="tests/IdentityService.UnitTests/IdentityService.UnitTests.csproj" />

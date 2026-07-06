@@ -45,9 +45,17 @@ public interface IAuctionService
     Task<List<AuctionDto>> GetAuctionsAsync(DateTime? updatedAfter);
 
     /// <summary>
-    /// Returns a single auction DTO, or <see langword="null"/> if not found.
+    /// Returns a single auction as an <see cref="AuctionDetailDto"/>, or <see langword="null"/>
+    /// if not found. <paramref name="requestingUser"/> is the caller's <c>username</c> claim
+    /// (<see langword="null"/> for an unauthenticated/anonymous caller, or for the gRPC fallback
+    /// rpc — see <c>AuctionGrpcService</c>) and drives ONLY the post-sale contact-exchange
+    /// fields (Requirements §3.1 / Tasks.md Phase 5 Task 19): once the auction is sold
+    /// (<c>Status = Finished</c> with a recorded <c>Winner</c>), the seller sees
+    /// <see cref="AuctionDetailDto.WinnerEmail"/>, the winner sees
+    /// <see cref="AuctionDetailDto.SellerEmail"/>, and every other caller — including
+    /// <see langword="null"/> — sees neither.
     /// </summary>
-    Task<AuctionDto?> GetAuctionByIdAsync(Guid id);
+    Task<AuctionDetailDto?> GetAuctionByIdAsync(Guid id, string? requestingUser);
 
     /// <summary>
     /// Creates a new auction. Validates the submitted gallery (Task 18.6) before writing

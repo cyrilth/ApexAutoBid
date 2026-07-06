@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+option csharp_namespace = "AuctionService.API.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+package auctions;
+
+// ── Phase 5 Task 8 — gRPC fallback contract ──────────────────────────────────
+//
+// Consumed by the Bidding Service as a fallback lookup when event data for an auction is not
+// yet available locally (e.g. a bid is placed before the `AuctionCreated` event has been
+// consumed — Requirements.md §3.2/§3.3, Architecture.md §3.2). This .proto file IS the
+// cross-service contract: the Bidding Service's gRPC client (BiddingService.Infrastructure,
+// built in a later phase) copies it verbatim. Keep it MINIMAL and STABLE.
+//
+// Field selection mirrors exactly what Requirements.md §3.3 lists for the Bidding Service's
+// own local `Auction` record — ID, AuctionEnd, Seller, ReservePrice, Finished — plus `status`
+// (the same string-enum-name convention AuctionDto/the event contracts already use) so the
+// caller can distinguish Finished/ReserveNotMet/Cancelled rather than a single ambiguous bool.
+//
+// Privacy (Requirements.md §3.1): this rpc is anonymous — it exposes only data already public
+// via the anonymous `GET api/auctions/{id}` endpoint, MINUS the post-sale contact-exchange
+// fields. It deliberately carries the seller's USERNAME (needed for the "seller cannot bid on
+// their own auction" check — Requirements.md §3.3) and NEVER `SellerEmail`/`WinnerEmail` — see
+// AuctionGrpcService's remarks for how that is enforced server-side, not just by omission here.
+service Auctions {
+  rpc GetAuction (GetAuctionRequest) returns (GetAuctionResponse);
+}
+
+message GetAuctionRequest {
+  // Auction id (Guid) as its canonical string form.
+  string id = 1;
+}
+
+message GetAuctionResponse {
+  string id = 1;
+  string seller = 2;
+  int32 reserve_price = 3;
+  google.protobuf.Timestamp auction_end = 4;
+
+  // "Live" | "Finished" | "ReserveNotMet" | "Cancelled" — the Domain Status enum's name,
+  // matching AuctionDto.Status and the event-contract convention (Contracts/AuctionCreated.cs
+  // etc.) so a new enum value never breaks this rpc's consumers.
+  string status = 5;
+}

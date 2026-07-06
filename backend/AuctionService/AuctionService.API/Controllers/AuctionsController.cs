@@ -54,15 +54,26 @@ public class AuctionsController(
         return Ok(auctions);
     }
 
-    // ── 8.2  GET api/auctions/{id} ───────────────────────────────────────────
+    // ── 8.2 / 19.1  GET api/auctions/{id} ────────────────────────────────────
     //
-    // Returns the full auction including the complete image gallery.
-    // 404 if the auction does not exist.
+    // Returns the full auction including the complete image gallery. 404 if the auction does
+    // not exist. Remains anonymous overall (no [Authorize] here) — but Phase 5 Task 19's
+    // post-sale contact exchange (Requirements §3.1) needs the caller's identity WHEN present,
+    // so this endpoint reads User.Identity?.Name directly rather than relying on User.Identity!.Name
+    // the way the write endpoints do. This works because JWT bearer authentication runs
+    // (UseAuthentication) for every request regardless of [Authorize] — an anonymous caller (no
+    // token, or TestAuthHandler's NoResult() in tests) ends up with an unauthenticated principal
+    // whose Identity.Name is null, while a caller presenting a valid token gets their username
+    // claim populated here even though this action never demands authorization. All of the
+    // actual redaction logic lives in AuctionAppService.GetAuctionByIdAsync — this controller
+    // only forwards the (possibly null) username.
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<AuctionDto>> GetAuctionById(Guid id)
+    public async Task<ActionResult<AuctionDetailDto>> GetAuctionById(Guid id)
     {
-        var dto = await service.GetAuctionByIdAsync(id);
+        var requestingUser = User.Identity?.Name;
+
+        var dto = await service.GetAuctionByIdAsync(id, requestingUser);
 
         if (dto is null)
         {

@@ -129,11 +129,19 @@ public static class Config
             // remove that ambiguity, AuctionService.API's Program.cs pins an explicit, fixed
             // redirect URI via ScalarOptions.AddAuthorizationCodeFlow(...).WithRedirectUri(...)
             // — each value here must match one of those exactly. AuctionService's own docs page
-            // (port 5054) and the Gateway's aggregated docs page (Phase 4 Task 7.3, port 6001 —
-            // GatewayService's Program.cs) both run the same login against this one client, so
-            // both redirect URIs are listed; a future Search/Bidding-hosted-standalone docs page
-            // would add a third entry the same way. Like the `webapp` client, these dev URLs are
-            // provisional — Phase 8/9 containerization may change the hosts.
+            // (port 5054), the Gateway's aggregated docs page (Phase 4 Task 7.3, port 6001 —
+            // GatewayService's Program.cs), and now the Bidding Service's own standalone docs
+            // page (Phase 5 Task 18, port 7003 — BiddingService.API's Program.cs) all run the
+            // same login against this one client, so all three redirect URIs are listed; a
+            // future Search-hosted-standalone docs page would add a fourth entry the same way.
+            // Like the `webapp` client, these dev URLs are provisional — Phase 8/9
+            // containerization may change the hosts.
+            //
+            // NOTE (Phase 5 Task 18): this file change requires an IdentityService process
+            // restart to take effect — Duende's AddInMemoryClients reads this list once, at
+            // startup. Not restarted as part of this task (a live dev instance was already
+            // running and other tasks depend on it staying up); pending for whoever next
+            // restarts it.
             new Client
             {
                 ClientId = "scalar",
@@ -143,7 +151,12 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code,
                 RequirePkce = true,
 
-                RedirectUris = { "http://localhost:5054/scalar", "http://localhost:6001/scalar" },
+                RedirectUris =
+                {
+                    "http://localhost:5054/scalar",
+                    "http://localhost:6001/scalar",
+                    "http://localhost:7003/scalar",
+                },
 
                 // Task 13.2 / Phase 4 Task 7.3: Duende's InMemoryCorsPolicyService (swapped in
                 // automatically by AddInMemoryClients — verified via decompilation) allows an
@@ -152,10 +165,15 @@ public static class Config
                 // in AllowedCorsOrigins. UseIdentityServer() already calls app.ConfigureCors()
                 // internally (also verified via decompilation), so no ASP.NET Core CORS
                 // middleware/policy needs to be registered anywhere — this property is the
-                // entire mechanism. Both origins are listed for the same reason both redirect
-                // URIs are above — the browser-based code exchange can originate from either
-                // docs page.
-                AllowedCorsOrigins = { "http://localhost:5054", "http://localhost:6001" },
+                // entire mechanism. All three origins are listed for the same reason all
+                // three redirect URIs are above — the browser-based code exchange can
+                // originate from any of the three docs pages.
+                AllowedCorsOrigins =
+                {
+                    "http://localhost:5054",
+                    "http://localhost:6001",
+                    "http://localhost:7003",
+                },
 
                 // No offline_access: a docs page doesn't need a long-lived session — each
                 // "Authorize" click is expected to mint a fresh token, unlike the webapp's

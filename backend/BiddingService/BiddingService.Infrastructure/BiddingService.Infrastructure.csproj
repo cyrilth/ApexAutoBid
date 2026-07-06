@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Entities" Version="25.1.0" />
+    <!-- 8.x line — see the MassTransit license note in BiddingService.Application.csproj.
+         Needed here (not just transitively via MassTransit.RabbitMQ in the API project) for
+         MassTransit.MongoDbIntegration.MongoDbContext — the transactional "bus outbox" type
+         BidPlacementUnitOfWork depends on to make the bid write and the BidPlaced publish
+         atomic (Requirements §3.3 / Task 4/11; live-verified mechanics — see that class's
+         remarks). -->
+    <PackageReference Include="MassTransit.MongoDb" Version="8.5.10" />
+
+    <!-- gRPC fallback client (Phase 5 Tasks 6/7 — Requirements §3.3). Grpc.Net.ClientFactory
+         (not the bare Grpc.Net.Client package) so the generated Auctions.AuctionsClient can be
+         registered/resolved via AddGrpcClient<T>() in Program.cs, with the resilience handler
+         below attached to its underlying HttpClient. Unlike AuctionService.API's Grpc.AspNetCore
+         (server) metapackage, this client-side package does NOT pull in Google.Protobuf
+         transitively — verified against its own nuspec during this task — so it is referenced
+         explicitly, matching Requirements.md §3.3's NuGet list (which lists it separately from
+         Grpc.Net.Client for the same reason). -->
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <!-- Build-time-only .proto → C# codegen (GrpcServices="Client" below). No metapackage
+         (Grpc.AspNetCore) pulls this in on the client side, unlike AuctionService.API's server
+         setup — referenced directly here instead. -->
+    <PackageReference Include="Grpc.Tools" Version="2.80.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- Polly v8 retry policy for the gRPC fallback call (Requirements §3.3/§13.5 — "Resilience:
+         Uses Polly v8 via Microsoft.Extensions.Http.Resilience for retry policies on HTTP/gRPC
+         calls"). Brings in Polly.Core/Microsoft.Extensions.Resilience transitively; wired onto
+         the AddGrpcClient<Auctions.AuctionsClient>() HttpClient in Program.cs. -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BiddingService.Application\BiddingService.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GrpcServices="Client": this project only ever CALLS Auctions.GetAuction (the fallback
+         lookup) — it never hosts it (that's AuctionService.API's own Protos/auctions.proto,
+         compiled there with GrpcServices="Server"). Generates only Auctions.AuctionsClient. -->
+    <Protobuf Include="Protos\auctions.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>

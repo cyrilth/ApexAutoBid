@@ -10,14 +10,14 @@
 | 2. Search Service | 30 | 30 | Done |
 | 3. Identity Service | 43 | 43 | Done |
 | 4. Gateway Service | 25 | 25 | Done |
-| 5. Bidding Service | 0 | 45 | Not started |
+| 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 0 | 19 | Not started |
 | 7. Frontend (Next.js) | 0 | 55 | Not started |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **155** | **371** | **In progress** |
+| **Overall** | **200** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -278,51 +278,51 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the Bidding Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
-- [ ] 2. Define models in `BiddingService.Domain/` — `dotnet-service-builder`
-  - [ ] 2.1. `Bid` entity in `BiddingService.Domain/Entities/` (includes Bidder and `BidderEmail` from claims; email is never returned by the bids API) — `dotnet-service-builder`
-  - [ ] 2.2. `BidStatus` enum in `BiddingService.Domain/Enums/` — `dotnet-service-builder`
-  - [ ] 2.3. Local `Auction` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
-- [ ] 3. Set up MongoDB connection via `MongoDB.Entities` in `BiddingService.Infrastructure/Data/` — `dotnet-service-builder`
-- [ ] 4. Configure MassTransit with Outbox pattern — `dotnet-service-builder`
-- [ ] 5. Implement event consumer for `AuctionCreated` in `BiddingService.Application/Consumers/` (store local auction record) — `dotnet-service-builder`
-- [ ] 6. Implement gRPC client in `BiddingService.Infrastructure/` to call Auction Service (fallback for missing auction data) — `dotnet-service-builder`
-- [ ] 7. Configure Polly retry policies for gRPC calls in `BiddingService.Infrastructure/` — `dotnet-service-builder`
-- [ ] 8. Implement gRPC server endpoint in Auction Service (`GetAuction`) — `dotnet-service-builder`
-- [ ] 9. Implement API endpoints in `BiddingService.API/Controllers/` — `dotnet-service-builder`
-  - [ ] 9.1. `POST api/bids` — place bid (Auth) — `dotnet-service-builder`
-  - [ ] 9.2. `GET api/bids/{auctionId}` — get bids for auction (Anon) — `dotnet-service-builder`
-- [ ] 10. Implement bid validation and status logic — `dotnet-service-builder`
-  - [ ] 10.1. Reject bid when bidder is the auction's seller — 400 Bad Request — `dotnet-service-builder`
-  - [ ] 10.2. Accepted — bid > current high bid and > reserve price — `dotnet-service-builder`
-  - [ ] 10.3. AcceptedBelowReserve — bid > current high bid but < reserve price — `dotnet-service-builder`
-  - [ ] 10.4. TooLow — bid <= current high bid — `dotnet-service-builder`
-  - [ ] 10.5. Finished — auction already ended — `dotnet-service-builder`
-- [ ] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
-- [ ] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold; check interval from `Bidding__FinalizationIntervalSeconds`, default 10s, so short dev auctions finalize promptly) — `dotnet-service-builder`
-- [ ] 13. Add JWT bearer authentication (require the `email_verified` claim for `POST api/bids` — 403 otherwise) — `dotnet-service-builder`
-- [ ] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
-  - [ ] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
-  - [ ] 15.2. PlaceBid — bid below reserve returns AcceptedBelowReserve — `dotnet-service-builder`
-  - [ ] 15.3. PlaceBid — bid too low returns TooLow — `dotnet-service-builder`
-  - [ ] 15.4. PlaceBid — auction finished returns Finished — `dotnet-service-builder`
-  - [ ] 15.5. PlaceBid — bidder is seller returns 400 — `dotnet-service-builder`
-  - [ ] 15.6. PlaceBid — auction not found triggers gRPC fallback — `dotnet-service-builder`
-  - [ ] 15.7. GetBids — returns bids for auction — `dotnet-service-builder`
-- [ ] 16. Write integration tests (BiddingService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 16.1. PlaceBid — valid bid publishes `BidPlaced` event — `dotnet-service-builder`
-  - [ ] 16.2. PlaceBid — unauthenticated returns 401 — `dotnet-service-builder`
-  - [ ] 16.3. AuctionCreated consumer — stores local auction record — `dotnet-service-builder`
-  - [ ] 16.4. Background service — finalizes expired auction — `dotnet-service-builder`
-- [ ] 17. Verify end-to-end: place bid → Auction Service updates CurrentHighBid → Search Service updates — `test-runner`
-- [ ] 18. Add API documentation: OpenAPI generation + Scalar UI with the OAuth2/Bearer security scheme (same pattern as Auction Service) — `dotnet-service-builder`
-- [ ] 19. Implement post-sale contact exchange in the Auction Service — `dotnet-service-builder`
-  - [ ] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
-  - [ ] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
-- [ ] 20. Seed local auction records and bid history per `Requirements.md` §8.3 (bids carry `BidderEmail`; states consistent with the Auction Service seed) — `dotnet-service-builder`
-- [ ] 21. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1; bid outcomes like TooLow/Finished are normal responses, not errors) — `dotnet-service-builder`
-- [ ] 22. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 1. Create the Bidding Service Clean Architecture projects (Domain, Application, Infrastructure, API) with correct NuGet packages per layer — `dotnet-service-builder`
+- [x] 2. Define models in `BiddingService.Domain/` — `dotnet-service-builder`
+  - [x] 2.1. `Bid` entity in `BiddingService.Domain/Entities/` (includes Bidder and `BidderEmail` from claims; email is never returned by the bids API) — `dotnet-service-builder`
+  - [x] 2.2. `BidStatus` enum in `BiddingService.Domain/Enums/` — `dotnet-service-builder`
+  - [x] 2.3. Local `Auction` entity in `BiddingService.Domain/Entities/` — `dotnet-service-builder`
+- [x] 3. Set up MongoDB connection via `MongoDB.Entities` in `BiddingService.Infrastructure/Data/` — `dotnet-service-builder`
+- [x] 4. Configure MassTransit with Outbox pattern — `dotnet-service-builder`
+- [x] 5. Implement event consumer for `AuctionCreated` in `BiddingService.Application/Consumers/` (store local auction record) — `dotnet-service-builder`
+- [x] 6. Implement gRPC client in `BiddingService.Infrastructure/` to call Auction Service (fallback for missing auction data) — `dotnet-service-builder`
+- [x] 7. Configure Polly retry policies for gRPC calls in `BiddingService.Infrastructure/` — `dotnet-service-builder`
+- [x] 8. Implement gRPC server endpoint in Auction Service (`GetAuction`) — `dotnet-service-builder`
+- [x] 9. Implement API endpoints in `BiddingService.API/Controllers/` — `dotnet-service-builder`
+  - [x] 9.1. `POST api/bids` — place bid (Auth) — `dotnet-service-builder`
+  - [x] 9.2. `GET api/bids/{auctionId}` — get bids for auction (Anon) — `dotnet-service-builder`
+- [x] 10. Implement bid validation and status logic — `dotnet-service-builder`
+  - [x] 10.1. Reject bid when bidder is the auction's seller — 400 Bad Request — `dotnet-service-builder`
+  - [x] 10.2. Accepted — bid > current high bid and > reserve price — `dotnet-service-builder`
+  - [x] 10.3. AcceptedBelowReserve — bid > current high bid but < reserve price — `dotnet-service-builder`
+  - [x] 10.4. TooLow — bid <= current high bid — `dotnet-service-builder`
+  - [x] 10.5. Finished — auction already ended — `dotnet-service-builder`
+- [x] 11. Publish events: `BidPlaced`, `AuctionFinished` — `dotnet-service-builder`
+- [x] 12. Implement background service (check auctions past `AuctionEnd`, emit `AuctionFinished` — set `WinnerEmail` from the winning bid's `BidderEmail` when sold; check interval from `Bidding__FinalizationIntervalSeconds`, default 10s, so short dev auctions finalize promptly) — `dotnet-service-builder`
+- [x] 13. Add JWT bearer authentication (require the `email_verified` claim for `POST api/bids` — 403 otherwise) — `dotnet-service-builder`
+- [x] 14. Dockerize the Bidding Service (multi-project restore pattern for Clean Architecture; JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
+- [x] 15. Write unit tests (BiddingService.UnitTests) — `dotnet-service-builder`
+  - [x] 15.1. PlaceBid — valid bid returns Accepted — `dotnet-service-builder`
+  - [x] 15.2. PlaceBid — bid below reserve returns AcceptedBelowReserve — `dotnet-service-builder`
+  - [x] 15.3. PlaceBid — bid too low returns TooLow — `dotnet-service-builder`
+  - [x] 15.4. PlaceBid — auction finished returns Finished — `dotnet-service-builder`
+  - [x] 15.5. PlaceBid — bidder is seller returns 400 — `dotnet-service-builder`
+  - [x] 15.6. PlaceBid — auction not found triggers gRPC fallback — `dotnet-service-builder`
+  - [x] 15.7. GetBids — returns bids for auction — `dotnet-service-builder`
+- [x] 16. Write integration tests (BiddingService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 16.1. PlaceBid — valid bid publishes `BidPlaced` event — `dotnet-service-builder`
+  - [x] 16.2. PlaceBid — unauthenticated returns 401 — `dotnet-service-builder`
+  - [x] 16.3. AuctionCreated consumer — stores local auction record — `dotnet-service-builder`
+  - [x] 16.4. Background service — finalizes expired auction — `dotnet-service-builder`
+- [x] 17. Verify end-to-end: place bid → Auction Service updates CurrentHighBid → Search Service updates — `test-runner`
+- [x] 18. Add API documentation: OpenAPI generation + Scalar UI with the OAuth2/Bearer security scheme (same pattern as Auction Service) — `dotnet-service-builder`
+- [x] 19. Implement post-sale contact exchange in the Auction Service — `dotnet-service-builder`
+  - [x] 19.1. `GET api/auctions/{id}`: once sold, include `WinnerEmail` only when the caller is the seller, and `SellerEmail` only when the caller is the winner — `dotnet-service-builder`
+  - [x] 19.2. Unit tests: seller sees WinnerEmail, winner sees SellerEmail, everyone else (incl. anonymous) sees neither — `dotnet-service-builder`
+- [x] 20. Seed local auction records and bid history per `Requirements.md` §8.3 (bids carry `BidderEmail`; states consistent with the Auction Service seed) — `dotnet-service-builder`
+- [x] 21. Add global error handling: `IExceptionHandler` + ProblemDetails (see `Requirements.md` §13.1; bid outcomes like TooLow/Finished are normal responses, not errors) — `dotnet-service-builder`
+- [x] 22. Add health endpoints: `GET /health/live` + `GET /health/ready` (MongoDB, RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 

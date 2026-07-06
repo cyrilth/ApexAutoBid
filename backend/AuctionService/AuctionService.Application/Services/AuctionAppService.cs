@@ -2,6 +2,7 @@ using System.Text.Json;
 using AuctionService.Application.Configuration;
 using AuctionService.Application.DTOs;
 using AuctionService.Domain.Entities;
+using AuctionService.Domain.Enums;
 using AuctionService.Domain.Interfaces;
 using Contracts;
 using MapsterMapper;
@@ -28,10 +29,39 @@ public class AuctionAppService(
         return mapper.Map<List<AuctionDto>>(auctions);
     }
 
-    public async Task<AuctionDto?> GetAuctionByIdAsync(Guid id)
+    public async Task<AuctionDetailDto?> GetAuctionByIdAsync(Guid id, string? requestingUser)
     {
         var auction = await repository.GetByIdAsync(id);
-        return auction is null ? null : mapper.Map<AuctionDto>(auction);
+        if (auction is null)
+            return null;
+
+        // Two-hop mapping (Auction → AuctionDto → AuctionDetailDto) deliberately reuses rule 2
+        // (Auction → AuctionDto) rather than duplicating the Item-flatten/Status/Images
+        // projections a second time in AuctionMappingConfig — see rule 2b's remarks there.
+        var baseDto = mapper.Map<AuctionDto>(auction);
+        var dto = mapper.Map<AuctionDetailDto>(baseDto);
+
+        // Post-sale contact exchange (Requirements §3.1 / Tasks.md Phase 5 Task 19.1).
+        // Fail-safe redaction: both fields start (and, for every caller below the one narrow
+        // exception, stay) null — regardless of what a future Mapster convention change might
+        // otherwise copy onto AuctionDetailDto. Only the exact counterparty of a SOLD auction
+        // (Status = Finished with a recorded Winner) ever sees the other party's email, and each
+        // side sees only the ONE field relevant to them, read directly from the tracked entity
+        // (never from anything Mapster produced) so this is the single source of truth for the
+        // redaction decision.
+        dto.SellerEmail = null;
+        dto.WinnerEmail = null;
+
+        var isSold = auction.Status == Status.Finished && auction.Winner is not null;
+        if (isSold && requestingUser is not null)
+        {
+            if (requestingUser == auction.Seller)
+                dto.WinnerEmail = auction.WinnerEmail;
+            else if (requestingUser == auction.Winner)
+                dto.SellerEmail = auction.SellerEmail;
+        }
+
+        return dto;
     }
 
     public async Task<AuctionCreateResult> CreateAuctionAsync(

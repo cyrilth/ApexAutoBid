@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Phase 5 Task 22 — GET /health/ready's MongoDB check. Same "AspNetCore.HealthChecks.*"
+         family and major version (9.0.0) as AuctionService.API's AspNetCore.HealthChecks.NpgSql
+         / SearchService.API's AspNetCore.HealthChecks.MongoDb pins, kept in lockstep. -->
+    <PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <!-- 8.x line — see the MassTransit license note in BiddingService.Application.csproj. -->
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Security pin — same GHSA-v5pm-xwqc-g5wc rationale as AuctionService.API.csproj's
+         identical override; kept in lockstep with it. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BiddingService.Application\BiddingService.Application.csproj" />
+    <ProjectReference Include="..\BiddingService.Infrastructure\BiddingService.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

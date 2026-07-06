@@ -386,6 +386,9 @@ app.MapScalarApiReference(options =>
 
     options.AddDocument("auction", "Auction Service");
     options.AddDocument("search", "Search Service", isDefault: true);
+    // Phase 5 Task 18 — same "openapi/{svc}/v1.json" proxied-path convention as the two
+    // documents above (the "openapi-bidding" route, appsettings.json).
+    options.AddDocument("bidding", "Bidding Service");
 
     // ── Route "try it" through the gateway itself, not the downstream service (small fix) ──
     //
