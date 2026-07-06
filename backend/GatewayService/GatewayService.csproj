@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <!-- Aggregated Scalar docs UI (Requirements.md §3.5) — the Program.cs wiring itself
+         (proxying each service's /openapi/v1.json + MapScalarApiReference) is a later Phase 4
+         task (Docs/Tasks.md Task 7); the package is referenced now so the NuGet dependency
+         matches Requirements §3.5's table from the start. -->
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.10" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
+  </ItemGroup>
+
+</Project>
