@@ -456,7 +456,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
   - [ ] 1.3. Frontend: Next.js web app — *main conversation*
   - [ ] 1.4. `healthcheck` blocks for infrastructure and app services (`/health/live`–`/health/ready`, web app `/api/health` — see `Requirements.md` §13.4) and startup ordering via `depends_on: condition: service_healthy` — *main conversation*
-- [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — *main conversation*, validate with `docker-validator`
+- [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — includes the Auction Service's dedicated HTTP/2 gRPC Kestrel endpoint (currently defined only in its `appsettings.Development.json`; containers need the equivalent `Kestrel__Endpoints__Grpc__*` env vars) and the Bidding Service's matching `Grpc__AuctionServiceUrl` — *main conversation*, validate with `docker-validator`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`

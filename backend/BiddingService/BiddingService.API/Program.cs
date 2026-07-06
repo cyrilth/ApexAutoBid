@@ -42,18 +42,20 @@ builder.Services.AddOptions<FinalizationOptions>()
 // AppContext switch: the dev Auction Service gRPC endpoint (http://localhost:7054 —
 // AuctionService.API's appsettings.Development.json) is deliberately cleartext HTTP/2 ("h2c"),
 // not HTTPS — SocketsHttpHandler otherwise requires TLS ALPN negotiation to use HTTP/2 at all,
-// and the very first call fails outright. This must be set before the channel's first request;
-// setting it here, at startup, well before AddGrpcClient below ever dispatches anything, is
-// sufficient (live-verified against the running AuctionService.API instance during this task —
-// still required on this .NET 10 build exactly as documented for earlier versions).
-AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+// and the very first call fails outright. Set only when the configured URL is actually
+// cleartext http:// (an https endpoint negotiates HTTP/2 via ALPN and never needs it), and
+// before the channel's first request; setting it here, at startup, well before AddGrpcClient
+// below ever dispatches anything, is sufficient (live-verified against the running
+// AuctionService.API instance during this task — still required on this .NET 10 build exactly
+// as documented for earlier versions).
+var auctionGrpcUrl = new Uri(builder.Configuration["Grpc:AuctionServiceUrl"]
+    ?? throw new InvalidOperationException("Grpc:AuctionServiceUrl is not configured"));
+
+if (auctionGrpcUrl.Scheme == Uri.UriSchemeHttp)
+    AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 builder.Services
-    .AddGrpcClient<Auctions.AuctionsClient>(options =>
-    {
-        options.Address = new Uri(builder.Configuration["Grpc:AuctionServiceUrl"]
-            ?? throw new InvalidOperationException("Grpc:AuctionServiceUrl is not configured"));
-    })
+    .AddGrpcClient<Auctions.AuctionsClient>(options => options.Address = auctionGrpcUrl)
     // Microsoft.Extensions.Http.Resilience (Polly v8) — retries with backoff on transient
     // gRPC/HTTP failures (HttpRetryStrategyOptions' default ShouldHandle predicate already
     // covers HttpRequestException, request timeouts, and 5xx/408/429 responses — exactly the

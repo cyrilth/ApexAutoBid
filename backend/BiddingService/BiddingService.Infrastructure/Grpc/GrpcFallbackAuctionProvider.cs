@@ -77,7 +77,10 @@ public class GrpcFallbackAuctionProvider(
 
         var auction = new Auction
         {
-            Id = Guid.Parse(response.Id),
+            // The rpc is keyed by auctionId, so the response describes exactly that auction —
+            // reusing the already-validated Guid instead of parsing response.Id back avoids a
+            // FormatException failure mode on a malformed echo.
+            Id = auctionId,
             Seller = response.Seller,
             ReservePrice = response.ReservePrice,
             AuctionEnd = response.AuctionEnd.ToDateTime(),
