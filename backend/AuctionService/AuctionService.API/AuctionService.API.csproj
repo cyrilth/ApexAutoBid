@@ -27,11 +27,22 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
+    <!-- gRPC server (Phase 5 Task 8) — the metapackage also brings in Grpc.Tools (build-time
+         .proto codegen, see the Protobuf item below) and Google.Protobuf. Explicitly targets
+         net10.0 as of 2.80.0 — see the Protos/auctions.proto contract remarks. -->
+    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AuctionService.Application\AuctionService.Application.csproj" />
     <ProjectReference Include="..\AuctionService.Infrastructure\AuctionService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GrpcServices="Server": this project only ever hosts the Auctions.GetAuction rpc — it
+         never calls it (that's the future BiddingService.Infrastructure gRPC client, which
+         copies this same .proto verbatim and compiles it with GrpcServices="Client" instead). -->
+    <Protobuf Include="Protos\auctions.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

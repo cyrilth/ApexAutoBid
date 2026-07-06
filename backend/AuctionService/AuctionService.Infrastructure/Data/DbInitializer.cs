@@ -45,11 +45,25 @@ public static class DbInitializer
 
         var baseUrl = config["Images:PublicBaseUrl"] ?? "http://localhost:9000";
 
+        // Fixed, well-known ids (Requirements §8.2/§8.3) — the Bidding Service's own seed
+        // (BiddingService.Infrastructure.Data.DbInitializer.SeedDataAsync) assigns its ten
+        // local auction records these EXACT same literal Guids, so a bidder's
+        // GET api/auctions/{id} and GET api/bids/{auctionId} always agree on which auction
+        // they mean in any fresh deployment of both services. Before this change, Id was left
+        // to whatever value generator (EF Core's own UUIDv7 default for Guid keys) produced —
+        // a random, per-deployment value that made "the same id" across two independently
+        // seeded datastores unsatisfiable other than by coincidence. Assigning an explicit,
+        // non-default Guid here works with EF Core's existing "value generated on add"
+        // configuration for this property without any model/migration change: EF only invokes
+        // the generator when the property's value is still the CLR default (Guid.Empty) at
+        // SaveChanges time. This has no effect on an ALREADY-seeded database (the AnyAsync
+        // guard above skips seeding entirely) — only future from-empty deployments.
         var auctions = new List<Auction>
         {
             // 1 – Ford GT (has a current high bid from seed bids)
             new()
             {
+                Id = Guid.Parse("019f34ea-a5dc-756c-923d-a43f3e66c6af"),
                 ReservePrice = 20000,
                 Seller = "bob",
                 SellerEmail = "bob@apexautobid.local",
@@ -78,6 +92,7 @@ public static class DbInitializer
             // 2 – Bugatti Veyron
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-7abc-8c64-8820ce20cd96"),
                 ReservePrice = 90000,
                 Seller = "alice",
                 SellerEmail = "alice@apexautobid.local",
@@ -105,6 +120,7 @@ public static class DbInitializer
             // 3 – Ford Mustang (no reserve)
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-7457-b003-cd061d1a886c"),
                 ReservePrice = 0,
                 Seller = "bob",
                 SellerEmail = "bob@apexautobid.local",
@@ -132,6 +148,7 @@ public static class DbInitializer
             // 4 – Mercedes SLK (ended, reserve not met)
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-75c8-99df-36981b246048"),
                 ReservePrice = 50000,
                 Seller = "tom",
                 SellerEmail = "tom@apexautobid.local",
@@ -159,6 +176,7 @@ public static class DbInitializer
             // 5 – BMW X1
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-7142-a876-f92dbd679148"),
                 ReservePrice = 20000,
                 Seller = "alice",
                 SellerEmail = "alice@apexautobid.local",
@@ -186,6 +204,7 @@ public static class DbInitializer
             // 6 – Ferrari Spider
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-75a4-b99b-568e6f3f0395"),
                 ReservePrice = 20000,
                 Seller = "bob",
                 SellerEmail = "bob@apexautobid.local",
@@ -213,6 +232,7 @@ public static class DbInitializer
             // 7 – Ferrari F-430
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-7e7c-863d-b313a76f80ec"),
                 ReservePrice = 150000,
                 Seller = "alice",
                 SellerEmail = "alice@apexautobid.local",
@@ -240,6 +260,7 @@ public static class DbInitializer
             // 8 – Audi R8 (no reserve)
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-70fd-b40f-e6d7c2090457"),
                 ReservePrice = 0,
                 Seller = "bob",
                 SellerEmail = "bob@apexautobid.local",
@@ -267,6 +288,7 @@ public static class DbInitializer
             // 9 – Audi TT (ending in 6 hours)
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-7ff7-b8c6-27b047c737ca"),
                 ReservePrice = 20000,
                 Seller = "tom",
                 SellerEmail = "tom@apexautobid.local",
@@ -294,6 +316,7 @@ public static class DbInitializer
             // 10 – Ford Model T (sold — Finished)
             new()
             {
+                Id = Guid.Parse("019f34ea-a60a-73f7-8724-6710dc1f942a"),
                 ReservePrice = 20000,
                 Seller = "bob",
                 SellerEmail = "bob@apexautobid.local",

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+// Phase 5 Tasks 6/7 — client side of the gRPC fallback contract.
+//
+// Copied VERBATIM from AuctionService.API/Protos/auctions.proto (the wire format — package,
+// message/field names and numbers, service/rpc name — is the cross-service contract and must
+// stay byte-for-byte identical) except for csharp_namespace below, which is purely a
+// client-side codegen concern: this project compiles the file with GrpcServices="Client"
+// (BiddingService.Infrastructure.csproj) to generate only Auctions.AuctionsClient, never
+// Auctions.AuctionsBase. See that file for the full contract rationale (privacy, field
+// selection) — it is not repeated here to avoid the two copies drifting out of sync in
+// prose while the wire format itself is kept identical.
+option csharp_namespace = "BiddingService.Infrastructure.Protos";
+
+import "google/protobuf/timestamp.proto";
+
+package auctions;
+
+service Auctions {
+  rpc GetAuction (GetAuctionRequest) returns (GetAuctionResponse);
+}
+
+message GetAuctionRequest {
+  // Auction id (Guid) as its canonical string form.
+  string id = 1;
+}
+
+message GetAuctionResponse {
+  string id = 1;
+  string seller = 2;
+  int32 reserve_price = 3;
+  google.protobuf.Timestamp auction_end = 4;
+
+  // "Live" | "Finished" | "ReserveNotMet" | "Cancelled" — the Auction Service Domain Status
+  // enum's name (see AuctionService.API/Protos/auctions.proto's remarks).
+  string status = 5;
+}

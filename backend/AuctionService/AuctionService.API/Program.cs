@@ -1,5 +1,6 @@
 using AuctionService.API.Handlers;
 using AuctionService.API.OpenApi;
+using AuctionService.API.Services;
 using AuctionService.Application.Configuration;
 using AuctionService.Application.Extensions;
 using AuctionService.Infrastructure.Data;
@@ -110,6 +111,17 @@ builder.Services.AddHealthChecks()
 // ── Controllers ───────────────────────────────────────────────────────────────
 
 builder.Services.AddControllers();
+
+// ── gRPC server (Phase 5 Task 8) ─────────────────────────────────────────────
+//
+// Hosts Auctions.GetAuction (Protos/auctions.proto) for the Bidding Service's fallback lookup.
+// gRPC requires HTTP/2; the dev/appsettings.Development.json Kestrel config below adds a
+// SECOND, dedicated endpoint (http://localhost:7054, Protocols=Http2) alongside the existing
+// http://localhost:5054 endpoint (left as the implicit Http1AndHttp2 default it always was) so
+// this does not disturb the REST API, /scalar, or the health endpoints already served on 5054.
+// See AuctionGrpcService's remarks for why this rpc is anonymous and never carries an email.
+
+builder.Services.AddGrpc();
 
 // ── Global error handling (Task 19) ──────────────────────────────────────────
 //
@@ -253,6 +265,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ── gRPC server (Phase 5 Task 8) ─────────────────────────────────────────────
+//
+// Bound to the dedicated "Grpc" Kestrel endpoint (Http2) configured in
+// appsettings.Development.json — see the AddGrpc() registration above for the full rationale.
+
+app.MapGrpcService<AuctionGrpcService>();
 
 // ── Health endpoints (Task 21) ────────────────────────────────────────────────
 //

@@ -61,6 +61,26 @@ public class AuctionMappingConfig : IRegister
                     .OrderBy(img => img.SortOrder)
                     .ToList());
 
+        // ── 2b. AuctionDto → AuctionDetailDto ────────────────────────────────────
+        //
+        // Phase 5 Task 19: AuctionDetailDto extends AuctionDto with the two post-sale
+        // contact-exchange fields (SellerEmail, WinnerEmail — see AuctionDetailDto's own
+        // remarks). Every AuctionDto property maps here by name convention (Id, CreatedAt,
+        // UpdatedAt, AuctionEnd, Seller, Winner, Make, Model, Year, Color, Mileage,
+        // ReservePrice, SoldAmount, CurrentHighBid, Status, Images) — reusing rule 2 above
+        // rather than duplicating the Item-flatten/Status/Images projections a second time.
+        //
+        // SellerEmail/WinnerEmail have no matching source property on AuctionDto (by design —
+        // see AuctionDto's own privacy remarks) and are explicitly ignored here anyway as
+        // defense-in-depth: AuctionAppService.GetAuctionByIdAsync is the ONLY place either
+        // field is ever populated, and it does so by direct assignment AFTER this mapping
+        // runs, reading straight from the tracked Auction entity — never through Mapster
+        // convention.
+
+        config.NewConfig<AuctionDto, AuctionDetailDto>()
+            .Ignore(dest => dest.SellerEmail!)
+            .Ignore(dest => dest.WinnerEmail!);
+
         // ── 3. CreateAuctionDto → Auction ────────────────────────────────────────
         //
         // Auction has two C# `required` members absent from the DTO: Seller and

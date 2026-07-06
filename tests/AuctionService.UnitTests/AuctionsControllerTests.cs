@@ -168,6 +168,64 @@ public class AuctionsControllerTests
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
+    // ── 19.1  GetAuctionById — forwards the caller's username to the service ────
+    //
+    // The actual post-sale contact-exchange redaction logic lives in
+    // AuctionAppService.GetAuctionByIdAsync (covered by PostSaleContactExchangeTests.cs); these
+    // tests only assert the controller's WIRING — that it correctly derives requestingUser from
+    // User.Identity?.Name (null for an unauthenticated/anonymous principal) and forwards it
+    // unchanged, and that a null service result becomes a 404.
+
+    [Fact]
+    public async Task GetAuctionById_WhenAuthenticated_PassesUsernameToService()
+    {
+        string? captured = "not-yet-set";
+        _service.GetAuctionByIdAsync(Arg.Any<Guid>(), Arg.Do<string?>(u => captured = u))
+            .Returns((AuctionDetailDto?)null);
+        var controller = BuildController(username: "seller-bob");
+
+        await controller.GetAuctionById(Guid.NewGuid());
+
+        Assert.Equal("seller-bob", captured);
+    }
+
+    [Fact]
+    public async Task GetAuctionById_WhenAnonymous_PassesNullToService()
+    {
+        string? captured = "not-yet-set";
+        _service.GetAuctionByIdAsync(Arg.Any<Guid>(), Arg.Do<string?>(u => captured = u))
+            .Returns((AuctionDetailDto?)null);
+
+        // Empty ClaimsIdentity() defaults to IsAuthenticated = false (no AuthenticationType) —
+        // User.Identity.Name is null, mirroring an anonymous caller with no bearer token (both
+        // the real JwtBearer handler and TestAuthHandler leave User in this shape for such a
+        // request — see TestAuthHandler's own remarks in AuctionService.IntegrationTests).
+        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
+        var controller = new AuctionsController(_service, _imageService, NullLogger<AuctionsController>.Instance)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = anonymousUser },
+            },
+        };
+
+        await controller.GetAuctionById(Guid.NewGuid());
+
+        Assert.Null(captured);
+    }
+
+    [Fact]
+    public async Task GetAuctionById_WhenNotFound_Returns404()
+    {
+        _service.GetAuctionByIdAsync(Arg.Any<Guid>(), Arg.Any<string?>())
+            .Returns((AuctionDetailDto?)null);
+        var controller = BuildController();
+
+        var result = await controller.GetAuctionById(Guid.NewGuid());
+
+        Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
     // ── 14.1  CreateAuction — failed save returns 400 ────────────────────────────
     [Fact]
     public async Task CreateAuction_WhenSaveFails_Returns400BadRequest()
