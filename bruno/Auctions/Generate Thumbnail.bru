@@ -1,0 +1,24 @@
+meta {
+  name: Generate Thumbnail
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{auction}}/api/auctions/thumbnail
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "key": "audi-r8.jpg"
+  }
+}
+
+docs {
+  Generates a max-400px WebP thumbnail (ImageSharp) for an object already in the
+  auction-images bucket and returns its URL. The seeded image keys (audi-r8.jpg, …) work
+  as-is — browse the bucket at http://localhost:9001 (minioadmin/minioadmin) for more.
+  A key outside the bucket → 400.
+}

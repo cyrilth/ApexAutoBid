@@ -1,0 +1,17 @@
+meta {
+  name: Delete Auction
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{auction}}/api/auctions/{{auctionId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Seller-only, like Update. Deleting also emits AuctionDeleted so SearchService drops the
+  document — verify with the Search request afterwards. (Re-seed by wiping the postgres
+  volume if you delete everything.)
+}

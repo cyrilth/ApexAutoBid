@@ -1,0 +1,21 @@
+meta {
+  name: UserInfo
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{identity}}/connect/userinfo
+  body: none
+  auth: inherit
+}
+
+docs {
+  Returns the identity claims for the logged-in user (sub, name, preferred_username, …)
+  in exchange for the access token. First request: open the Auth tab (inherited from the
+  collection) and click "Get Access Token" — log in as bob / Pass123$ (or alice, tom, admin).
+
+  Compare this with the claims baked into the access token itself (paste the token into
+  jwt.io): username, email, email_verified, role come from ProfileService.cs because the
+  apexautobid ApiResource declares them as UserClaims.
+}

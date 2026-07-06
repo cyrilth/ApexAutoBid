@@ -421,8 +421,9 @@ ApexAutoBid/
 │   ├── Requirements.md
 │   ├── Architecture.md
 │   ├── Tasks.md
-│   ├── AgentGuide.md
-│   └── postman/                       # Postman collection (created in Phase 8)
+│   └── AgentGuide.md
+│
+├── bruno/                             # Bruno API collection (started Phase 3; full coverage Phase 8)
 │
 ├── .editorconfig
 ├── .gitignore

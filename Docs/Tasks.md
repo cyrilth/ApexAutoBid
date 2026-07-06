@@ -446,7 +446,7 @@ Status values: `Not started` · `In progress` · `Done`
 - `docker compose up` starts all infrastructure, backend, and frontend services
 - All services communicate correctly within the Docker network
 - Application is accessible via Nginx proxy
-- All Postman collection tests pass
+- All Bruno collection requests pass (`bru run` via the Bruno CLI)
 - Full user flows work end-to-end
 
 ### Tasks
@@ -460,7 +460,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
-- [ ] 6. Create a Postman collection covering all API endpoints, verify it passes against the running stack, and commit it at `Docs/postman/ApexAutoBid.postman_collection.json` — *main conversation*
+- [ ] 6. Extend the Bruno collection at `bruno/` (started in Phase 3 with Identity/Auction/Search requests) to cover all API endpoints, add assertions, and verify it passes against the running stack with the Bruno CLI (`bru run --env Local`) — *main conversation*
 - [ ] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
 
 ---

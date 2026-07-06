@@ -1,0 +1,41 @@
+meta {
+  name: Create Auction
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{auction}}/api/auctions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "make": "Tesla",
+    "model": "Model 3",
+    "color": "Red",
+    "mileage": 12000,
+    "year": 2023,
+    "reservePrice": 20000,
+    "auctionEnd": "2026-08-15T00:00:00Z",
+    "images": [
+      {
+        "url": "http://localhost:9000/auction-images/audi-r8.jpg",
+        "sortOrder": 0
+      }
+    ]
+  }
+}
+
+docs {
+  Requires a Bearer token AND a verified email (the "EmailVerified" policy) — all seeded
+  users qualify. The Seller is taken from the token's username claim, never from the body.
+
+  Things to try:
+  - Send without a token → 401 with WWW-Authenticate.
+  - Send with an empty images array → 400 (1–10 images enforced server-side).
+  - Send auctionEnd in the past → 400 (min/max duration bounds).
+  - After a 201: run Search → the new auction appears there via the AuctionCreated event
+    through RabbitMQ (watch the exchange on http://localhost:15672, guest/guest).
+}
