@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════════
    ApexAutoBid brand accents — Phase 3 Task 4
    ────────────────────────────────────────────────────────────────────────
-   Re-skins stock, unmodified Bootstrap v4.5 with the ApexAutoBid palette
+   Re-skins stock, unmodified Bootstrap v5.3 with the ApexAutoBid palette
    (Docs/DesignGuide.md §2 "Teal Breeze") WITHOUT touching any HTML.
    Loaded last in Pages/Shared/_Layout.cshtml, after bootstrap.min.css and
    site.css, so these rules win the cascade.

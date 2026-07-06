@@ -39,12 +39,15 @@ public class Index : PageModel
     {
         if (string.IsNullOrWhiteSpace(userCode))
         {
+            View = new ViewModel();
+            Input = new InputModel();
             return Page();
         }
 
         if (!await SetViewModelAsync(userCode, ct))
         {
             ModelState.AddModelError("", DeviceOptions.InvalidUserCode);
+            Input = new InputModel();
             return Page();
         }
 
