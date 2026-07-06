@@ -14,3 +14,9 @@
 **/.dockerignore
 .git/
 .gitignore
+
+# Duende IdentityServer Automatic Key Management — signing keys persisted to disk at dev
+# runtime (Data Protection-encrypted, machine-specific; gitignored — see root .gitignore).
+# COPY IdentityService/ IdentityService/ would otherwise bake the host's dev signing key
+# into the image; the container generates its own on first run.
+IdentityService/keys/

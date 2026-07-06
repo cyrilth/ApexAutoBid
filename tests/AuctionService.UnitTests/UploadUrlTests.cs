@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Claims;
 using AuctionService.API.Controllers;
 using AuctionService.Application.Configuration;
@@ -92,15 +93,18 @@ public class UploadUrlTests
 
     // Mirrors the BuildController/ClaimsPrincipal pattern established in
     // AuctionsControllerTests (Task 14) — duplicated here since each xUnit test class
-    // is independently instantiated. email_verified defaults to true so the
-    // CreateUploadUrl action body (not just the verification gate) is exercised.
-    private AuctionsController BuildController(bool emailVerified = true, string username = "seller-bob")
+    // is independently instantiated. email_verified is always "true": Phase 3 Task 19's
+    // follow-up round converted this endpoint's own in-body check to the "EmailVerified"
+    // policy, so nothing in THIS controller method reads the claim anymore (a caller who
+    // failed the policy never reaches here at all) — no test in this file needs a "false"
+    // variant, matching AuctionsControllerTests.cs's identical Task 19 cleanup.
+    private AuctionsController BuildController(string username = "seller-bob")
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, username),
             new(ClaimTypes.Email, "bob@apexautobid.local"),
-            new("email_verified", emailVerified ? "true" : "false"),
+            new("email_verified", "true"),
         };
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "TestAuth"));
@@ -114,12 +118,16 @@ public class UploadUrlTests
         };
     }
 
-    // Covers "unauthenticated returns 401": [Authorize] is what produces the 401 via
-    // the ASP.NET Core authentication/authorization middleware pipeline, which does not
-    // run when the action is invoked directly in a unit test — so we assert the
-    // attribute itself is present rather than simulating the pipeline.
+    // ── Phase 3 Task 19 follow-up — "EmailVerified" policy wiring (reflection-based) ──
+    //
+    // Replaces the old CreateUploadUrl_HasAuthorizeAttribute test (which only checked that SOME
+    // [Authorize] attribute was present) — that test's own comment already explained why: the
+    // ASP.NET Core authorization middleware (which is what actually produces 401/403) does not
+    // run when an action is invoked directly in a unit test, so this asserts the attribute AND
+    // its specific policy name are correctly wired rather than simulating the pipeline (that's
+    // AuctionService.IntegrationTests/EmailVerifiedPolicyTests.cs's job).
     [Fact]
-    public void CreateUploadUrl_HasAuthorizeAttribute()
+    public void CreateUploadUrl_HasEmailVerifiedPolicy()
     {
         // Bind to the exact overload signature so adding a CreateUploadUrl overload later
         // can't make this throw AmbiguousMatchException.
@@ -128,15 +136,13 @@ public class UploadUrlTests
 
         Assert.NotNull(method);
 
-        // The endpoint is protected whether [Authorize] sits on the action method or the
-        // controller type (either placement enforces auth), so accept both — otherwise a
-        // non-behavioral refactor that hoists [Authorize] to the controller would fail this test.
-        var authorizeOnMethod = method!
-            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Any();
-        var authorizeOnController = typeof(AuctionsController)
-            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Any();
+        var attribute = method!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .SingleOrDefault();
 
-        Assert.True(authorizeOnMethod || authorizeOnController);
+        Assert.NotNull(attribute);
+        Assert.Equal("EmailVerified", attribute!.Policy);
     }
 
     [Fact]

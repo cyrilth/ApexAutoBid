@@ -3,6 +3,7 @@ using AuctionService.API.Controllers;
 using AuctionService.Application.Configuration;
 using AuctionService.Application.DTOs;
 using AuctionService.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,14 +68,17 @@ public class ThumbnailTests
     private readonly IAuctionImageService _imageService = Substitute.For<IAuctionImageService>();
 
     // Mirrors the BuildController/ClaimsPrincipal pattern established in
-    // AuctionsControllerTests (Task 14).
-    private AuctionsController BuildController(bool emailVerified = true, string username = "seller-bob")
+    // AuctionsControllerTests (Task 14). email_verified is always "true": Phase 3 Task 19's
+    // follow-up round converted this endpoint's own in-body check to the "EmailVerified" policy,
+    // so nothing in THIS controller method reads the claim anymore — no test in this file needs
+    // a "false" variant, matching AuctionsControllerTests.cs's identical Task 19 cleanup.
+    private AuctionsController BuildController(string username = "seller-bob")
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, username),
             new(ClaimTypes.Email, "bob@apexautobid.local"),
-            new("email_verified", emailVerified ? "true" : "false"),
+            new("email_verified", "true"),
         };
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "TestAuth"));
@@ -86,6 +90,31 @@ public class ThumbnailTests
                 HttpContext = new DefaultHttpContext { User = user },
             },
         };
+    }
+
+    // ── Phase 3 Task 19 follow-up — "EmailVerified" policy wiring (reflection-based) ──
+    //
+    // ThumbnailTests.cs had no pre-existing reflection-based [Authorize] test to replace
+    // (unlike UploadUrlTests.cs) — this is purely new coverage, mirroring
+    // UploadUrlTests.CreateUploadUrl_HasEmailVerifiedPolicy's own reasoning: the authorization
+    // middleware that actually produces 401/403 doesn't run when an action is invoked directly
+    // in a unit test, so this asserts the attribute/policy name are correctly wired instead of
+    // simulating the pipeline (AuctionService.IntegrationTests/EmailVerifiedPolicyTests.cs's job).
+    [Fact]
+    public void CreateThumbnail_HasEmailVerifiedPolicy()
+    {
+        var method = typeof(AuctionsController).GetMethod(
+            nameof(AuctionsController.CreateThumbnail), [typeof(ThumbnailRequest)]);
+
+        Assert.NotNull(method);
+
+        var attribute = method!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal("EmailVerified", attribute!.Policy);
     }
 
     [Fact]

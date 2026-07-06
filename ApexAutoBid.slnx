@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/backend/">
     <Project Path="backend/Contracts/Contracts.csproj" />
+    <Project Path="backend/IdentityService/IdentityService.csproj" />
   </Folder>
   <Folder Name="/backend/AuctionService/">
     <Project Path="backend/AuctionService/AuctionService.API/AuctionService.API.csproj" />
@@ -18,6 +19,8 @@
     <Project Path="tests/AuctionService.IntegrationTests/AuctionService.IntegrationTests.csproj" />
     <Project Path="tests/AuctionService.UnitTests/AuctionService.UnitTests.csproj" />
     <Project Path="tests/SearchService.UnitTests/SearchService.UnitTests.csproj" />
+    <Project Path="tests/IdentityService.IntegrationTests/IdentityService.IntegrationTests.csproj" />
+    <Project Path="tests/IdentityService.UnitTests/IdentityService.UnitTests.csproj" />
     <Project Path="tests/SearchService.IntegrationTests/SearchService.IntegrationTests.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,21 @@
+@page
+@model IdentityService.Pages.Account.ConfirmEmailModel
+
+<div class="confirm-email-page">
+    <div class="lead">
+        <h1>Confirm Email</h1>
+    </div>
+
+    @if (Model.Succeeded)
+    {
+        <div class="alert alert-success">
+            Your email address has been confirmed. You can now use all ApexAutoBid features.
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">@Model.ErrorMessage</div>
+    }
+
+    <p><a asp-page="/Account/Login/Index">Return to login</a></p>
+</div>

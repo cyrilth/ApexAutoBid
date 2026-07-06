@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Latest version compatible with .NET 10 (dotnet package search, confirmed 2026-07-03);
+         not pinned below latest like MassTransit/ImageSharp — no commercial-license gate on
+         this line as of this version. -->
+    <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="8.0.2" />
+    <!-- Phase 3 Task 18 — GET /health/ready's PostgreSQL check (Requirements.md §13.4: Identity's
+         only readiness dependency — no RabbitMQ/MongoDB here). Same version pin as
+         AuctionService.API.csproj's identical package, for consistency across services. -->
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <!-- Microsoft.* packages aligned to 10.0.9 to match the pin already used across
+         AuctionService.API / SearchService.API (see their .csproj comments). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Phase 3 Task 2 — same version pin as AuctionService.Infrastructure.csproj. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <!-- Phase 3 Task 6 — startup DB-connection retry (Data/DbInitializer.cs). Current stable
+         Polly 8.x (dotnet package search, confirmed 2026-07-04). BSD-licensed — no
+         commercial-license gate, unlike the MassTransit/ImageSharp pins elsewhere in this repo.
+         Polly.Core (not the full "Polly" metapackage) is enough: it has the v8
+         ResiliencePipelineBuilder API this project uses and skips the legacy v7-compat
+         Policy/PolicyRegistry surface the metapackage also carries. No project in the repo
+         referenced Polly directly yet to match versions against — SearchService.Infrastructure
+         only pulls Polly v8 transitively via Microsoft.Extensions.Http.Resilience, an
+         HttpClient-specific package not applicable to a raw DbContext connection retry. -->
+    <PackageReference Include="Polly.Core" Version="8.7.0" />
+    <!-- Phase 3 Task 14 — SMTP client for the email-confirmation sender (Services/SmtpEmailSender.cs).
+         MailKit chosen over the BCL's System.Net.Mail.SmtpClient, which Microsoft's own docs
+         recommend against for new development (no modern SMTPUTF8/pipelining support, known
+         issues with STARTTLS negotiation); MailKit is the de-facto standard replacement, actively
+         maintained, and MIT-licensed — no commercial-license gate to check against the
+         MassTransit/ImageSharp pins memory. Latest stable (dotnet package search, confirmed
+         2026-07-04); not pinned below latest — no gate on this line. -->
+    <PackageReference Include="MailKit" Version="4.17.0" />
+  </ItemGroup>
+
+</Project>
