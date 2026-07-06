@@ -1,0 +1,24 @@
+meta {
+  name: Update Auction
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{auction}}/api/auctions/{{auctionId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "color": "Midnight Blue",
+    "mileage": 15000
+  }
+}
+
+docs {
+  Partial update — only non-null fields are applied. Only the seller may update their own
+  auction: the default {{auctionId}} is seeded to seller "bob", so log in as bob to get a
+  200, or as alice to see the 403 ownership check.
+}

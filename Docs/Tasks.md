@@ -9,7 +9,7 @@
 | 1. Auction Service | 57 | 57 | Done |
 | 2. Search Service | 30 | 30 | Done |
 | 3. Identity Service | 43 | 43 | Done |
-| 4. Gateway Service | 0 | 25 | Not started |
+| 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 0 | 45 | Not started |
 | 6. Notification Service | 0 | 19 | Not started |
 | 7. Frontend (Next.js) | 0 | 55 | Not started |
@@ -17,7 +17,7 @@
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **130** | **371** | **In progress** |
+| **Overall** | **155** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -232,31 +232,31 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the Gateway Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 2. Configure YARP reverse proxy routes — `dotnet-service-builder`
-  - [ ] 2.1. `/api/auctions/*` → Auction Service — `dotnet-service-builder`
-  - [ ] 2.2. `/api/search*` → Search Service — `dotnet-service-builder`
-  - [ ] 2.3. `/api/bids/*` → Bidding Service (prep for Phase 5) — `dotnet-service-builder`
-  - [ ] 2.4. `/notifications` → Notification Service (prep for Phase 6) — `dotnet-service-builder`
-- [ ] 3. Configure JWT bearer authentication on the gateway — `dotnet-service-builder`
-- [ ] 4. Dockerize the Gateway Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 5. Write integration tests (GatewayService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 5.1. Route `/api/auctions` — proxies to Auction Service — `dotnet-service-builder`
-  - [ ] 5.2. Route `/api/search` — proxies to Search Service — `dotnet-service-builder`
-  - [ ] 5.3. Auth endpoint — rejects request without token — `dotnet-service-builder`
-  - [ ] 5.4. Auth endpoint — accepts request with valid token — `dotnet-service-builder`
-  - [ ] 5.5. Anon endpoint — accepts request without token — `dotnet-service-builder`
-- [ ] 6. Verify end-to-end: client → gateway → backend services (auth and anon) — `test-runner`
-- [ ] 7. Aggregate API documentation at the gateway — `dotnet-service-builder`
-  - [ ] 7.1. Proxy each service's `/openapi/v1.json` through YARP — `dotnet-service-builder`
-  - [ ] 7.2. Host a single Scalar UI at the gateway listing all service documents (`AddDocument` per service) — `dotnet-service-builder`
-  - [ ] 7.3. Configure the OAuth2 authorization code flow (PKCE, `scalar` client) against IdentityServer so one login covers all "try it" requests — `dotnet-service-builder`
-- [ ] 8. Add rate limiting at the gateway (`Microsoft.AspNetCore.RateLimiting`) — `dotnet-service-builder`
-  - [ ] 8.1. General per-IP fixed-window policy on all proxied routes; stricter policy on mutating endpoints (`POST api/bids`, `POST/PUT/DELETE api/auctions`); limits from configuration — `dotnet-service-builder`
-  - [ ] 8.2. Integration test — exceeding the limit returns 429 — `dotnet-service-builder`
-- [ ] 9. Expose `GET api/version` (Anon) — handled by the gateway itself, not proxied; returns the platform version from assembly metadata (see `Docs/Versioning.md`) — `dotnet-service-builder`
-- [ ] 10. Return ProblemDetails for gateway-generated errors (edge 401/403, 429 rate limiting); proxied service errors pass through unchanged (see `Requirements.md` §13.1) — `dotnet-service-builder`
-- [ ] 11. Add health endpoints: `GET /health/live` + `GET /health/ready` — gateway-only checks, no downstream fan-out (see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 1. Create the Gateway Service project with NuGet packages — `dotnet-service-builder`
+- [x] 2. Configure YARP reverse proxy routes — `dotnet-service-builder`
+  - [x] 2.1. `/api/auctions/*` → Auction Service — `dotnet-service-builder`
+  - [x] 2.2. `/api/search*` → Search Service — `dotnet-service-builder`
+  - [x] 2.3. `/api/bids/*` → Bidding Service (prep for Phase 5) — `dotnet-service-builder`
+  - [x] 2.4. `/notifications` → Notification Service (prep for Phase 6) — `dotnet-service-builder`
+- [x] 3. Configure JWT bearer authentication on the gateway — `dotnet-service-builder`
+- [x] 4. Dockerize the Gateway Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
+- [x] 5. Write integration tests (GatewayService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 5.1. Route `/api/auctions` — proxies to Auction Service — `dotnet-service-builder`
+  - [x] 5.2. Route `/api/search` — proxies to Search Service — `dotnet-service-builder`
+  - [x] 5.3. Auth endpoint — rejects request without token — `dotnet-service-builder`
+  - [x] 5.4. Auth endpoint — accepts request with valid token — `dotnet-service-builder`
+  - [x] 5.5. Anon endpoint — accepts request without token — `dotnet-service-builder`
+- [x] 6. Verify end-to-end: client → gateway → backend services (auth and anon) — `test-runner`
+- [x] 7. Aggregate API documentation at the gateway — `dotnet-service-builder`
+  - [x] 7.1. Proxy each service's `/openapi/v1.json` through YARP — `dotnet-service-builder`
+  - [x] 7.2. Host a single Scalar UI at the gateway listing all service documents (`AddDocument` per service) — `dotnet-service-builder`
+  - [x] 7.3. Configure the OAuth2 authorization code flow (PKCE, `scalar` client) against IdentityServer so one login covers all "try it" requests — `dotnet-service-builder`
+- [x] 8. Add rate limiting at the gateway (`Microsoft.AspNetCore.RateLimiting`) — `dotnet-service-builder`
+  - [x] 8.1. General per-IP fixed-window policy on all proxied routes; stricter policy on mutating endpoints (`POST api/bids`, `POST/PUT/DELETE api/auctions`); limits from configuration — `dotnet-service-builder`
+  - [x] 8.2. Integration test — exceeding the limit returns 429 — `dotnet-service-builder`
+- [x] 9. Expose `GET api/version` (Anon) — handled by the gateway itself, not proxied; returns the platform version from assembly metadata (see `Docs/Versioning.md`) — `dotnet-service-builder`
+- [x] 10. Return ProblemDetails for gateway-generated errors (edge 401/403, 429 rate limiting); proxied service errors pass through unchanged (see `Requirements.md` §13.1) — `dotnet-service-builder`
+- [x] 11. Add health endpoints: `GET /health/live` + `GET /health/ready` — gateway-only checks, no downstream fan-out (see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
@@ -446,7 +446,7 @@ Status values: `Not started` · `In progress` · `Done`
 - `docker compose up` starts all infrastructure, backend, and frontend services
 - All services communicate correctly within the Docker network
 - Application is accessible via Nginx proxy
-- All Postman collection tests pass
+- All Bruno collection requests pass (`bru run --env Local` via the Bruno CLI)
 - Full user flows work end-to-end
 
 ### Tasks
@@ -460,7 +460,7 @@ Status values: `Not started` · `In progress` · `Done`
 - [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
 - [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
 - [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
-- [ ] 6. Create a Postman collection covering all API endpoints, verify it passes against the running stack, and commit it at `Docs/postman/ApexAutoBid.postman_collection.json` — *main conversation*
+- [ ] 6. Extend the Bruno collection at `bruno/` (started in Phase 3 with Identity/Auction/Search requests) to cover all API endpoints, add assertions, and verify it passes against the running stack with the Bruno CLI (`bru run --env Local`) — *main conversation*
 - [ ] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
 
 ---

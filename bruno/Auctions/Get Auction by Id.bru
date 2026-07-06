@@ -1,0 +1,17 @@
+meta {
+  name: Get Auction by Id
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{auction}}/api/auctions/{{auctionId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Anonymous. Full auction detail including the complete image gallery. 404 ProblemDetails
+  (RFC 7807) if the id doesn't exist — try changing a digit of the GUID to see the global
+  exception-handler shape.
+}

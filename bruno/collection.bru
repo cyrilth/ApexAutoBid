@@ -1,0 +1,50 @@
+auth {
+  mode: oauth2
+}
+
+auth:oauth2 {
+  grant_type: authorization_code
+  callback_url: http://localhost:3000/api/auth/callback/identityserver
+  authorization_url: {{identity}}/connect/authorize
+  access_token_url: {{identity}}/connect/token
+  refresh_token_url: {{identity}}/connect/token
+  client_id: webapp
+  client_secret: webapp-dev-secret
+  scope: openid profile apexautobid offline_access
+  state:
+  pkce: true
+  credentials_placement: body
+  credentials_id: credentials
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: true
+}
+
+docs {
+  # ApexAutoBid — local dev collection
+
+  Collection-level auth is the `webapp` confidential client (authorization code + PKCE,
+  dev-only committed secret — Requirements.md §6). Requests marked `auth: inherit` send
+  the access token as a Bearer header; clicking "Get Access Token" on any of them opens
+  the IdentityServer login page in Bruno's window.
+
+  Seeded dev users (SeedData.cs): bob / alice / tom / admin — password `Pass123$`.
+  All have confirmed emails; `admin` additionally has the `admin` role.
+
+  ## Prerequisites
+  - Infra:    docker compose -f docker/docker-compose.infra.yml up -d
+  - Identity: dotnet run --project backend/IdentityService                                  → https://localhost:5001
+  - Auction:  SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs" \
+              dotnet run --project backend/AuctionService/AuctionService.API --launch-profile http → http://localhost:5054
+  - Search:   ASPNETCORE_URLS=http://localhost:5055 \
+              dotnet run --project backend/SearchService/SearchService.API                  → http://localhost:5055
+
+  IdentityServer uses the self-signed ASP.NET dev certificate, so in Bruno either
+  disable Preferences → General → "SSL/TLS Certificate Verification", or add
+  ~/.aspnet/dev-certs/aspnet-dev-cert.pem as a custom CA certificate.
+
+  Mailpit (registration/verification emails): http://localhost:8025
+  RabbitMQ management (watch AuctionCreated etc. flow): http://localhost:15672 (guest/guest)
+  MinIO console (auction-images bucket): http://localhost:9001 (minioadmin/minioadmin)
+}

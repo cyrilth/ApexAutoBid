@@ -1,0 +1,28 @@
+meta {
+  name: Create Upload URL
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{auction}}/api/auctions/upload-url
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "contentType": "image/jpeg",
+    "sizeBytes": 500000
+  }
+}
+
+docs {
+  Returns a presigned MinIO PUT URL + a GUID object key + expiry. Upload flow:
+  1) call this, 2) PUT the raw image bytes to the returned URL (no auth header —
+  the signature is in the URL), 3) pass the key to Generate Thumbnail, 4) reference
+  the public object URL in Create Auction's images array.
+
+  Negative cases: contentType "application/pdf" → 400; sizeBytes over the configured
+  limit → 400; no token → 401.
+}

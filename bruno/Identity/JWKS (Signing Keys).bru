@@ -1,0 +1,17 @@
+meta {
+  name: JWKS (Signing Keys)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{identity}}/.well-known/openid-configuration/jwks
+  body: none
+  auth: none
+}
+
+docs {
+  The public signing keys (JSON Web Key Set). This is what AuctionService's JwtBearer
+  middleware downloads from the Authority at startup to validate access-token signatures —
+  the backchannel half of the trust relationship between services.
+}

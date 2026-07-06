@@ -1,0 +1,17 @@
+meta {
+  name: Discovery Document
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{identity}}/.well-known/openid-configuration
+  body: none
+  auth: none
+}
+
+docs {
+  The OIDC discovery document — the machine-readable map of every IdentityServer feature:
+  authorization/token/userinfo/end-session endpoints, supported scopes, grant types,
+  response types, and signing algorithms. Everything else in this folder is listed here.
+}

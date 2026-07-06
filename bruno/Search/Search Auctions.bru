@@ -1,0 +1,28 @@
+meta {
+  name: Search Auctions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{search}}/api/search?searchTerm=audi&pageNumber=1&pageSize=4
+  body: none
+  auth: none
+}
+
+params:query {
+  searchTerm: audi
+  pageNumber: 1
+  pageSize: 4
+  ~seller: bob
+  ~winner:
+  ~orderBy: new
+  ~filterBy: live
+}
+
+docs {
+  Anonymous, reads MongoDB (populated from AuctionService events — eventual consistency).
+  orderBy: endingSoon (default) | make | new; filterBy: all (default) | live | endingSoon | finished — unknown values → 400.
+  pageSize=0 or 999 → 400 ProblemDetails (in-range type, out-of-range value);
+  pageNumber=abc → ASP.NET's automatic ValidationProblemDetails (never reaches the service).
+}

@@ -128,11 +128,12 @@ public static class Config
             // URLs a user could land on depending on trailing-slash/document-name routing. To
             // remove that ambiguity, AuctionService.API's Program.cs pins an explicit, fixed
             // redirect URI via ScalarOptions.AddAuthorizationCodeFlow(...).WithRedirectUri(...)
-            // — the single value here must match that exactly. Only AuctionService's docs page
-            // is wired for Scalar login today; Search/Bidding/the Gateway's aggregated docs
-            // (Phase 4/8) will add their own redirect URIs to this same client when their own
-            // Task-13-equivalent work lands. Like the `webapp` client, this dev URL is
-            // provisional — Phase 8/9 containerization may change the host.
+            // — each value here must match one of those exactly. AuctionService's own docs page
+            // (port 5054) and the Gateway's aggregated docs page (Phase 4 Task 7.3, port 6001 —
+            // GatewayService's Program.cs) both run the same login against this one client, so
+            // both redirect URIs are listed; a future Search/Bidding-hosted-standalone docs page
+            // would add a third entry the same way. Like the `webapp` client, these dev URLs are
+            // provisional — Phase 8/9 containerization may change the hosts.
             new Client
             {
                 ClientId = "scalar",
@@ -142,17 +143,19 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code,
                 RequirePkce = true,
 
-                RedirectUris = { "http://localhost:5054/scalar" },
+                RedirectUris = { "http://localhost:5054/scalar", "http://localhost:6001/scalar" },
 
-                // Task 13.2: Duende's InMemoryCorsPolicyService (swapped in automatically by
-                // AddInMemoryClients — verified via decompilation) allows an origin for
-                // /connect/token (and discovery/userinfo/revocation — CorsOptions.CorsPaths'
-                // documented defaults) if ANY registered client lists it in
-                // AllowedCorsOrigins. UseIdentityServer() already calls app.ConfigureCors()
+                // Task 13.2 / Phase 4 Task 7.3: Duende's InMemoryCorsPolicyService (swapped in
+                // automatically by AddInMemoryClients — verified via decompilation) allows an
+                // origin for /connect/token (and discovery/userinfo/revocation —
+                // CorsOptions.CorsPaths' documented defaults) if ANY registered client lists it
+                // in AllowedCorsOrigins. UseIdentityServer() already calls app.ConfigureCors()
                 // internally (also verified via decompilation), so no ASP.NET Core CORS
                 // middleware/policy needs to be registered anywhere — this property is the
-                // entire mechanism.
-                AllowedCorsOrigins = { "http://localhost:5054" },
+                // entire mechanism. Both origins are listed for the same reason both redirect
+                // URIs are above — the browser-based code exchange can originate from either
+                // docs page.
+                AllowedCorsOrigins = { "http://localhost:5054", "http://localhost:6001" },
 
                 // No offline_access: a docs page doesn't need a long-lived session — each
                 // "Authorize" click is expected to mint a fresh token, unlike the webapp's

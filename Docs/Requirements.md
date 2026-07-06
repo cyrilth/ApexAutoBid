@@ -736,7 +736,7 @@ These bids explain the auction states: #1's current high bid is $18,000 (below i
 
 ## 9. API Testing
 
-A **Postman collection** covering all API endpoints is created during Phase 8 (Task 6) and committed at `Docs/postman/ApexAutoBid.postman_collection.json`. Until then, the interactive Scalar docs (below) are the way to exercise the APIs manually.
+A **Bruno collection** covering the API endpoints is committed at `bruno/` in the repository root. Bruno stores each request as a plain-text `.bru` file, so the collection is diffed and reviewed like code — no exported-JSON blob. The collection was started in Phase 3 (Identity, Auction, and Search requests; a `Local` environment; collection-level OAuth2 authorization code + PKCE via the `webapp` client) and is extended in Phase 8 (Task 6) to cover all API endpoints, verified against the containerized stack with the Bruno CLI (`bru run --env Local` — the environment flag is required, since every request resolves `{{identity}}`/`{{auction}}`-style variables from `bruno/environments/Local.bru`). The interactive Scalar docs (below) remain the zero-setup way to exercise the APIs manually.
 
 ### API Documentation
 

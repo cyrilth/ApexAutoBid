@@ -1,0 +1,21 @@
+meta {
+  name: List Auctions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{auction}}/api/auctions
+  body: none
+  auth: none
+}
+
+params:query {
+  ~date: 2026-07-01T00:00:00Z
+}
+
+docs {
+  Anonymous. Returns all auctions ordered by Make then Model. Enable the optional `date`
+  query param to get only auctions updated strictly after that UTC instant — this is the
+  incremental-sync endpoint SearchService polls on startup.
+}
