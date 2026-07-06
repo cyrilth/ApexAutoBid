@@ -12,13 +12,18 @@ post {
 
 body:json {
   {
-    "key": "audi-r8.jpg"
+    "key": "{{uploadKey}}"
   }
 }
 
 docs {
   Generates a max-400px WebP thumbnail (ImageSharp) for an object already in the
-  auction-images bucket and returns its URL. The seeded image keys (audi-r8.jpg, …) work
-  as-is — browse the bucket at http://localhost:9001 (minioadmin/minioadmin) for more.
-  A key outside the bucket → 400.
+  auction-images bucket and returns its URL.
+
+  The key must be a BARE GUID issued by Create Upload URL (SSRF guard — anything else,
+  including seeded filenames like "audi-r8.jpg", returns 400 InvalidKey). Flow:
+  1. Create Upload URL → copy "key" into the {{uploadKey}} environment variable.
+  2. PUT real image bytes to the presigned URL (curl -X PUT --data-binary @car.jpg "<url>").
+  3. Run this request → thumbnail URL for the uploaded object.
+  A GUID that parses but has no object behind it → 400 SourceNotFound.
 }

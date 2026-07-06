@@ -21,7 +21,7 @@ body:json {
     "auctionEnd": "2026-08-15T00:00:00Z",
     "images": [
       {
-        "url": "http://localhost:9000/auction-images/audi-r8.jpg",
+        "url": "https://images.example.com/tesla-model-3.jpg",
         "sortOrder": 0
       }
     ]
@@ -32,10 +32,21 @@ docs {
   Requires a Bearer token AND a verified email (the "EmailVerified" policy) — all seeded
   users qualify. The Seller is taken from the token's username claim, never from the body.
 
+  Image URL rules (ValidateGalleryAsync):
+  - EXTERNAL URLs (any host/path outside http://localhost:9000/auction-images/) are
+    accepted as-is — counted toward the 1–10 limit but not existence/size-checked.
+  - PLATFORM URLs (http://localhost:9000/auction-images/<key>) must have a bare GUID
+    key issued by Create Upload URL (then actually PUT the bytes), and the object is
+    HEAD-verified for existence and size. A non-GUID key like "audi-r8.jpg" is rejected
+    outright (path-traversal/SSRF guard) — even though the seeded auctions reference
+    such URLs (seeding writes to the DB directly and bypasses this validation).
+
   Things to try:
   - Send without a token → 401 with WWW-Authenticate.
   - Send with an empty images array → 400 (1–10 images enforced server-side).
-  - Send auctionEnd in the past → 400 (min/max duration bounds).
+  - Change the URL to http://localhost:9000/auction-images/not-a-guid.jpg → 400.
+  - Full upload flow: Create Upload URL → PUT image bytes to the presigned URL →
+    use http://localhost:9000/auction-images/<key> here → 201 with HEAD verification.
   - After a 201: run Search → the new auction appears there via the AuctionCreated event
     through RabbitMQ (watch the exchange on http://localhost:15672, guest/guest).
 }
