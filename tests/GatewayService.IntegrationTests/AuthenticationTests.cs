@@ -29,6 +29,11 @@ public class AuthenticationTests(CustomWebAppFactory factory)
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
+        // RFC 9110 §11.6.1: a 401 must advertise the auth scheme — HandleResponse() in the
+        // OnChallenge handler suppresses the default header, so Program.cs rebuilds it. Bare
+        // "Bearer" here because no token was presented at all.
+        Assert.Equal("Bearer", Assert.Single(response.Headers.WwwAuthenticate).ToString());
+
         // Gateway-GENERATED, not proxied — the stub never sees this request at all (YARP never
         // forwards it; JwtBearerHandler + the "authenticated" AuthorizationPolicy reject it
         // before MapReverseProxy()'s forwarder runs), so there is no "X-Stub-Hit" header here,
@@ -77,5 +82,10 @@ public class AuthenticationTests(CustomWebAppFactory factory)
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        // A PRESENTED-but-invalid token additionally gets the OAuth error attributes in
+        // WWW-Authenticate (same shape JwtBearerHandler's default challenge produces).
+        var wwwAuthenticate = Assert.Single(response.Headers.WwwAuthenticate).ToString();
+        Assert.StartsWith("Bearer error=\"invalid_token\"", wwwAuthenticate);
     }
 }

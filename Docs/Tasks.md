@@ -446,7 +446,7 @@ Status values: `Not started` · `In progress` · `Done`
 - `docker compose up` starts all infrastructure, backend, and frontend services
 - All services communicate correctly within the Docker network
 - Application is accessible via Nginx proxy
-- All Bruno collection requests pass (`bru run` via the Bruno CLI)
+- All Bruno collection requests pass (`bru run --env Local` via the Bruno CLI)
 - Full user flows work end-to-end
 
 ### Tasks

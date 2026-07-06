@@ -69,6 +69,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 context.Response.ContentType = "application/problem+json";
 
+                // HandleResponse() also suppresses the WWW-Authenticate header a 401 must carry
+                // (RFC 9110 §11.6.1) — rebuild it exactly as JwtBearerHandler's default challenge
+                // would have: bare "Bearer" when no token was presented, plus the OAuth error
+                // attributes (already populated on the event context before it fires) when a
+                // presented token failed validation.
+                var challenge = "Bearer";
+                if (!string.IsNullOrEmpty(context.Error))
+                {
+                    challenge += $" error=\"{context.Error}\"";
+                }
+                if (!string.IsNullOrEmpty(context.ErrorDescription))
+                {
+                    challenge += $", error_description=\"{context.ErrorDescription}\"";
+                }
+                context.Response.Headers.WWWAuthenticate = challenge;
+
                 // Rejection-path visibility (phase-end code review follow-up) — method + path
                 // only, via message-template logging (never string interpolation). NEVER logs
                 // the token/Authorization header or any claim value (Requirements §13.5): this
