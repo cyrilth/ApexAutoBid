@@ -11,13 +11,13 @@
 | 3. Identity Service | 43 | 43 | Done |
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
-| 6. Notification Service | 0 | 19 | Not started |
+| 6. Notification Service | 19 | 19 | Done |
 | 7. Frontend (Next.js) | 0 | 55 | Not started |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **200** | **371** | **In progress** |
+| **Overall** | **219** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -341,25 +341,25 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the Notification Service project with NuGet packages — `dotnet-service-builder`
-- [ ] 2. Configure MassTransit with RabbitMQ (consumer-only — no outbox; this service has no database and publishes no events) — `dotnet-service-builder`
-- [ ] 3. Create SignalR hub at `/notifications` — `dotnet-service-builder`
-  - [ ] 3.1. Allow anonymous connections (broadcasts) — `dotnet-service-builder`
-  - [ ] 3.2. Add JWT bearer authentication (`access_token` query param) + username-based `IUserIdProvider` for targeted messages — `dotnet-service-builder`
-- [ ] 4. Implement event consumers that push to SignalR clients — `dotnet-service-builder`
-  - [ ] 4.1. `AuctionCreated` — notify clients of new auction — `dotnet-service-builder`
-  - [ ] 4.2. `BidPlaced` — notify clients of new bid — `dotnet-service-builder`
-  - [ ] 4.3. `AuctionFinished` — notify clients of auction result — `dotnet-service-builder`
-  - [ ] 4.4. `AuctionFinished` — additionally send targeted `AuctionWon` to the winner (when ItemSold) and `AuctionSellerResult` to the seller via `Clients.User(...)` — `dotnet-service-builder`
-- [ ] 5. Dockerize the Notification Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
-- [ ] 6. Write integration tests (NotificationService.IntegrationTests) — `dotnet-service-builder`
-  - [ ] 6.1. AuctionCreated consumer — pushes notification to SignalR clients — `dotnet-service-builder`
-  - [ ] 6.2. BidPlaced consumer — pushes notification to SignalR clients — `dotnet-service-builder`
-  - [ ] 6.3. AuctionFinished consumer — pushes notification to SignalR clients — `dotnet-service-builder`
-  - [ ] 6.4. SignalR hub — client connects and receives messages — `dotnet-service-builder`
-  - [ ] 6.5. AuctionFinished consumer — winner and seller receive targeted messages; anonymous clients receive only the broadcast — `dotnet-service-builder`
-- [ ] 7. Verify end-to-end: place bid → notification pushed to connected SignalR client — `test-runner`
-- [ ] 8. Add health endpoints: `GET /health/live` + `GET /health/ready` (RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
+- [x] 1. Create the Notification Service project with NuGet packages — `dotnet-service-builder`
+- [x] 2. Configure MassTransit with RabbitMQ (consumer-only — no outbox; this service has no database and publishes no events) — `dotnet-service-builder`
+- [x] 3. Create SignalR hub at `/notifications` — `dotnet-service-builder`
+  - [x] 3.1. Allow anonymous connections (broadcasts) — `dotnet-service-builder`
+  - [x] 3.2. Add JWT bearer authentication (`access_token` query param) + username-based `IUserIdProvider` for targeted messages — `dotnet-service-builder`
+- [x] 4. Implement event consumers that push to SignalR clients — `dotnet-service-builder`
+  - [x] 4.1. `AuctionCreated` — notify clients of new auction — `dotnet-service-builder`
+  - [x] 4.2. `BidPlaced` — notify clients of new bid — `dotnet-service-builder`
+  - [x] 4.3. `AuctionFinished` — notify clients of auction result — `dotnet-service-builder`
+  - [x] 4.4. `AuctionFinished` — additionally send targeted `AuctionWon` to the winner (when ItemSold) and `AuctionSellerResult` to the seller via `Clients.User(...)` — `dotnet-service-builder`
+- [x] 5. Dockerize the Notification Service (JSON console logging in the container environment — `Requirements.md` §13.5) — `dotnet-service-builder`, verify with `docker-validator`
+- [x] 6. Write integration tests (NotificationService.IntegrationTests) — `dotnet-service-builder`
+  - [x] 6.1. AuctionCreated consumer — pushes notification to SignalR clients — `dotnet-service-builder`
+  - [x] 6.2. BidPlaced consumer — pushes notification to SignalR clients — `dotnet-service-builder`
+  - [x] 6.3. AuctionFinished consumer — pushes notification to SignalR clients — `dotnet-service-builder`
+  - [x] 6.4. SignalR hub — client connects and receives messages — `dotnet-service-builder`
+  - [x] 6.5. AuctionFinished consumer — winner and seller receive targeted messages; anonymous clients receive only the broadcast — `dotnet-service-builder`
+- [x] 7. Verify end-to-end: place bid → notification pushed to connected SignalR client — `test-runner`
+- [x] 8. Add health endpoints: `GET /health/live` + `GET /health/ready` (RabbitMQ — see `Requirements.md` §13.4) — `dotnet-service-builder`
 
 ---
 
