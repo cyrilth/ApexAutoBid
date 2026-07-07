@@ -1,0 +1,23 @@
+meta {
+  name: Get Platform Version
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{gateway}}/api/version
+  body: none
+  auth: none
+}
+
+docs {
+  Anonymous. Returns the platform-wide semantic version as `{ "version": "0.1.0" }`.
+
+  Handled by the Gateway itself (not proxied to a backend service) — the value flows from
+  backend/Directory.Build.props's <Version> into the assembly metadata at build time, so it
+  is never hardcoded (Docs/Versioning.md §5, Architecture.md §3.5).
+
+  Unlike the service-direct requests in the other folders, this one targets the Gateway
+  ({{gateway}} → http://localhost:6001). Run the Gateway with:
+  dotnet run --project backend/GatewayService
+}

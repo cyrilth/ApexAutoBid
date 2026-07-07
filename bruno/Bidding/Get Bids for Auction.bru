@@ -1,0 +1,20 @@
+meta {
+  name: Get Bids for Auction
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{bidding}}/api/bids/{{auctionId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Anonymous. Returns every bid for the auction, newest first. `bidderEmail` is never
+  included (Requirements §3.3 — it is captured only for the post-sale AuctionFinished flow).
+
+  An unknown or bid-less auction id returns 200 with an empty array (not 404) — bids are a
+  collection under the auction, not the auction resource itself. `{auctionId}` must be a
+  well-formed GUID; a non-GUID segment doesn't match the route and returns 404 from routing.
+}
