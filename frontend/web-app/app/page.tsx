@@ -51,9 +51,11 @@ export default async function Home({
         </div>
       </div>
 
-      <AuctionToolbar key={queryKey} query={query} />
+      {/* Distinct key prefixes: these are siblings, and React requires keys
+          to be unique within the same children array. */}
+      <AuctionToolbar key={`toolbar-${queryKey}`} query={query} />
 
-      <Suspense key={queryKey} fallback={<AuctionGridSkeleton />}>
+      <Suspense key={`results-${queryKey}`} fallback={<AuctionGridSkeleton />}>
         <AuctionResults query={query} />
       </Suspense>
     </div>

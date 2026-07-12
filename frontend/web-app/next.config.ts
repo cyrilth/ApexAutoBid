@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
     // own default, kept as the only allowed value since nothing in this app
     // passes a custom `quality` prop.
     qualities: [75],
+    // Next.js 16 refuses to optimize upstream images whose host resolves to
+    // a private/loopback IP (SSRF hardening). Dev MinIO lives at
+    // localhost:9000, so allow it exactly when the configured storage host
+    // IS a loopback address -- a real production host never enables this.
+    dangerouslyAllowLocalIP: /\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${IMAGE_STORAGE_URL}/`),
   },
 };
 

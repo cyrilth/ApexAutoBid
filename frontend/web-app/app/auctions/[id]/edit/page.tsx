@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AuctionForm } from "@/components/AuctionForm";
-import { signInReturningTo } from "@/lib/auth-actions";
 import { getAuctionById } from "@/lib/auction-service";
 import { hasAdminRole } from "@/lib/roles";
 
@@ -36,7 +35,9 @@ export default async function EditAuctionPage({ params }: EditAuctionPageProps) 
   const session = await auth();
 
   if (!session?.user?.username || session.error === "RefreshTokenError") {
-    await signInReturningTo(`/auctions/${id}/edit`);
+    // signIn() can't run during render (cookie writes) -- see the
+    // app/auth/signin Route Handler, which starts the flow legally.
+    redirect(`/auth/signin?callbackUrl=${encodeURIComponent(`/auctions/${id}/edit`)}`);
   }
 
   const auction = await getAuctionById(id);

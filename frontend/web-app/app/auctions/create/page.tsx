@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AuctionForm } from "@/components/AuctionForm";
-import { signInReturningTo } from "@/lib/auth-actions";
 
 export const metadata: Metadata = {
   title: "Create auction | ApexAutoBid",
@@ -26,10 +26,12 @@ export default async function CreateAuctionPage() {
   const session = await auth();
 
   if (!session?.user?.username || session.error === "RefreshTokenError") {
-    // Sends the browser straight to IdentityServer's login page and back to
-    // this exact route afterwards -- signIn() always redirects (throws), so
-    // nothing below this call runs for a signed-out visitor.
-    await signInReturningTo("/auctions/create");
+    // Sends the browser to IdentityServer's login page and back to this
+    // exact route afterwards. Calling signIn() during render is illegal --
+    // it writes the PKCE/state cookies, and cookies can only be modified in
+    // a Server Action or Route Handler -- so the flow starts in the
+    // app/auth/signin Route Handler instead.
+    redirect("/auth/signin?callbackUrl=%2Fauctions%2Fcreate");
   }
 
   return (
