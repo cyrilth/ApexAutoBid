@@ -6,6 +6,8 @@ import { AuctionCountdown } from "@/components/AuctionCountdown";
 import { AuctionGallery } from "@/components/AuctionGallery";
 import { AuctionStatusBadge } from "@/components/AuctionStatusBadge";
 import { BidHistory } from "@/components/BidHistory";
+import { BidPanel } from "@/components/BidPanel";
+import { BidStoreProvider } from "@/components/BidStoreProvider";
 import { DeleteAuctionButton } from "@/components/DeleteAuctionButton";
 import { DetailedSpecs } from "@/components/DetailedSpecs";
 import { PostSaleContact } from "@/components/PostSaleContact";
@@ -85,6 +87,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   }
 
   const isSold = auction.status === "Finished";
+  const isLive = auction.status === "Live";
   const highBid = isSold ? auction.soldAmount : auction.currentHighBid;
   const bidLabel = isSold ? "Sold for" : "Current bid";
 
@@ -93,9 +96,13 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   // endpoints enforce the real ownership check regardless, this just avoids
   // dangling the controls in front of everyone else.
   const session = await auth();
-  const canEdit =
-    Boolean(session?.user?.username) &&
-    (session!.user.username === auction.seller || hasAdminRole(session!.user.role));
+  const isSignedIn = Boolean(session?.user?.username);
+  // Deliberately narrower than `canEdit` below (no admin bypass) -- the
+  // backend's own rule (BidAppService.PlaceBidAsync) is a literal
+  // `auction.Seller == bidder` comparison; an admin who isn't the seller
+  // can still bid (Requirements §3.3).
+  const isSeller = isSignedIn && session!.user.username === auction.seller;
+  const canEdit = isSignedIn && (isSeller || hasAdminRole(session!.user.role));
 
   const title = `${auction.year} ${auction.make} ${auction.model}`;
   const shareUrl = `${getSiteUrl()}/auctions/${auction.id}`;
@@ -118,55 +125,75 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
           <ShareButtons url={shareUrl} title={title} text={shareText} />
         </div>
 
-        <div className="space-y-6">
-          <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-2">
-              <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-              <div className="flex items-center gap-2">
-                <AuctionStatusBadge item={auction} />
-                {/* Styled Link, not Flowbite `Button as={Link}` -- Button is a
-                    Client Component and can't receive a function component
-                    as a prop from this Server Component (RSC serialization). */}
-                {canEdit && (
-                  <Link
-                    href={`/auctions/${auction.id}/edit`}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-400"
-                  >
-                    Edit
-                  </Link>
-                )}
-                {/* DeleteAuctionButton is a small Client Component (needs the
-                    Flowbite Modal + confirm/cancel interactivity) -- everything
-                    else on this page stays a Server Component. */}
-                {canEdit && <DeleteAuctionButton auctionId={auction.id} displayName={title} />}
+        {/* BidStoreProvider (Task 9) wraps both the bid panel and the bid
+            history so a placed bid appears at the top of the history
+            instantly, without a page reload -- see its own remarks for why
+            this is a per-render Context provider rather than a module-level
+            store. */}
+        <BidStoreProvider initialBids={bids}>
+          <div className="space-y-6">
+            <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+                <div className="flex items-center gap-2">
+                  <AuctionStatusBadge item={auction} />
+                  {/* Styled Link, not Flowbite `Button as={Link}` -- Button is a
+                      Client Component and can't receive a function component
+                      as a prop from this Server Component (RSC serialization). */}
+                  {canEdit && (
+                    <Link
+                      href={`/auctions/${auction.id}/edit`}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-primary-400"
+                    >
+                      Edit
+                    </Link>
+                  )}
+                  {/* DeleteAuctionButton is a small Client Component (needs the
+                      Flowbite Modal + confirm/cancel interactivity) -- everything
+                      else on this page stays a Server Component. */}
+                  {canEdit && <DeleteAuctionButton auctionId={auction.id} displayName={title} />}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <p className="text-sm text-slate-500">{bidLabel}</p>
-              <p className="text-3xl font-bold text-slate-900">
-                {highBid != null ? formatCurrency(highBid) : "No bids yet"}
-              </p>
-            </div>
-
-            <AuctionCountdown auctionEnd={auction.auctionEnd} isLive={auction.status === "Live"} />
-          </div>
-
-          <PostSaleContact auction={auction} />
-
-          <div>
-            <h2 className="mb-3 text-xl font-semibold text-slate-900">Bid history</h2>
-            {bidsFailed ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
-                <p className="text-sm font-medium text-red-700">
-                  We couldn&apos;t load the bid history right now. Please try again shortly.
+              <div>
+                <p className="text-sm text-slate-500">{bidLabel}</p>
+                <p className="text-3xl font-bold text-slate-900">
+                  {highBid != null ? formatCurrency(highBid) : "No bids yet"}
                 </p>
               </div>
-            ) : (
-              <BidHistory bids={bids} />
-            )}
+
+              {/* Countdown prominent near the bid panel (Docs/DesignGuide.md §7) --
+                  both live inside this same card, countdown directly above. */}
+              <AuctionCountdown auctionEnd={auction.auctionEnd} isLive={isLive} />
+
+              <div className="border-t border-slate-200 pt-4">
+                <BidPanel
+                  auctionId={auction.id}
+                  isLive={isLive}
+                  initialHighBid={auction.currentHighBid ?? null}
+                  isSignedIn={isSignedIn}
+                  isSeller={isSeller}
+                  isEmailVerified={session?.user?.isEmailVerified ?? false}
+                />
+              </div>
+            </div>
+
+            <PostSaleContact auction={auction} />
+
+            <div>
+              <h2 className="mb-3 text-xl font-semibold text-slate-900">Bid history</h2>
+              {bidsFailed ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-red-700">
+                    We couldn&apos;t load the bid history right now. Please try again shortly.
+                  </p>
+                </div>
+              ) : (
+                <BidHistory auctionId={auction.id} />
+              )}
+            </div>
           </div>
-        </div>
+        </BidStoreProvider>
       </div>
     </div>
   );

@@ -37,6 +37,26 @@ body {
 }
 
 /*
+ * Real-time update pulse (Phase 7 Task 8.2, Docs/DesignGuide.md §8 -- "Real-time updates (new
+ * bid, high-bid change) get a brief background-tint pulse (accent-leaf fading out) so live
+ * changes are noticeable without being noisy."). Applied to a BidHistory row the instant a
+ * SignalR "BidPlaced" event inserts it (stores/bid-store.ts's `latestLiveBidId`, set only by
+ * `addLiveBid`) -- NOT to bids added via this bidder's own `placeBid` result (`prependBid`),
+ * which already gets a toast instead of the extra visual.
+ */
+@keyframes bid-pulse {
+  from {
+    background-color: var(--color-accent-leaf);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.animate-bid-pulse {
+  animation: bid-pulse 2s ease-out;
+}
+
+/*
  * react-datepicker theming (Task 7.6.2, Docs/DesignGuide.md §6 -- "styled
  * to match TextInput"). The library ships its own stylesheet
  * (react-datepicker/dist/react-datepicker.css, imported by
