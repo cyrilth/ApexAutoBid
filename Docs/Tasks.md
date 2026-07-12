@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 2 | 55 | In progress |
+| 7. Frontend (Next.js) | 3 | 55 | In progress |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **221** | **371** | **In progress** |
+| **Overall** | **222** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -380,7 +380,7 @@ Status values: `Not started` · `In progress` · `Done`
 
 - [x] 1. Create the Next.js project (`frontend/web-app`) with dependencies — `frontend-builder`
 - [x] 2. Configure Tailwind CSS and Flowbite React — theme tokens (Teal Breeze `primary` scale, `accent` colors) and Inter font per `Docs/DesignGuide.md` — `frontend-builder`
-- [ ] 3. Set up next-auth with Duende IdentityServer (OAuth2/OIDC) — `frontend-builder`
+- [x] 3. Set up next-auth with Duende IdentityServer (OAuth2/OIDC) — `frontend-builder`
 - [ ] 4. Implement auction listing page — `frontend-builder`
   - [ ] 4.1. Fetch from Search Service (via Gateway) — `frontend-builder`
   - [ ] 4.2. Pagination, filtering (live, endingSoon, finished), sorting (make, new, endingSoon) — `frontend-builder`

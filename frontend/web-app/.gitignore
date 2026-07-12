@@ -32,6 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env holds committed dev-only defaults (Docs/Requirements.md §6, same
+# convention as backend/**/appsettings.Development.json); .env.example
+# documents the shape for anyone adding a personal .env.local override.
+# .env.local itself stays ignored -- it's for machine-specific secrets.
+!.env
+!.env.example
 
 # vercel
 .vercel
