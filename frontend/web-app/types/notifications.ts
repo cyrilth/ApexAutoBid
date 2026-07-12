@@ -35,15 +35,16 @@ export interface AuctionCreatedPayload {
 /**
  * Mirrors `Contracts.AuctionFinished` -- the "AuctionFinished" broadcast (`Clients.All`) AND
  * the "AuctionWon"/"AuctionSellerResult" targeted sends (`Clients.User`); all three carry the
- * exact same shape (`NotificationService.Consumers.AuctionFinishedConsumer` forwards the one
- * MassTransit message object to all three `SendAsync` calls).
+ * exact same shape (`NotificationService.Consumers.AuctionFinishedConsumer` sends the one
+ * redacted copy to all three `SendAsync` calls).
  *
- * `winnerEmail` is deliberately never READ anywhere this type is used, even though the field
- * is present on the wire -- Requirements §13.5 forbids surfacing email addresses outside the
- * post-sale contact flow, which the frontend gets from `GET api/auctions/{id}`
- * (`components/PostSaleContact.tsx`) instead, never SignalR. Kept in this interface (rather
- * than omitted) purely so it's typed if anyone ever needs to double-check that -- accessing it
- * is not itself the violation, displaying/logging it would be.
+ * `winnerEmail` is always `null` on the wire: the consumer redacts it (`message with
+ * { WinnerEmail = null }`) on every hub send, and the NotificationService integration tests
+ * assert that -- Requirements §13.5 forbids surfacing email addresses outside the post-sale
+ * contact flow, which the frontend gets from `GET api/auctions/{id}`
+ * (`components/PostSaleContact.tsx`) instead, never SignalR. The key survives in the JSON
+ * (as null) because the contract type still declares it, so it's typed here rather than
+ * omitted -- but no real address ever reaches a browser through the hub.
  */
 export interface AuctionFinishedPayload {
   itemSold: boolean;
