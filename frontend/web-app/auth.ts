@@ -39,8 +39,8 @@ const identityServerClientSecret = process.env.AUTH_IDENTITYSERVER_SECRET ?? "";
 // set by Next itself for the duration of the production build.
 if (!identityServerClientSecret && process.env.NEXT_PHASE !== "phase-production-build") {
   throw new Error(
-    "AUTH_IDENTITYSERVER_SECRET is not set. Copy .env.example to .env.local " +
-      "(or fill in .env) with the webapp client's secret from " +
+    "AUTH_IDENTITYSERVER_SECRET is not set. Copy .env.example to .env " +
+      "(gitignored) and fill in the webapp client's secret from " +
       "backend/IdentityService/Config.cs."
   );
 }

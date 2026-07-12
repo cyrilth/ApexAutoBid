@@ -12,12 +12,12 @@ Dockerfile
 .git
 .gitignore
 
-# Env files -- deliberately excluded even though `.env` is committed-by-design
-# (Docs/Requirements.md §6, same convention as backend appsettings.Development.json):
-# it holds throwaway dev secrets (e.g. AUTH_IDENTITYSERVER_SECRET) alongside the two
-# NEXT_PUBLIC_* values, and none of it belongs baked into a production image.
+# Env files -- machine-local, gitignored, and doubly excluded here: `.env` holds
+# each machine's own dev secrets (e.g. AUTH_IDENTITYSERVER_SECRET), and none of it
+# belongs baked into an image (Next's standalone build would copy `.env` into the
+# bundle if it were in the build context -- see the Task 13 notes).
 # Build-time NEXT_PUBLIC_* values come from Dockerfile ARGs instead (dev defaults
-# matching .env, overridable via --build-arg for real deployments); every other
+# matching .env.example, overridable via --build-arg for real deployments); every other
 # runtime env var (AUTH_*, GATEWAY_URL) is supplied by the container platform
 # (docker-compose/k8s) at `docker run` time -- see the comment block in Dockerfile.
 .env

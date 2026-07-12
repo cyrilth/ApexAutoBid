@@ -42,7 +42,9 @@ function resolveStatus(item: StatusBadgeItem, now: Date): { label: string; color
     default: {
       const hoursRemaining = (new Date(item.auctionEnd).getTime() - now.getTime()) / (1000 * 60 * 60);
       if (hoursRemaining <= 0) return { label: "Ended", color: "slate" };
-      return hoursRemaining <= 6
+      // Strictly-under-6h, matching AuctionCountdown's amber threshold exactly
+      // (its `days * 24 + hours < 6` floor arithmetic is amber iff remaining < 6h).
+      return hoursRemaining < 6
         ? { label: "Ending soon", color: "amber" }
         : { label: "Live", color: "primary" };
     }

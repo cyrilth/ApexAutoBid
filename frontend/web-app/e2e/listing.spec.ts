@@ -76,7 +76,7 @@ test.describe("home page listing (live data)", () => {
                 // components/AuctionStatusBadge.tsx's resolveStatus applies.
                 (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) <= 0
                 ? "Ended"
-                : (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) <= 6
+                : (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) < 6
                   ? "Ending soon"
                   : "Live";
       await expect(card.getByText(expectedBadgeText, { exact: true })).toBeVisible();

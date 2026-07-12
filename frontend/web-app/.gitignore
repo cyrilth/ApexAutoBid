@@ -30,13 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files -- .env (and .env.local etc.) are machine-local and never
+# committed; copy .env.example to .env and fill in the secrets to get a
+# working local setup. Only the example template is tracked.
 .env*
-# .env holds committed dev-only defaults (Docs/Requirements.md §6, same
-# convention as backend/**/appsettings.Development.json); .env.example
-# documents the shape for anyone adding a personal .env.local override.
-# .env.local itself stays ignored -- it's for machine-specific secrets.
-!.env
 !.env.example
 
 # vercel

@@ -44,7 +44,7 @@ COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client JS bundle at build time --
 # there is no way to change them at container-run time (see next.config.ts /
-# lib/image-config.ts). Defaults here match the committed .env dev values so
+# lib/image-config.ts). Defaults here match .env.example's local-dev values so
 # a plain `docker build` with no --build-arg still produces a working local
 # image; a real deployment overrides both with the environment's actual
 # Gateway/object-storage hostnames, e.g.:
