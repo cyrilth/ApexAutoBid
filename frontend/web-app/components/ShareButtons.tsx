@@ -1,8 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import toast from "react-hot-toast";
 import { FacebookIcon, ShareIcon, WhatsAppIcon, XIcon } from "@/components/icons/ShareIcons";
+import { toastError } from "@/lib/toast";
 
 interface ShareButtonsProps {
   /** Canonical, absolute auction URL -- server-computed via lib/site-url.ts. */
@@ -56,7 +56,7 @@ export function ShareButtons({ url, title, text }: ShareButtonsProps) {
     } catch (error) {
       // AbortError just means the visitor closed the share sheet -- not a real failure.
       if (error instanceof Error && error.name !== "AbortError") {
-        toast.error("Couldn't open the share sheet.");
+        toastError("Couldn't open the share sheet.");
       }
     }
   }

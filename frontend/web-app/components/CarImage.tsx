@@ -42,17 +42,13 @@ const DEFAULT_SIZES = "96px";
  * user-supplied URL never crashes the page.
  */
 export function CarImage({ src, alt, className = "", sizes = DEFAULT_SIZES }: CarImageProps) {
-  const [failed, setFailed] = useState(false);
-  // Tracks the src the `failed` flag above applies to. When src changes --
-  // e.g. AuctionGallery reuses the same CarImage instance as the user cycles
-  // through images -- reset `failed` during render (React's documented
-  // "adjusting state when a prop changes" pattern) rather than in an Effect,
-  // so a previous image failing to load doesn't permanently hide this slot.
-  const [lastSrc, setLastSrc] = useState(src);
-  if (src !== lastSrc) {
-    setLastSrc(src);
-    setFailed(false);
-  }
+  // Stores WHICH src failed rather than a boolean, so `failed` is derived
+  // per-src: when src changes -- e.g. AuctionGallery reuses the same CarImage
+  // instance as the user cycles through images -- the failure no longer
+  // applies and the new image renders, with no state reset (render-time or
+  // Effect) needed at all.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = src != null && src === failedSrc;
 
   if (!src || failed) {
     return (
@@ -71,7 +67,7 @@ export function CarImage({ src, alt, className = "", sizes = DEFAULT_SIZES }: Ca
         sizes={sizes}
         unoptimized={!isOptimizableImageSrc(src)}
         className="object-cover"
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
       />
     </div>
   );
