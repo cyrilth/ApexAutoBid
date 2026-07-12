@@ -58,7 +58,14 @@ export function AuctionGallery({ images, alt }: AuctionGalleryProps) {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <CarImage src={current.url} alt={alt} className="h-full w-full" />
+        <CarImage
+          src={current.url}
+          alt={alt}
+          className="h-full w-full"
+          // Detail page is a 2-col grid on lg (image + specs left, bid panel
+          // right), stacked full-width below that.
+          sizes="(min-width: 1024px) 50vw, 100vw"
+        />
 
         {hasMultiple && (
           <>
@@ -102,6 +109,7 @@ export function AuctionGallery({ images, alt }: AuctionGalleryProps) {
                 src={image.thumbnailUrl ?? image.url}
                 alt={`${alt} thumbnail ${i + 1}`}
                 className="h-full w-full"
+                sizes="80px" // fixed h-16 w-20 thumbnail strip
               />
             </button>
           ))}

@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 27 | 55 | In progress |
+| 7. Frontend (Next.js) | 29 | 55 | In progress |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **246** | **371** | **In progress** |
+| **Overall** | **248** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -405,8 +405,8 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 8.3. Connect to the hub with the access token when logged in; show targeted "You won" toast (winner) and auction-result toast (seller) — `frontend-builder`
 - [x] 9. Set up Zustand store for client-side state management — `frontend-builder`
 - [x] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
-- [ ] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
-- [ ] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
+- [x] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
+- [x] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
 - [ ] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
 - [ ] 14. Set up Playwright test project — `frontend-builder`
 - [ ] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`

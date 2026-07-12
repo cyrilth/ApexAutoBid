@@ -318,6 +318,7 @@ export function AuctionImageManager({ initialImages = [], onChange, disabled }: 
                   src={image.status === "uploading" ? image.url : (image.thumbnailUrl ?? image.url)}
                   alt={`Gallery image ${index + 1}`}
                   className={`h-full w-full${image.status === "uploading" ? " opacity-60" : ""}`}
+                  sizes="80px" // fixed h-16 w-20 reorder-list thumbnail
                 />
                 {image.status === "uploading" && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
