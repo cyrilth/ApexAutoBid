@@ -45,3 +45,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright (Phase 7 Task 14) -- regenerated per test run, never committed.
+/playwright-report/
+/test-results/
+/blob-report/

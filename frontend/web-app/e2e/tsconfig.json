@@ -1,0 +1,15 @@
+{
+  // Editor/type-checking config for Playwright specs -- deliberately NOT
+  // referenced by the root tsconfig.json (see its `exclude`), so `next
+  // build`'s typecheck never walks into e2e/. Playwright itself compiles
+  // TS on the fly when running tests (esbuild under the hood) and doesn't
+  // require this file to run -- it only powers editor IntelliSense/`tsc
+  // --noEmit` if run manually against this folder.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "@playwright/test"],
+    "noEmit": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}

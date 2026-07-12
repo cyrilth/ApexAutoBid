@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Playwright e2e specs (Phase 7 Task 14) have their own tsconfig
+    // (e2e/tsconfig.json) and are type-checked/run by Playwright itself
+    // (`npm run test:e2e`), not by `next build`/`next dev`'s typechecker.
+    "e2e"
+  ]
 }
