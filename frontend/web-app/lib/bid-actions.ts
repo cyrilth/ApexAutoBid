@@ -1,58 +1,15 @@
 "use server";
 
-import { getAccessToken } from "@/lib/auth-token";
+import {
+  type ActionResult,
+  problemDetailsError,
+  requireBearerToken,
+  signInRequiredError,
+} from "@/lib/action-result";
 import type { Bid } from "@/types/bid";
 
 /** Mirrors lib/auction-actions.ts's identical constant/fallback. */
 const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:6001";
-
-/**
- * Same envelope as lib/auction-actions.ts's `ActionResult<T>` -- duplicated
- * here (rather than imported) because that file is itself a "use server"
- * module: every export from one has to be a valid Server Action, and a
- * plain helper type/function isn't one. Keep the shape identical if it ever
- * changes there.
- */
-export type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { title: string; detail?: string; status: number } };
-
-/** Mirrors lib/auction-actions.ts's identical helper. */
-async function requireBearerToken(): Promise<string | null> {
-  const token = await getAccessToken();
-  return token ?? null;
-}
-
-/** Mirrors lib/auction-actions.ts's identical helper. */
-function signInRequiredError(action: string): ActionResult<never> {
-  return {
-    success: false,
-    error: {
-      title: "Sign-in required",
-      detail: `Please sign in again to ${action}.`,
-      status: 401,
-    },
-  };
-}
-
-/** Mirrors lib/auction-actions.ts's identical helper -- see its remarks on the bare-403 case. */
-async function problemDetailsError(res: Response, fallbackTitle: string): Promise<ActionResult<never>> {
-  let title = fallbackTitle;
-  let detail: string | undefined;
-
-  try {
-    const body = (await res.json()) as { title?: string; detail?: string };
-    if (typeof body.title === "string") title = body.title;
-    if (typeof body.detail === "string") detail = body.detail;
-  } catch {
-    if (res.status === 403) {
-      title = "Not allowed";
-      detail = "You don't have permission to do that.";
-    }
-  }
-
-  return { success: false, error: { title, detail, status: res.status } };
-}
 
 // ── POST api/bids ────────────────────────────────────────────────────────
 //

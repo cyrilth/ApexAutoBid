@@ -1,20 +1,15 @@
 "use server";
 
-import { getAccessToken } from "@/lib/auth-token";
+import {
+  type ActionResult,
+  problemDetailsError,
+  requireBearerToken,
+  signInRequiredError,
+} from "@/lib/action-result";
 import type { CreateAuctionPayload, UpdateAuctionPayload } from "@/types/auction-form";
 
 /** Mirrors lib/auction-service.ts's identical constant/fallback. */
 const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:6001";
-
-/**
- * Typed result envelope for every action below -- never throws a raw fetch
- * error at the client (Docs/Requirements.md §13.2). Callers branch on
- * `success` and render `error.title`/`error.detail` inline near the submit
- * button (the toast system is a later task, see the Task 6 brief).
- */
-export type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { title: string; detail?: string; status: number } };
 
 /** Mirrors AuctionService.Application.DTOs.UploadUrlResponse. */
 interface UploadUrlResult {
@@ -27,55 +22,6 @@ interface UploadUrlResult {
 /** Mirrors AuctionService.Application.DTOs.ThumbnailResponse. */
 interface ThumbnailResult {
   thumbnailUrl: string;
-}
-
-/**
- * Every mutating action needs the signed-in user's bearer token
- * (lib/auth-token.ts is server-only, so this file -- itself server-only via
- * "use server" -- is exactly where it's read). `undefined` means the caller
- * is signed out (or their refresh failed); every action below treats that
- * the same way the backend would treat a missing token: reject before
- * calling the Gateway at all.
- */
-async function requireBearerToken(): Promise<string | null> {
-  const token = await getAccessToken();
-  return token ?? null;
-}
-
-function signInRequiredError(action: string): ActionResult<never> {
-  return {
-    success: false,
-    error: {
-      title: "Sign-in required",
-      detail: `Please sign in again to ${action}.`,
-      status: 401,
-    },
-  };
-}
-
-/**
- * Parses a ProblemDetails body (RFC 7807, Docs/Requirements.md §13.1) when
- * present. Some 403s from [Authorize(Policy = "EmailVerified")] are a bare
- * framework `Forbid()` with no body at all (see AuctionsController's
- * remarks) -- `res.json()` throws on those, so this falls back to a generic,
- * status-appropriate title/detail rather than surfacing a parse error.
- */
-async function problemDetailsError(res: Response, fallbackTitle: string): Promise<ActionResult<never>> {
-  let title = fallbackTitle;
-  let detail: string | undefined;
-
-  try {
-    const body = (await res.json()) as { title?: string; detail?: string };
-    if (typeof body.title === "string") title = body.title;
-    if (typeof body.detail === "string") detail = body.detail;
-  } catch {
-    if (res.status === 403) {
-      title = "Not allowed";
-      detail = "You don't have permission to do that.";
-    }
-  }
-
-  return { success: false, error: { title, detail, status: res.status } };
 }
 
 // ── 6.3  POST api/auctions/upload-url ───────────────────────────────────────
