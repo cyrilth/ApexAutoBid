@@ -50,3 +50,6 @@ next-env.d.ts
 /playwright-report/
 /test-results/
 /blob-report/
+# Task 15 Batch C -- real signed-in session cookies (e2e/global-setup.ts), regenerated at the
+# start of every run. Never committed: these are live next-auth session cookies, not fixtures.
+/e2e/.auth/

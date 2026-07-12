@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 31 | 55 | In progress |
+| 7. Frontend (Next.js) | 50 | 55 | In progress |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **250** | **371** | **In progress** |
+| **Overall** | **269** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -409,25 +409,25 @@ Status values: `Not started` · `In progress` · `Done`
 - [x] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
 - [x] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
 - [x] 14. Set up Playwright test project — `frontend-builder`
-- [ ] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
-  - [ ] 15.1. Home page — loads auction listings — `frontend-builder`
-  - [ ] 15.2. Search — filters auctions by search term — `frontend-builder`
-  - [ ] 15.3. Pagination — navigates between pages — `frontend-builder`
-  - [ ] 15.4. Filtering — filters by live, endingSoon, finished — `frontend-builder`
-  - [ ] 15.5. Sorting — sorts by make, new, endingSoon — `frontend-builder`
-  - [ ] 15.6. Auth — login flow via IdentityServer — `frontend-builder`
-  - [ ] 15.7. Auth — logout returns to home page — `frontend-builder`
-  - [ ] 15.8. Auth — unauthenticated user cannot access create page — `frontend-builder`
-  - [ ] 15.9. Create auction — fills form and submits successfully — `frontend-builder`
-  - [ ] 15.10. Edit auction — updates auction details — `frontend-builder`
-  - [ ] 15.11. Delete auction — removes auction with confirmation — `frontend-builder`
-  - [ ] 15.12. Auction detail — displays specs, countdown, and bid history — `frontend-builder`
-  - [ ] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
-  - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
-  - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
-  - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
-  - [ ] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
-  - [ ] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
+- [x] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
+  - [x] 15.1. Home page — loads auction listings — `frontend-builder`
+  - [x] 15.2. Search — filters auctions by search term — `frontend-builder`
+  - [x] 15.3. Pagination — navigates between pages — `frontend-builder`
+  - [x] 15.4. Filtering — filters by live, endingSoon, finished — `frontend-builder`
+  - [x] 15.5. Sorting — sorts by make, new, endingSoon — `frontend-builder`
+  - [x] 15.6. Auth — login flow via IdentityServer — `frontend-builder`
+  - [x] 15.7. Auth — logout returns to home page — `frontend-builder`
+  - [x] 15.8. Auth — unauthenticated user cannot access create page — `frontend-builder`
+  - [x] 15.9. Create auction — fills form and submits successfully — `frontend-builder`
+  - [x] 15.10. Edit auction — updates auction details — `frontend-builder`
+  - [x] 15.11. Delete auction — removes auction with confirmation — `frontend-builder`
+  - [x] 15.12. Auction detail — displays specs, countdown, and bid history — `frontend-builder`
+  - [x] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
+  - [x] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
+  - [x] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
+  - [x] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
+  - [x] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
+  - [x] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
 - [ ] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
 - [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
 - [ ] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
