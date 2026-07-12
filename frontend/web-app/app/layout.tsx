@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ThemeProvider } from "flowbite-react";
 import { ThemeInit } from "@/.flowbite-react/init";
+import { customFlowbiteTheme } from "@/lib/flowbite-theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,7 +24,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased bg-slate-50 text-slate-700">
         <ThemeInit />
-        {children}
+        <ThemeProvider theme={customFlowbiteTheme}>{children}</ThemeProvider>
       </body>
     </html>
   );

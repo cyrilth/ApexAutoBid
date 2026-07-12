@@ -6,6 +6,32 @@
   --font-sans: var(--font-inter);
 }
 
+/*
+ * Teal Breeze brand palette (Docs/DesignGuide.md §2).
+ * These override the blue "primary" scale that ships with
+ * flowbite-react/plugin/tailwindcss (imported above) so every
+ * Flowbite component that already references `primary-*` classes
+ * (Button "default" color, TextInput/Select/Textarea focus rings,
+ * etc.) renders in-brand without further per-component theming.
+ */
+@theme {
+  --color-primary-50: #f1fafa;
+  --color-primary-100: #dbf2f1;
+  --color-primary-200: #bce5e4;
+  --color-primary-300: #8ed7d3;
+  --color-primary-400: #4ccdc4; /* Puerto Rico — highlights, focus rings, live indicators */
+  --color-primary-500: #2ba8a6;
+  --color-primary-600: #1f898e; /* Elm — brand anchor: links, active nav, primary buttons */
+  --color-primary-700: #1c6e74; /* button hover, link text on white */
+  --color-primary-800: #1c585e;
+  --color-primary-900: #1b4a4f;
+  --color-primary-950: #0a2f34;
+
+  --color-accent-mint: #78e2b8; /* Riptide — success/sold accents */
+  --color-accent-leaf: #a3f0b4; /* Madang — success backgrounds, subtle highlights */
+  --color-accent-cream: #e4f5c2; /* Tusk — hero/section background tint */
+}
+
 body {
   font-family: var(--font-sans);
 }
