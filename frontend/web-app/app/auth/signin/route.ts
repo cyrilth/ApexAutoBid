@@ -16,5 +16,9 @@ export async function GET(request: NextRequest) {
   // Local-path check so this can't be abused as an open redirect.
   const callbackUrl = requested.startsWith("/") && !requested.startsWith("//") ? requested : "/";
 
+  // No `return` needed: with redirect enabled (the default), Auth.js v5's
+  // signIn never returns -- it calls next/navigation's redirect(), which
+  // THROWS `NEXT_REDIRECT` and Next converts that into the 307 response
+  // (its return value is only reachable with `redirect: false`).
   await signIn("identityserver", { redirectTo: callbackUrl });
 }

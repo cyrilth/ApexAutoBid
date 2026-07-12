@@ -19,10 +19,10 @@
  * a mutating Gateway request (`./auction-builder.ts`'s `createAuctionViaUi`, `./bidding.ts`'s
  * `submitBid`, `edit.spec.ts`'s "Save changes" click, `delete.spec.ts`'s "Yes, delete it" click)
  * awaits `throttleMutation()` immediately beforehand -- proactively sleeping, if needed, so this
- * process never issues more than `LIMIT` such requests in any rolling 60s span. `LIMIT` is set
- * below the server's real `PermitLimit` (10) to leave headroom for OTHER specs' own mutating
- * calls this pacer doesn't wrap (e.g. `register.spec.ts`'s inline create-auction flow, a Batch B
- * spec out of this run's scope to modify) sharing the same 60s window.
+ * process never issues more than `LIMIT` such requests in any rolling 60s span. Every mutating
+ * call site in the suite is paced, including `create.spec.ts`'s and `register.spec.ts`'s inline
+ * create-auction submits; `LIMIT` stays below the server's real `PermitLimit` (10) purely as a
+ * safety margin (e.g. the dev server's own SSR-triggered requests sharing the client IP).
  *
  * Only correct as a SINGLE in-process counter -- i.e. with `playwright.config.ts`'s `workers: 1`
  * for this project. Parallel workers are separate Node processes with no shared memory, so each

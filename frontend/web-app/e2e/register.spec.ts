@@ -1,6 +1,7 @@
 import { test, expect, baseURL } from "./fixtures/test";
 import { uniqueE2EUser } from "./fixtures/test-data";
 import { fetchConfirmationLink } from "./fixtures/mailpit";
+import { throttleMutation } from "./fixtures/mutation-throttle";
 
 /**
  * Phase 7 Task 15.16 -- Email verification, against the LIVE stack: register a brand-new user,
@@ -124,6 +125,10 @@ test.describe("email verification", () => {
     await page.getByLabel("Or add an image by URL").fill("http://127.0.0.1:9000/auction-images/ford-gt.jpg");
     await page.getByRole("button", { name: "Add" }).click();
 
+    // POST /api/auctions falls under the Gateway's strict mutating-route rate
+    // limit -- pace it like every other mutating call site (see
+    // fixtures/mutation-throttle.ts).
+    await throttleMutation();
     await page.getByRole("button", { name: "Create auction" }).click();
 
     await page.waitForURL(/\/auctions\/[0-9a-f-]+$/);

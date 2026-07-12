@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/test";
+import { throttleMutation } from "./fixtures/mutation-throttle";
 import { storageStatePath } from "./fixtures/storage-state";
 
 /**
@@ -47,6 +48,10 @@ test.describe("create auction", () => {
     await page.getByRole("button", { name: "Add" }).click();
     await expect(page.getByText("External URL")).toBeVisible();
 
+    // POST /api/auctions falls under the Gateway's strict mutating-route rate
+    // limit -- pace it like every other mutating call site (see
+    // fixtures/mutation-throttle.ts).
+    await throttleMutation();
     await page.getByRole("button", { name: "Create auction" }).click();
 
     await page.waitForURL(/\/auctions\/[0-9a-f-]{36}$/);
