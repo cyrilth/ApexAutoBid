@@ -6,6 +6,7 @@ import { AuctionCountdown } from "@/components/AuctionCountdown";
 import { AuctionGallery } from "@/components/AuctionGallery";
 import { AuctionStatusBadge } from "@/components/AuctionStatusBadge";
 import { BidHistory } from "@/components/BidHistory";
+import { DeleteAuctionButton } from "@/components/DeleteAuctionButton";
 import { DetailedSpecs } from "@/components/DetailedSpecs";
 import { PostSaleContact } from "@/components/PostSaleContact";
 import { ShareButtons } from "@/components/ShareButtons";
@@ -87,10 +88,10 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   const highBid = isSold ? auction.soldAmount : auction.currentHighBid;
   const bidLabel = isSold ? "Sold for" : "Current bid";
 
-  // Edit link (Task 6) -- shown only to the auction's own seller or an
-  // admin; the PUT api/auctions/{id} endpoint enforces the real ownership
-  // check regardless, this just avoids dangling the link in front of
-  // everyone else.
+  // Edit link (Task 6) / Delete button (Task 7) -- shown only to the
+  // auction's own seller or an admin; the PUT/DELETE api/auctions/{id}
+  // endpoints enforce the real ownership check regardless, this just avoids
+  // dangling the controls in front of everyone else.
   const session = await auth();
   const canEdit =
     Boolean(session?.user?.username) &&
@@ -134,6 +135,10 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
                     Edit
                   </Link>
                 )}
+                {/* DeleteAuctionButton is a small Client Component (needs the
+                    Flowbite Modal + confirm/cancel interactivity) -- everything
+                    else on this page stays a Server Component. */}
+                {canEdit && <DeleteAuctionButton auctionId={auction.id} displayName={title} />}
               </div>
             </div>
 

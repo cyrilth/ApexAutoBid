@@ -209,3 +209,55 @@ export async function updateAuction(
   // UpdateAuction returns a bare 200 Ok() with no body -- nothing to parse.
   return { success: true, data: { id } };
 }
+
+// ── DELETE api/auctions/{id} ─────────────────────────────────────────────────
+//
+// Deletes an auction (Task 7). Ownership is enforced by the backend
+// (AuctionAppService.DeleteAuctionAsync compares auction.Seller to the caller's
+// username -- unlike Update, there is no admin bypass there today, so an admin
+// deleting someone else's auction still gets Forbidden even though the detail
+// page's `canEdit` gate shows them the button; the backend result is what
+// actually decides, this action just surfaces whatever it returns), same as
+// updateAuction above.
+
+export async function deleteAuction(id: string): Promise<ActionResult<{ id: string }>> {
+  const token = await requireBearerToken();
+  if (!token) return signInRequiredError("delete this auction");
+
+  const res = await fetch(`${GATEWAY_URL}/api/auctions/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+
+  if (res.status === 403) {
+    // Forbid() -- either the "EmailVerified" policy or the ownership check
+    // failed (DeleteAuction's remarks); both are a bare 403 with no body.
+    return {
+      success: false,
+      error: {
+        title: "Not allowed",
+        detail: "You can only delete your own auctions.",
+        status: 403,
+      },
+    };
+  }
+
+  if (res.status === 404) {
+    return {
+      success: false,
+      error: {
+        title: "Auction not found",
+        detail: `No auction with id '${id}' was found.`,
+        status: 404,
+      },
+    };
+  }
+
+  if (!res.ok) {
+    return problemDetailsError(res, "Could not delete the auction");
+  }
+
+  // DeleteAuction returns a bare 200 Ok() with no body -- nothing to parse.
+  return { success: true, data: { id } };
+}

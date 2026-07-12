@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 20 | 55 | In progress |
+| 7. Frontend (Next.js) | 21 | 55 | In progress |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **239** | **371** | **In progress** |
+| **Overall** | **240** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -398,7 +398,7 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 6.2. `react-datepicker` for auction end date — `frontend-builder`
   - [x] 6.3. Image upload — multi-file picker (1–10 images, client-side ≤5 MB pre-validation) uploading each file direct to storage via presigned PUT (`upload-url` endpoint), drag-to-reorder to set the primary image, with a plain URL input as fallback — `frontend-builder`
   - [x] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail` per image, previews the result) — `frontend-builder`
-- [ ] 7. Implement auction delete (with confirmation) — `frontend-builder`
+- [x] 7. Implement auction delete (with confirmation) — `frontend-builder`
 - [ ] 8. Implement bid placement UI — `frontend-builder`
   - [ ] 8.1. Bid input and submit — `frontend-builder`
   - [ ] 8.2. Real-time bid updates via SignalR (`@microsoft/signalr`) — `frontend-builder`
