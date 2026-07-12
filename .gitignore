@@ -425,3 +425,12 @@ Initial_Planning/
 # startup (Data Protection-encrypted, machine-specific; regenerated automatically if
 # absent). Never committed — same class as bin/obj, not a configured secret.
 backend/IdentityService/keys/
+
+# Playwright artifacts (Phase 7 Task 14) — regenerated per test run, never committed.
+# frontend/web-app/.gitignore already covers runs from that directory; these unanchored
+# rules also catch strays dropped wherever `npx playwright test` was invoked from
+# (the VS template's [Tt]est[Rr]esult*/ above doesn't match the hyphenated name).
+test-results/
+playwright-report/
+blob-report/
+.last-run.json

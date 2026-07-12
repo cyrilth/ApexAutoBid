@@ -23,6 +23,8 @@ namespace NotificationService.Consumers;
 /// <c>WinnerEmail</c> is never sent over the hub — Architecture.md §3.3 is explicit that the
 /// post-sale email exchange goes through <c>GET api/auctions/{id}</c> only, never SignalR
 /// (Requirements.md §13.5 also forbids logging/pushing email addresses outside that flow).
+/// Enforced below by sending a redacted copy (<c>WinnerEmail = null</c>) on every hub send,
+/// broadcast and targeted alike.
 /// </para>
 /// <para>
 /// Idempotent by construction — see <see cref="AuctionCreatedConsumer"/>'s identical remark;
@@ -37,20 +39,25 @@ public class AuctionFinishedConsumer(
     {
         var message = context.Message;
 
-        await hub.Clients.All.SendAsync("AuctionFinished", message, context.CancellationToken);
+        // Redacted copy for ALL hub sends — WinnerEmail must never reach a browser via
+        // SignalR (see remarks). The winner and seller obtain the post-sale email through
+        // GET api/auctions/{id}, where AuctionService authorizes the caller per-field.
+        var redacted = message with { WinnerEmail = null };
+
+        await hub.Clients.All.SendAsync("AuctionFinished", redacted, context.CancellationToken);
 
         logger.LogInformation("Broadcast AuctionFinished for auction {AuctionId}", message.AuctionId);
 
         if (message.ItemSold && !string.IsNullOrEmpty(message.Winner))
         {
             await hub.Clients.User(message.Winner)
-                .SendAsync("AuctionWon", message, context.CancellationToken);
+                .SendAsync("AuctionWon", redacted, context.CancellationToken);
 
             logger.LogInformation("Sent targeted AuctionWon for auction {AuctionId}", message.AuctionId);
         }
 
         await hub.Clients.User(message.Seller)
-            .SendAsync("AuctionSellerResult", message, context.CancellationToken);
+            .SendAsync("AuctionSellerResult", redacted, context.CancellationToken);
 
         logger.LogInformation(
             "Sent targeted AuctionSellerResult for auction {AuctionId}", message.AuctionId);

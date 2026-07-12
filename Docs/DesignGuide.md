@@ -12,34 +12,33 @@ Visual design conventions for the Next.js frontend (`frontend/web-app`). The `fr
 
 Brand palette: **Teal Breeze** (generated with [colormagic.app](https://colormagic.app/palette/2aa2d3ccc4ae48c4260b9402)) — `#1f898e`, `#4ccdc4`, `#78e2b8`, `#a3f0b4`, `#e4f5c2`.
 
-### Theme tokens (`tailwind.config.ts`)
+### Theme tokens (`@theme` in `app/globals.css`)
 
-Extend the Tailwind theme with a `primary` scale anchored on the two teals (600 = `#1f898e` Elm, 400 = `#4ccdc4` Puerto Rico) and an `accent` group for the palette's greens:
+The project uses **Tailwind CSS v4**, which has no `tailwind.config.ts` — theme tokens are declared as CSS custom properties inside an `@theme { … }` block in `app/globals.css`. Define a `primary` scale anchored on the two teals (600 = `#1f898e` Elm, 400 = `#4ccdc4` Puerto Rico) and `accent` tokens for the palette's greens. Place the block *after* the `@import "flowbite-react/plugin/tailwindcss"` line so these `--color-primary-*` values override Flowbite's default blue scale:
 
-```ts
-colors: {
-  primary: {
-    50:  "#f1fafa",
-    100: "#dbf2f1",
-    200: "#bce5e4",
-    300: "#8ed7d3",
-    400: "#4ccdc4", // Puerto Rico — highlights, focus rings, live indicators
-    500: "#2ba8a6",
-    600: "#1f898e", // Elm — brand anchor: links, active nav, primary buttons
-    700: "#1c6e74", // button hover, link text on white (AA-safe)
-    800: "#1c585e",
-    900: "#1b4a4f",
-    950: "#0a2f34",
-  },
-  accent: {
-    mint:  "#78e2b8", // Riptide — success/sold accents
-    leaf:  "#a3f0b4", // Madang — success backgrounds, subtle highlights
-    cream: "#e4f5c2", // Tusk — hero/section background tint
-  },
-},
+```css
+@theme {
+  --color-primary-50:  #f1fafa;
+  --color-primary-100: #dbf2f1;
+  --color-primary-200: #bce5e4;
+  --color-primary-300: #8ed7d3;
+  --color-primary-400: #4ccdc4; /* Puerto Rico — highlights, focus rings, live indicators */
+  --color-primary-500: #2ba8a6;
+  --color-primary-600: #1f898e; /* Elm — brand anchor: links, active nav, primary buttons */
+  --color-primary-700: #1c6e74; /* button hover, link text on white (AA-safe) */
+  --color-primary-800: #1c585e;
+  --color-primary-900: #1b4a4f;
+  --color-primary-950: #0a2f34;
+
+  --color-accent-mint:  #78e2b8; /* Riptide — success/sold accents */
+  --color-accent-leaf:  #a3f0b4; /* Madang — success backgrounds, subtle highlights */
+  --color-accent-cream: #e4f5c2; /* Tusk — hero/section background tint */
+}
 ```
 
-Also map Flowbite React's theme `primary` to this scale so its buttons/inputs pick up the brand color.
+These generate the usual utilities (`bg-primary-600`, `text-primary-700`, `ring-primary-400`, `bg-accent-mint`, …).
+
+**Flowbite React primary mapping:** Flowbite's inputs already reference the `primary-*` scale by name, so the `@theme` override brings them in-brand automatically. Flowbite `Button`, however, keys its `color` map by literal names and has no `primary` entry — add one via `createTheme(...)` in `lib/flowbite-theme.ts` and supply it through `<ThemeProvider theme={…}>` in `app/layout.tsx`, so `<Button color="primary">` renders `bg-primary-600` with `hover:bg-primary-700` and `focus:ring-primary-400`.
 
 ### Usage rules
 

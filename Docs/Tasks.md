@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 0 | 55 | Not started |
+| 7. Frontend (Next.js) | 55 | 55 | Done |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **219** | **371** | **In progress** |
+| **Overall** | **274** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -378,61 +378,61 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create the Next.js project (`frontend/web-app`) with dependencies — `frontend-builder`
-- [ ] 2. Configure Tailwind CSS and Flowbite React — theme tokens (Teal Breeze `primary` scale, `accent` colors) and Inter font per `Docs/DesignGuide.md` — `frontend-builder`
-- [ ] 3. Set up next-auth with Duende IdentityServer (OAuth2/OIDC) — `frontend-builder`
-- [ ] 4. Implement auction listing page — `frontend-builder`
-  - [ ] 4.1. Fetch from Search Service (via Gateway) — `frontend-builder`
-  - [ ] 4.2. Pagination, filtering (live, endingSoon, finished), sorting (make, new, endingSoon) — `frontend-builder`
-  - [ ] 4.3. Search by term, seller, winner — `frontend-builder`
-- [ ] 5. Implement auction detail page — `frontend-builder`
-  - [ ] 5.1. Display DetailedSpecs (seller, make, model, year, mileage, reserve price) — `frontend-builder`
-  - [ ] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
-  - [ ] 5.3. Bid history list — `frontend-builder`
-  - [ ] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
-  - [ ] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
-  - [ ] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from the primary image's thumbnail with primary-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
-  - [ ] 5.7. Image gallery — primary image first, click/swipe navigation through the remaining images (listing cards elsewhere show only the primary thumbnail) — `frontend-builder`
-- [ ] 6. Implement auction create/edit form — `frontend-builder`
-  - [ ] 6.1. `react-hook-form` for form handling — `frontend-builder`
-  - [ ] 6.2. `react-datepicker` for auction end date — `frontend-builder`
-  - [ ] 6.3. Image upload — multi-file picker (1–10 images, client-side ≤5 MB pre-validation) uploading each file direct to storage via presigned PUT (`upload-url` endpoint), drag-to-reorder to set the primary image, with a plain URL input as fallback — `frontend-builder`
-  - [ ] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail` per image, previews the result) — `frontend-builder`
-- [ ] 7. Implement auction delete (with confirmation) — `frontend-builder`
-- [ ] 8. Implement bid placement UI — `frontend-builder`
-  - [ ] 8.1. Bid input and submit — `frontend-builder`
-  - [ ] 8.2. Real-time bid updates via SignalR (`@microsoft/signalr`) — `frontend-builder`
-  - [ ] 8.3. Connect to the hub with the access token when logged in; show targeted "You won" toast (winner) and auction-result toast (seller) — `frontend-builder`
-- [ ] 9. Set up Zustand store for client-side state management — `frontend-builder`
-- [ ] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
-- [ ] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
-- [ ] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
-- [ ] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
-- [ ] 14. Set up Playwright test project — `frontend-builder`
-- [ ] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
-  - [ ] 15.1. Home page — loads auction listings — `frontend-builder`
-  - [ ] 15.2. Search — filters auctions by search term — `frontend-builder`
-  - [ ] 15.3. Pagination — navigates between pages — `frontend-builder`
-  - [ ] 15.4. Filtering — filters by live, endingSoon, finished — `frontend-builder`
-  - [ ] 15.5. Sorting — sorts by make, new, endingSoon — `frontend-builder`
-  - [ ] 15.6. Auth — login flow via IdentityServer — `frontend-builder`
-  - [ ] 15.7. Auth — logout returns to home page — `frontend-builder`
-  - [ ] 15.8. Auth — unauthenticated user cannot access create page — `frontend-builder`
-  - [ ] 15.9. Create auction — fills form and submits successfully — `frontend-builder`
-  - [ ] 15.10. Edit auction — updates auction details — `frontend-builder`
-  - [ ] 15.11. Delete auction — removes auction with confirmation — `frontend-builder`
-  - [ ] 15.12. Auction detail — displays specs, countdown, and bid history — `frontend-builder`
-  - [ ] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
-  - [ ] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
-  - [ ] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
-  - [ ] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
-  - [ ] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
-  - [ ] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
-- [ ] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
-- [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
-- [ ] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
-- [ ] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
-- [ ] 20. Add `GET /api/health` route handler returning 200 (see `Requirements.md` §13.4) — `frontend-builder`
+- [x] 1. Create the Next.js project (`frontend/web-app`) with dependencies — `frontend-builder`
+- [x] 2. Configure Tailwind CSS and Flowbite React — theme tokens (Teal Breeze `primary` scale, `accent` colors) and Inter font per `Docs/DesignGuide.md` — `frontend-builder`
+- [x] 3. Set up next-auth with Duende IdentityServer (OAuth2/OIDC) — `frontend-builder`
+- [x] 4. Implement auction listing page — `frontend-builder`
+  - [x] 4.1. Fetch from Search Service (via Gateway) — `frontend-builder`
+  - [x] 4.2. Pagination, filtering (live, endingSoon, finished), sorting (make, new, endingSoon) — `frontend-builder`
+  - [x] 4.3. Search by term, seller, winner — `frontend-builder`
+- [x] 5. Implement auction detail page — `frontend-builder`
+  - [x] 5.1. Display DetailedSpecs (seller, make, model, year, mileage, reserve price) — `frontend-builder`
+  - [x] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
+  - [x] 5.3. Bid history list — `frontend-builder`
+  - [x] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
+  - [x] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
+  - [x] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from the primary image's thumbnail with primary-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
+  - [x] 5.7. Image gallery — primary image first, click/swipe navigation through the remaining images (listing cards elsewhere show only the primary thumbnail) — `frontend-builder`
+- [x] 6. Implement auction create/edit form — `frontend-builder`
+  - [x] 6.1. `react-hook-form` for form handling — `frontend-builder`
+  - [x] 6.2. `react-datepicker` for auction end date — `frontend-builder`
+  - [x] 6.3. Image upload — multi-file picker (1–10 images, client-side ≤5 MB pre-validation) uploading each file direct to storage via presigned PUT (`upload-url` endpoint), drag-to-reorder to set the primary image, with a plain URL input as fallback — `frontend-builder`
+  - [x] 6.4. Optional "Generate thumbnail" step after upload (calls `POST api/auctions/thumbnail` per image, previews the result) — `frontend-builder`
+- [x] 7. Implement auction delete (with confirmation) — `frontend-builder`
+- [x] 8. Implement bid placement UI — `frontend-builder`
+  - [x] 8.1. Bid input and submit — `frontend-builder`
+  - [x] 8.2. Real-time bid updates via SignalR (`@microsoft/signalr`) — `frontend-builder`
+  - [x] 8.3. Connect to the hub with the access token when logged in; show targeted "You won" toast (winner) and auction-result toast (seller) — `frontend-builder`
+- [x] 9. Set up Zustand store for client-side state management — `frontend-builder`
+- [x] 10. Add toast notifications (`react-hot-toast`) — `frontend-builder`
+- [x] 11. Add currency formatting helper (`numberWithCommas`) — `frontend-builder`
+- [x] 12. Configure Next.js image optimization (`sharp`) with `remotePatterns` whitelisting the MinIO/object-storage host from an environment variable — `frontend-builder`
+- [x] 13. Dockerize the Next.js app (multi-stage build, standalone output, non-root user) — `frontend-builder`, verify with `docker-validator`
+- [x] 14. Set up Playwright test project — `frontend-builder`
+- [x] 15. Write Playwright e2e tests — `frontend-builder`, run with `playwright-tester`
+  - [x] 15.1. Home page — loads auction listings — `frontend-builder`
+  - [x] 15.2. Search — filters auctions by search term — `frontend-builder`
+  - [x] 15.3. Pagination — navigates between pages — `frontend-builder`
+  - [x] 15.4. Filtering — filters by live, endingSoon, finished — `frontend-builder`
+  - [x] 15.5. Sorting — sorts by make, new, endingSoon — `frontend-builder`
+  - [x] 15.6. Auth — login flow via IdentityServer — `frontend-builder`
+  - [x] 15.7. Auth — logout returns to home page — `frontend-builder`
+  - [x] 15.8. Auth — unauthenticated user cannot access create page — `frontend-builder`
+  - [x] 15.9. Create auction — fills form and submits successfully — `frontend-builder`
+  - [x] 15.10. Edit auction — updates auction details — `frontend-builder`
+  - [x] 15.11. Delete auction — removes auction with confirmation — `frontend-builder`
+  - [x] 15.12. Auction detail — displays specs, countdown, and bid history — `frontend-builder`
+  - [x] 15.13. Place bid — submits bid and updates UI — `frontend-builder`
+  - [x] 15.14. Real-time — bid placed by another user appears without refresh — `frontend-builder`
+  - [x] 15.15. Toast notifications — displays on success and error actions — `frontend-builder`
+  - [x] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
+  - [x] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
+  - [x] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
+- [x] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
+- [x] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
+- [x] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
+- [x] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
+- [x] 20. Add `GET /api/health` route handler returning 200 (see `Requirements.md` §13.4) — `frontend-builder`
 
 ---
 

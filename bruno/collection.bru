@@ -39,6 +39,11 @@ docs {
               dotnet run --project backend/AuctionService/AuctionService.API --launch-profile http → http://localhost:5054
   - Search:   ASPNETCORE_URLS=http://localhost:5055 \
               dotnet run --project backend/SearchService/SearchService.API                  → http://localhost:5055
+  - Bidding:  dotnet run --project backend/BiddingService/BiddingService.API --launch-profile http → http://localhost:7003
+              (needs MongoDB + RabbitMQ from infra; resolves auctions from its local
+               projection, falling back to the Auction Service's gRPC endpoint on :7054)
+  - Gateway:  dotnet run --project backend/GatewayService                                   → http://localhost:6001
+              (only needed for Get Platform Version — every other request is service-direct)
 
   IdentityServer uses the self-signed ASP.NET dev certificate, so in Bruno either
   disable Preferences → General → "SSL/TLS Certificate Verification", or add

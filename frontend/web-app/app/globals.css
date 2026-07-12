@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@import "flowbite-react/plugin/tailwindcss";
+@source "../.flowbite-react/class-list.json";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+}
+
+/*
+ * Teal Breeze brand palette (Docs/DesignGuide.md §2).
+ * These override the blue "primary" scale that ships with
+ * flowbite-react/plugin/tailwindcss (imported above) so every
+ * Flowbite component that already references `primary-*` classes
+ * (Button "default" color, TextInput/Select/Textarea focus rings,
+ * etc.) renders in-brand without further per-component theming.
+ */
+@theme {
+  --color-primary-50: #f1fafa;
+  --color-primary-100: #dbf2f1;
+  --color-primary-200: #bce5e4;
+  --color-primary-300: #8ed7d3;
+  --color-primary-400: #4ccdc4; /* Puerto Rico — highlights, focus rings, live indicators */
+  --color-primary-500: #2ba8a6;
+  --color-primary-600: #1f898e; /* Elm — brand anchor: links, active nav, primary buttons */
+  --color-primary-700: #1c6e74; /* button hover, link text on white */
+  --color-primary-800: #1c585e;
+  --color-primary-900: #1b4a4f;
+  --color-primary-950: #0a2f34;
+
+  --color-accent-mint: #78e2b8; /* Riptide — success/sold accents */
+  --color-accent-leaf: #a3f0b4; /* Madang — success backgrounds, subtle highlights */
+  --color-accent-cream: #e4f5c2; /* Tusk — hero/section background tint */
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/*
+ * Real-time update pulse (Phase 7 Task 8.2, Docs/DesignGuide.md §8 -- "Real-time updates (new
+ * bid, high-bid change) get a brief background-tint pulse (accent-leaf fading out) so live
+ * changes are noticeable without being noisy."). Applied to a BidHistory row the instant a
+ * SignalR "BidPlaced" event inserts it (stores/bid-store.ts's `latestLiveBidId`, set only by
+ * `addLiveBid`) -- NOT to bids added via this bidder's own `placeBid` result (`prependBid`),
+ * which already gets a toast instead of the extra visual.
+ */
+@keyframes bid-pulse {
+  from {
+    background-color: var(--color-accent-leaf);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.animate-bid-pulse {
+  animation: bid-pulse 2s ease-out;
+}
+
+/*
+ * react-datepicker theming (Task 7.6.2, Docs/DesignGuide.md §6 -- "styled
+ * to match TextInput"). The library ships its own stylesheet
+ * (react-datepicker/dist/react-datepicker.css, imported by
+ * components/AuctionForm.tsx); the input box itself is already a real
+ * Flowbite `TextInput` via `customInput`, so only the popup calendar needs
+ * retheming here to the Teal Breeze palette instead of its default blue.
+ * Tailwind v4 exposes every default-palette color (slate-*) and this
+ * project's `primary-*`/`@theme` overrides as plain CSS custom properties,
+ * so these selectors can reference them directly.
+ */
+.react-datepicker {
+  font-family: var(--font-sans);
+  border-color: var(--color-slate-200);
+  border-radius: 0.5rem;
+}
+.react-datepicker__header {
+  background-color: var(--color-primary-50);
+  border-bottom-color: var(--color-primary-100);
+}
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker-time__header {
+  color: var(--color-slate-700);
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__time-list-item--selected {
+  background-color: var(--color-primary-600) !important;
+  color: white !important;
+}
+.react-datepicker__day:hover,
+.react-datepicker__time-list-item:hover {
+  background-color: var(--color-primary-100) !important;
+}
+.react-datepicker__day--today {
+  font-weight: 700;
+  color: var(--color-primary-700);
+}
+.react-datepicker__triangle {
+  display: none;
+}

@@ -1,0 +1,46 @@
+meta {
+  name: Place Bid
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{bidding}}/api/bids
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "auctionId": "{{auctionId}}",
+    "amount": 25000
+  }
+}
+
+docs {
+  Requires a Bearer token AND a verified email (the "EmailVerified" policy) — all seeded
+  users qualify. The Bidder is taken from the token's username claim, never from the body;
+  the bidder's email is captured from the token for the later post-sale flow but is never
+  returned in any bids response (Requirements §3.3).
+
+  Outcomes — all four normal results return 200 OK with the result carried in
+  `bidStatus`, NOT an HTTP error (Requirements §3.3):
+  - Accepted            — new high bid, at/above reserve.
+  - AcceptedBelowReserve — recorded, but still under the auction's reserve price.
+  - TooLow              — below the current high bid; recorded but not leading.
+  - Finished            — the auction has already ended; bid rejected.
+
+  Only two cases short-circuit before a bid is recorded:
+  - 404 ProblemDetails — no auction with that id (try a random GUID).
+  - 400 ProblemDetails — the seller bidding on their own auction (log in as the auction's
+    seller and bid on it).
+
+  Things to try:
+  - Send without a token → 401 with WWW-Authenticate.
+  - amount: 0 (or negative) → 400 ValidationProblemDetails (Amount must be greater than zero).
+  - A valid bid, then run Search / Get Auction by Id → CurrentHighBid updates via the
+    BidPlaced event through RabbitMQ (watch the exchange on http://localhost:15672, guest/guest).
+  - The Bidding Service resolves the auction from its own local projection (populated by the
+    AuctionCreated event) and falls back to a gRPC call to the Auction Service if the event
+    hasn't arrived yet — so a freshly created auction is biddable immediately.
+}

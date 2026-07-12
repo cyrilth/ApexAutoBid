@@ -1,0 +1,33 @@
+# Host-installed dependencies and build output must never be copied into the
+# build context -- the `deps`/`builder` stages run their own `npm ci`/`next
+# build` in-container. Copying a host node_modules (built for the host's OS/
+# arch) or a stale .next/ can break or shadow the in-container build.
+node_modules
+.next
+out
+
+# Docker & VCS noise (the Dockerfile is supplied via -f, not needed in context).
+Dockerfile
+.dockerignore
+.git
+.gitignore
+
+# Env files -- machine-local, gitignored, and doubly excluded here: `.env` holds
+# each machine's own dev secrets (e.g. AUTH_IDENTITYSERVER_SECRET), and none of it
+# belongs baked into an image (Next's standalone build would copy `.env` into the
+# bundle if it were in the build context -- see the Task 13 notes).
+# Build-time NEXT_PUBLIC_* values come from Dockerfile ARGs instead (dev defaults
+# matching .env.example, overridable via --build-arg for real deployments); every other
+# runtime env var (AUTH_*, GATEWAY_URL) is supplied by the container platform
+# (docker-compose/k8s) at `docker run` time -- see the comment block in Dockerfile.
+.env
+.env.*
+
+# IDE / editor state.
+.vscode
+*.md
+
+# Test artifacts (Phase 7 Task 14/15 adds a Playwright suite here later).
+coverage
+playwright-report
+test-results

@@ -80,15 +80,24 @@ public class TargetedMessageTests(CustomWebAppFactory factory)
         Assert.Equal(auctionId, sellerBroadcast.AuctionId);
         Assert.Equal(auctionId, anonymousBroadcast.AuctionId);
 
+        // WinnerEmail must never cross the hub (Requirements.md §13.5 — the post-sale email
+        // exchange goes through GET api/auctions/{id} only), even though the published event
+        // above carries it. Broadcast AND targeted sends are redacted alike.
+        Assert.Null(winnerBroadcast.WinnerEmail);
+        Assert.Null(sellerBroadcast.WinnerEmail);
+        Assert.Null(anonymousBroadcast.WinnerEmail);
+
         // Only the winner's connection receives the targeted AuctionWon message.
         var won = await SignalRTestHelpers.WaitForMessageAsync(winnerWonTcs, cancellationToken);
         Assert.Equal(auctionId, won.AuctionId);
         Assert.Equal(winnerUsername, won.Winner);
+        Assert.Null(won.WinnerEmail);
 
         // Only the seller's connection receives the targeted AuctionSellerResult message.
         var sellerResult = await SignalRTestHelpers.WaitForMessageAsync(sellerSellerResultTcs, cancellationToken);
         Assert.Equal(auctionId, sellerResult.AuctionId);
         Assert.Equal(sellerUsername, sellerResult.Seller);
+        Assert.Null(sellerResult.WinnerEmail);
 
         // Cross-checks: the seller's connection must NOT receive AuctionWon, the winner's
         // connection must NOT receive AuctionSellerResult, and the anonymous connection must
