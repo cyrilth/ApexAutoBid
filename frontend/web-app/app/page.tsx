@@ -32,12 +32,23 @@ export default async function Home({
         </div>
         {/* Temporary until the real nav/auth menu lands (later Phase 7 tasks) --
             see app/session/page.tsx for the auth verification harness. */}
-        <Link
-          href="/session"
-          className="rounded text-sm font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-400"
-        >
-          Sign in / session
-        </Link>
+        <div className="flex items-center gap-4">
+          {/* Styled Link rather than Flowbite `Button as={Link}`: Button is a
+              Client Component, and a Server Component can't pass the Link
+              function component across that boundary (RSC serialization). */}
+          <Link
+            href="/auctions/create"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-400"
+          >
+            Create auction
+          </Link>
+          <Link
+            href="/session"
+            className="rounded text-sm font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-400"
+          >
+            Sign in / session
+          </Link>
+        </div>
       </div>
 
       <AuctionToolbar key={queryKey} query={query} />

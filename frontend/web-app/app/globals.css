@@ -35,3 +35,46 @@
 body {
   font-family: var(--font-sans);
 }
+
+/*
+ * react-datepicker theming (Task 7.6.2, Docs/DesignGuide.md §6 -- "styled
+ * to match TextInput"). The library ships its own stylesheet
+ * (react-datepicker/dist/react-datepicker.css, imported by
+ * components/AuctionForm.tsx); the input box itself is already a real
+ * Flowbite `TextInput` via `customInput`, so only the popup calendar needs
+ * retheming here to the Teal Breeze palette instead of its default blue.
+ * Tailwind v4 exposes every default-palette color (slate-*) and this
+ * project's `primary-*`/`@theme` overrides as plain CSS custom properties,
+ * so these selectors can reference them directly.
+ */
+.react-datepicker {
+  font-family: var(--font-sans);
+  border-color: var(--color-slate-200);
+  border-radius: 0.5rem;
+}
+.react-datepicker__header {
+  background-color: var(--color-primary-50);
+  border-bottom-color: var(--color-primary-100);
+}
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker-time__header {
+  color: var(--color-slate-700);
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__time-list-item--selected {
+  background-color: var(--color-primary-600) !important;
+  color: white !important;
+}
+.react-datepicker__day:hover,
+.react-datepicker__time-list-item:hover {
+  background-color: var(--color-primary-100) !important;
+}
+.react-datepicker__day--today {
+  font-weight: 700;
+  color: var(--color-primary-700);
+}
+.react-datepicker__triangle {
+  display: none;
+}

@@ -4,9 +4,28 @@ import { redirect } from "next/navigation";
 import { signIn, signOut, identityServerIssuer, identityServerPostLogoutRedirectUri } from "@/auth";
 import { getIdToken } from "@/lib/auth-token";
 
-/** Redirects straight to IdentityServer's login page for the "identityserver" provider. */
+/**
+ * Redirects straight to IdentityServer's login page for the "identityserver"
+ * provider. Kept zero-argument (rather than taking an optional callback URL)
+ * so it stays assignable to a plain `<form action={...}>`, which React
+ * requires to accept a `FormData` first parameter -- see `signInReturningTo`
+ * below for the redirect-with-return-path variant.
+ */
 export async function signInWithIdentityServer(): Promise<void> {
   await signIn("identityserver");
+}
+
+/**
+ * Same sign-in redirect as `signInWithIdentityServer`, but for callers that
+ * need the user back on a specific page afterwards rather than wherever
+ * they came from (next-auth's `redirectTo` -- otherwise it falls back to
+ * the referring page). Not a `<form action>` -- invoked directly (e.g. from
+ * a Server Component's render body when it detects a signed-out visitor).
+ * Used by the create/edit auction pages (Phase 7 Task 6) so a signed-out
+ * visitor lands back on the exact form they were trying to reach.
+ */
+export async function signInReturningTo(callbackUrl: string): Promise<void> {
+  await signIn("identityserver", { redirectTo: callbackUrl });
 }
 
 /**
