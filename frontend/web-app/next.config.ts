@@ -24,7 +24,9 @@ const nextConfig: NextConfig = {
     // a private/loopback IP (SSRF hardening). Dev MinIO lives at
     // localhost:9000, so allow it exactly when the configured storage host
     // IS a loopback address -- a real production host never enables this.
-    dangerouslyAllowLocalIP: /\/\/(localhost|127\.0\.0\.1)[:/]/.test(`${IMAGE_STORAGE_URL}/`),
+    dangerouslyAllowLocalIP: ["localhost", "127.0.0.1"].includes(
+      new URL(IMAGE_STORAGE_URL).hostname
+    ),
   },
 };
 

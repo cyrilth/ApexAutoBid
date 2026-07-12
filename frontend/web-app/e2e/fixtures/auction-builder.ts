@@ -37,8 +37,9 @@ export interface AuctionSeed {
  * id, parsed off the post-submit redirect URL (`AuctionForm.onSubmit`'s `router.push
  * ("/auctions/{id}")`). Mirrors `register.spec.ts`'s 15.16 spec's own inline create-auction
  * steps exactly, factored out here so Batch C's several specs that each need their OWN
- * throwaway auction (parallel-safety under `workers: 4` -- Docs/Tasks.md Phase 7 Task 15's
- * "avoid two tests mutating the same auction" guidance) don't each duplicate it.
+ * throwaway auction (test isolation -- Docs/Tasks.md Phase 7 Task 15's "avoid two tests
+ * mutating the same auction" guidance, which also keeps the suite correct if `workers`
+ * is ever raised above the current rate-limit-imposed 1) don't each duplicate it.
  */
 export async function createAuctionViaUi(page: Page, seed: AuctionSeed): Promise<string> {
   await page.goto("/auctions/create");
