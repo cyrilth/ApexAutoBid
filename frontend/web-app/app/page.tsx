@@ -1,64 +1,50 @@
-import { Button } from "flowbite-react";
-import { auth } from "@/auth";
-import { signInWithIdentityServer, signOutFederated } from "@/lib/auth-actions";
+import { Suspense } from "react";
+import Link from "next/link";
+import { AuctionToolbar } from "@/components/AuctionToolbar";
+import { AuctionResults } from "@/components/AuctionResults";
+import { AuctionGridSkeleton } from "@/components/AuctionGridSkeleton";
+import { parseAuctionSearchParams } from "@/lib/auction-search-params";
 
-// Temporary verification harness for Phase 7 Task 2 (theme tokens + Flowbite
-// mapping) and Task 3 (next-auth + IdentityServer). Replaced with the real
-// listings page (and real nav/header auth UI) in later Phase 7 tasks.
-export default async function Home() {
-  const session = await auth();
+/**
+ * Auction listing page (Phase 7 Task 4). Server Component -- `searchParams`
+ * is the single source of truth for search/filter/sort/pagination state, so
+ * results stay shareable/bookmarkable/back-button friendly (no client-only
+ * state; Zustand lands in Task 9 for other concerns).
+ */
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = parseAuctionSearchParams(await searchParams);
+  // Forces AuctionToolbar/AuctionResults to remount (fresh skeleton, fresh
+  // uncontrolled field defaults) whenever the resolved query changes.
+  const queryKey = JSON.stringify(query);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-8">
-      <h1 className="text-3xl font-bold text-primary-700">ApexAutoBid</h1>
-
-      <Button color="primary">Place Bid</Button>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-primary-600 text-white rounded-lg p-4 text-sm font-semibold">
-          primary-600
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Auctions</h1>
+          <p className="text-sm text-slate-500">
+            Browse live, ending-soon, and finished car auctions.
+          </p>
         </div>
-        <div className="bg-accent-mint text-slate-900 rounded-lg p-4 text-sm font-semibold">
-          accent-mint
-        </div>
-        <div className="bg-accent-leaf text-slate-900 rounded-lg p-4 text-sm font-semibold">
-          accent-leaf
-        </div>
+        {/* Temporary until the real nav/auth menu lands (later Phase 7 tasks) --
+            see app/session/page.tsx for the auth verification harness. */}
+        <Link
+          href="/session"
+          className="rounded text-sm font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-400"
+        >
+          Sign in / session
+        </Link>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3 max-w-md">
-        <h2 className="text-xl font-semibold text-slate-900">
-          Auth.js + IdentityServer
-        </h2>
+      <AuctionToolbar key={queryKey} query={query} />
 
-        {session?.user ? (
-          <>
-            <p className="text-sm text-slate-600">
-              Signed in as{" "}
-              <span className="font-semibold">
-                {session.user.username ?? session.user.name ?? session.user.email}
-              </span>
-              {session.user.role && ` (${session.user.role})`}
-            </p>
-            {session.error === "RefreshTokenError" && (
-              <p className="text-sm text-red-600">
-                Session refresh failed — please sign in again.
-              </p>
-            )}
-            <form action={signOutFederated}>
-              <Button type="submit" color="primary">
-                Sign out
-              </Button>
-            </form>
-          </>
-        ) : (
-          <form action={signInWithIdentityServer}>
-            <Button type="submit" color="primary">
-              Sign in
-            </Button>
-          </form>
-        )}
-      </div>
+      <Suspense key={queryKey} fallback={<AuctionGridSkeleton />}>
+        <AuctionResults query={query} />
+      </Suspense>
     </div>
   );
 }
