@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Modal, ModalBody, ModalHeader } from "flowbite-react";
 import { deleteAuction } from "@/lib/auction-actions";
+import { toastActionError } from "@/lib/toast";
 
 interface DeleteAuctionButtonProps {
   auctionId: string;
@@ -33,6 +34,9 @@ export function DeleteAuctionButton({ auctionId, displayName }: DeleteAuctionBut
 
     if (!result.success) {
       setError(result.error);
+      // Red toast, title only (Task 19, Docs/Requirements.md §13.2) -- alongside the modal's
+      // own inline error, which still shows `detail` for extra context.
+      toastActionError(result.error);
       setIsDeleting(false);
       return;
     }

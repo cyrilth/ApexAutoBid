@@ -4,6 +4,7 @@ import { ThemeProvider } from "flowbite-react";
 import { Toaster } from "react-hot-toast";
 import { ThemeInit } from "@/.flowbite-react/init";
 import { auth } from "@/auth";
+import { Footer } from "@/components/Footer";
 import { NotificationProvider } from "@/components/NotificationProvider";
 import { customFlowbiteTheme } from "@/lib/flowbite-theme";
 import "./globals.css";
@@ -36,9 +37,17 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col antialiased bg-slate-50 text-slate-700">
         <ThemeInit />
         <ThemeProvider theme={customFlowbiteTheme}>
-          <NotificationProvider isSignedIn={isSignedIn} username={session?.user?.username}>
-            {children}
-          </NotificationProvider>
+          {/* `flex-1` on the NotificationProvider's wrapper (rather than on `<Footer>` itself)
+              is what makes the footer sit at the bottom of the viewport on short pages -- the
+              body is `flex flex-col` (Task 16), so this div grows to fill the remaining space
+              and pushes `<Footer>` down, while still letting normal document flow push it
+              further down on tall pages. */}
+          <div className="flex flex-1 flex-col">
+            <NotificationProvider isSignedIn={isSignedIn} username={session?.user?.username}>
+              {children}
+            </NotificationProvider>
+          </div>
+          <Footer />
           {/* Mounted once, app-wide (Task 10, Docs/DesignGuide.md §6 -- "top-right,
               success/error variants"). Individual calls go through lib/toast.ts's
               helpers, which supply the per-variant (success/error/warning) colors;

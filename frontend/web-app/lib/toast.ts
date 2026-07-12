@@ -60,13 +60,18 @@ export function toastWarning(message: string): void {
 }
 
 /**
- * Formats an `ActionResult` failure (the `{ title, detail? }` envelope
- * shared by `lib/auction-actions.ts` and `lib/bid-actions.ts`) as a single
- * error toast -- "title: detail" when a detail is present, just the title
- * otherwise.
+ * Red error toast for an `ActionResult` failure (the `{ title, detail? }`
+ * envelope shared by `lib/auction-actions.ts` and `lib/bid-actions.ts`) --
+ * `title` ONLY (Docs/Requirements.md §13.2: "surface its `title` as a red
+ * toast ... never render `detail` or stack traces to users in
+ * production"). `detail` still travels on the `ActionResult`/`error` object
+ * for callers that show it inline near a field or submit button instead of
+ * (or alongside) this toast -- e.g. `AuctionForm`'s inline panel,
+ * `DeleteAuctionButton`'s modal -- §13.2's title-only rule is specifically
+ * about the toast.
  */
-export function toastActionError(error: { title: string; detail?: string }): void {
-  toastError(error.detail ? `${error.title}: ${error.detail}` : error.title);
+export function toastActionError(error: { title: string }): void {
+  toastError(error.title);
 }
 
 /**

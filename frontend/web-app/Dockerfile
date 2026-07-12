@@ -85,6 +85,7 @@ ENV HOSTNAME=0.0.0.0
 
 # No HEALTHCHECK here, matching the backend Dockerfiles' convention -- health
 # is verified via Docker Compose `healthcheck:` blocks (Phase 8), not baked
-# into the image. This app's `GET /api/health` route lands in Task 20; until
-# then there is no dedicated health endpoint to point one at.
+# into the image. This app's dependency-free liveness probe now exists at
+# `GET /api/health` (Task 20, app/api/health/route.ts) -- a compose/k8s
+# healthcheck block can point at it once Phase 8 adds one.
 CMD ["node", "server.js"]

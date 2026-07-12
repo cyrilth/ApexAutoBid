@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 50 | 55 | In progress |
+| 7. Frontend (Next.js) | 55 | 55 | Done |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **269** | **371** | **In progress** |
+| **Overall** | **274** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -428,11 +428,11 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 15.16. Email verification — register a new user, fetch the confirmation link via the Mailpit API, confirm, then create an auction successfully — `frontend-builder`
   - [x] 15.17. Image upload — create an auction with multiple file uploads; the images land in storage and the gallery renders on the detail page (primary image first) — `frontend-builder`
   - [x] 15.18. Link preview metadata — the auction detail page head contains og:title, og:description, og:image, and twitter:card tags — `frontend-builder`
-- [ ] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
-- [ ] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
-- [ ] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
-- [ ] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
-- [ ] 20. Add `GET /api/health` route handler returning 200 (see `Requirements.md` §13.4) — `frontend-builder`
+- [x] 16. Page footer shows the frontend version (`package.json`) and the backend version fetched from `GET api/version` (see `Docs/Versioning.md`) — `frontend-builder`
+- [x] 17. Verify end-to-end: full user flow (browse → login → create auction → bid → real-time updates) — `playwright-tester`
+- [x] 18. Add global error boundaries: root `global-error.tsx`, route-level `error.tsx` (friendly message + "Try again" reset), and `not-found.tsx` — styled per `Docs/DesignGuide.md` (see `Requirements.md` §13.2) — `frontend-builder`
+- [x] 19. Surface API ProblemDetails failures as red toasts (`title` only — never `detail` or stack traces in production; see `Requirements.md` §13.2) — `frontend-builder`
+- [x] 20. Add `GET /api/health` route handler returning 200 (see `Requirements.md` §13.4) — `frontend-builder`
 
 ---
 

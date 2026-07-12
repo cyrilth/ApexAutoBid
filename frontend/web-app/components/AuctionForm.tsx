@@ -8,6 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Button, HelperText, Label, TextInput } from "flowbite-react";
 import { AuctionImageManager, imagesToPayload, type ManagedImage } from "@/components/AuctionImageManager";
 import { createAuction, updateAuction } from "@/lib/auction-actions";
+import { toastActionError } from "@/lib/toast";
 import type { AuctionDetail } from "@/types/auction";
 
 interface AuctionFormValues {
@@ -103,6 +104,10 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
 
       if (!result.success) {
         setSubmitError(result.error);
+        // Red toast, title only (Task 19, Docs/Requirements.md §13.2) -- alongside (not instead
+        // of) the inline panel below, which still shows `detail` for extra context next to the
+        // submit button.
+        toastActionError(result.error);
         return;
       }
 
@@ -124,6 +129,8 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
 
     if (!result.success) {
       setSubmitError(result.error);
+      // See the create-mode branch above -- same title-only toast + detail-bearing inline panel split.
+      toastActionError(result.error);
       return;
     }
 
