@@ -3,6 +3,11 @@ import withFlowbiteReact from "flowbite-react/plugin/nextjs";
 import { IMAGE_STORAGE_URL } from "./lib/image-config";
 
 const nextConfig: NextConfig = {
+  // Phase 7 Task 13: emits a self-contained `.next/standalone` build (a minimal
+  // `server.js` plus only the `node_modules` files actually traced as needed at
+  // runtime) so the Docker runtime stage doesn't need `npm install`/full
+  // `node_modules` at all -- see Dockerfile. No effect on `next dev`/`next start`.
+  output: "standalone",
   images: {
     // Whitelists the MinIO/object-storage host (dev default, or
     // NEXT_PUBLIC_IMAGE_STORAGE_URL in production -- see

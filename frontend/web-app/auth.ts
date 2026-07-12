@@ -30,9 +30,14 @@ export const identityServerIssuer =
   process.env.AUTH_IDENTITYSERVER_ISSUER ?? "https://localhost:5001";
 
 const identityServerClientId = process.env.AUTH_IDENTITYSERVER_ID ?? "webapp";
-const identityServerClientSecret = process.env.AUTH_IDENTITYSERVER_SECRET;
+const identityServerClientSecret = process.env.AUTH_IDENTITYSERVER_SECRET ?? "";
 
-if (!identityServerClientSecret) {
+// Fail fast on a missing client secret -- but NOT during `next build`, where
+// this module is loaded while collecting page data and runtime secrets are
+// deliberately absent (the Docker image build excludes .env by design; the
+// secret arrives via the container environment at run time). NEXT_PHASE is
+// set by Next itself for the duration of the production build.
+if (!identityServerClientSecret && process.env.NEXT_PHASE !== "phase-production-build") {
   throw new Error(
     "AUTH_IDENTITYSERVER_SECRET is not set. Copy .env.example to .env.local " +
       "(or fill in .env) with the webapp client's secret from " +
