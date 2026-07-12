@@ -12,12 +12,12 @@
 | 4. Gateway Service | 25 | 25 | Done |
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
-| 7. Frontend (Next.js) | 7 | 55 | In progress |
+| 7. Frontend (Next.js) | 15 | 55 | In progress |
 | 8. Docker Compose Deployment | 0 | 11 | Not started |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **226** | **371** | **In progress** |
+| **Overall** | **234** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -385,14 +385,14 @@ Status values: `Not started` · `In progress` · `Done`
   - [x] 4.1. Fetch from Search Service (via Gateway) — `frontend-builder`
   - [x] 4.2. Pagination, filtering (live, endingSoon, finished), sorting (make, new, endingSoon) — `frontend-builder`
   - [x] 4.3. Search by term, seller, winner — `frontend-builder`
-- [ ] 5. Implement auction detail page — `frontend-builder`
-  - [ ] 5.1. Display DetailedSpecs (seller, make, model, year, mileage, reserve price) — `frontend-builder`
-  - [ ] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
-  - [ ] 5.3. Bid history list — `frontend-builder`
-  - [ ] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
-  - [ ] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
-  - [ ] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from the primary image's thumbnail with primary-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
-  - [ ] 5.7. Image gallery — primary image first, click/swipe navigation through the remaining images (listing cards elsewhere show only the primary thumbnail) — `frontend-builder`
+- [x] 5. Implement auction detail page — `frontend-builder`
+  - [x] 5.1. Display DetailedSpecs (seller, make, model, year, mileage, reserve price) — `frontend-builder`
+  - [x] 5.2. Auction countdown timer (`react-countdown`) — `frontend-builder`
+  - [x] 5.3. Bid history list — `frontend-builder`
+  - [x] 5.4. Post-sale contact info on sold auctions (seller sees winner's email, winner sees seller's email) — `frontend-builder`
+  - [x] 5.5. Social share buttons — Facebook/X/WhatsApp share intents + native Web Share API button (`navigator.share`; covers Instagram via the mobile share sheet) — `frontend-builder`
+  - [x] 5.6. Open Graph + Twitter Card metadata via `generateMetadata` (og:title, og:description, og:image from the primary image's thumbnail with primary-image fallback, summary_large_image) for rich link previews in WhatsApp/iMessage/Slack/social apps — `frontend-builder`
+  - [x] 5.7. Image gallery — primary image first, click/swipe navigation through the remaining images (listing cards elsewhere show only the primary thumbnail) — `frontend-builder`
 - [ ] 6. Implement auction create/edit form — `frontend-builder`
   - [ ] 6.1. `react-hook-form` for form handling — `frontend-builder`
   - [ ] 6.2. `react-datepicker` for auction end date — `frontend-builder`
