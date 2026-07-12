@@ -22,6 +22,13 @@ interface StatusBadgeItem {
  * "Sold" is a Finished auction -- this domain's `Finished` status always
  * implies a winner/sale (see Requirements.md §3.1's Status enum and seed
  * data), `ReserveNotMet` is the "ended without selling" case.
+ *
+ * "Ended" is also derived: BiddingService finalizes auctions in a background
+ * job, so an auction whose `auctionEnd` has passed can still carry
+ * `status: "Live"` until the AuctionFinished event lands (the Search service
+ * even files such rows under its `finished` filter). Without this branch a
+ * negative `hoursRemaining` would satisfy `<= 6` and mislabel an already-over
+ * auction "Ending soon".
  */
 function resolveStatus(item: StatusBadgeItem, now: Date): { label: string; color: StatusBadgeColor } {
   switch (item.status) {
@@ -34,6 +41,7 @@ function resolveStatus(item: StatusBadgeItem, now: Date): { label: string; color
     case "Live":
     default: {
       const hoursRemaining = (new Date(item.auctionEnd).getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (hoursRemaining <= 0) return { label: "Ended", color: "slate" };
       return hoursRemaining <= 6
         ? { label: "Ending soon", color: "amber" }
         : { label: "Live", color: "primary" };

@@ -70,11 +70,15 @@ test.describe("home page listing (live data)", () => {
             ? "Reserve not met"
             : item.status === "Cancelled"
               ? "Cancelled"
-              : // Live: "Ending soon" inside 6h of auctionEnd, "Live" otherwise -- same threshold
+              : // Live: "Ended" once auctionEnd has passed (finalization is a background
+                // job, so a Live-status row can outlive its end time), "Ending soon"
+                // inside 6h, "Live" otherwise -- the same thresholds
                 // components/AuctionStatusBadge.tsx's resolveStatus applies.
-                (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) <= 6
-                ? "Ending soon"
-                : "Live";
+                (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) <= 0
+                ? "Ended"
+                : (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60) <= 6
+                  ? "Ending soon"
+                  : "Live";
       await expect(card.getByText(expectedBadgeText, { exact: true })).toBeVisible();
     }
   });

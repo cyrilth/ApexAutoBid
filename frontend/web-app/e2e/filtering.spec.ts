@@ -28,6 +28,8 @@ function expectedBadgeText(item: AuctionItem): string {
     case "Live":
     default: {
       const hoursRemaining = (new Date(item.auctionEnd).getTime() - Date.now()) / (1000 * 60 * 60);
+      // "Ended": a Live-status row whose end has passed (finalization is a background job).
+      if (hoursRemaining <= 0) return "Ended";
       return hoursRemaining <= 6 ? "Ending soon" : "Live";
     }
   }
