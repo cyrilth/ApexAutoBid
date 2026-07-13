@@ -13,11 +13,11 @@
 | 5. Bidding Service | 45 | 45 | Done |
 | 6. Notification Service | 19 | 19 | Done |
 | 7. Frontend (Next.js) | 55 | 55 | Done |
-| 8. Docker Compose Deployment | 0 | 11 | Not started |
+| 8. Docker Compose Deployment | 11 | 11 | Done |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
 | 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **274** | **371** | **In progress** |
+| **Overall** | **285** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -451,17 +451,17 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Create `docker/docker-compose.yml` — *main conversation*, validate with `docker-validator`
-  - [ ] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher), MinIO + `mc` bucket/seed-image init — *main conversation*
-  - [ ] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
-  - [ ] 1.3. Frontend: Next.js web app — *main conversation*
-  - [ ] 1.4. `healthcheck` blocks for infrastructure and app services (`/health/live`–`/health/ready`, web app `/api/health` — see `Requirements.md` §13.4) and startup ordering via `depends_on: condition: service_healthy` — *main conversation*
-- [ ] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — includes the Auction Service's dedicated HTTP/2 gRPC Kestrel endpoint (currently defined only in its `appsettings.Development.json`; containers need the equivalent `Kestrel__Endpoints__Grpc__*` env vars) and the Bidding Service's matching `Grpc__AuctionServiceUrl` — *main conversation*, validate with `docker-validator`
-- [ ] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
-- [ ] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
-- [ ] 5. Verify full stack runs with `docker compose up` — `docker-validator`
-- [ ] 6. Extend the Bruno collection at `bruno/` (started in Phase 3 with Identity/Auction/Search requests) to cover all API endpoints, add assertions, and verify it passes against the running stack with the Bruno CLI (`bru run --env Local`) — *main conversation*
-- [ ] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
+- [x] 1. Create `docker/docker-compose.yml` — *main conversation*, validate with `docker-validator`
+  - [x] 1.1. Infrastructure services: PostgreSQL, MongoDB, RabbitMQ, Mailpit (dev email catcher), MinIO + `mc` bucket/seed-image init — *main conversation*
+  - [x] 1.2. Backend services: Auction, Search, Bidding, Identity, Gateway, Notification — *main conversation*
+  - [x] 1.3. Frontend: Next.js web app — *main conversation*
+  - [x] 1.4. `healthcheck` blocks for infrastructure and app services (`/health/live`–`/health/ready`, web app `/api/health` — see `Requirements.md` §13.4) and startup ordering via `depends_on: condition: service_healthy` — *main conversation*
+- [x] 2. Configure environment variables and connection strings for all services (dev-only values inline in `docker-compose.yml` — committed by design, see `Requirements.md` §6) — includes the Auction Service's dedicated HTTP/2 gRPC Kestrel endpoint (currently defined only in its `appsettings.Development.json`; containers need the equivalent `Kestrel__Endpoints__Grpc__*` env vars) and the Bidding Service's matching `Grpc__AuctionServiceUrl` — *main conversation*, validate with `docker-validator`
+- [x] 3. Configure inter-service networking — *main conversation*, validate with `docker-validator`
+- [x] 4. Set up Nginx reverse proxy with SSL (via acme-companion) — *main conversation*, validate with `docker-validator`
+- [x] 5. Verify full stack runs with `docker compose up` — `docker-validator`
+- [x] 6. Extend the Bruno collection at `bruno/` (started in Phase 3 with Identity/Auction/Search requests) to cover all API endpoints, add assertions, and verify it passes against the running stack with the Bruno CLI (`bru run --env Local`) — *main conversation*
+- [x] 7. Test all user flows end-to-end in the containerized environment — `playwright-tester`
 
 ---
 

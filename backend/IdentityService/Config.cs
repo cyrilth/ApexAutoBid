@@ -64,9 +64,48 @@ public static class Config
             }
         };
 
-    public static IEnumerable<Client> Clients =>
-        new Client[]
+    /// <summary>
+    /// Phase 8: the client URLs below stopped being compile-time constants the moment the
+    /// platform got a second deployment shape (docker-compose behind Nginx, where the web app
+    /// lives at https://app.apexautobid.local instead of http://localhost:3000). They are now
+    /// read from configuration with the original localhost dev values as defaults, so a bare
+    /// `dotnet run` keeps working with zero configuration while docker-compose/k8s override via
+    /// environment variables (Clients__WebApp__BaseUrl etc.). Read once at startup —
+    /// AddInMemoryClients materializes this list a single time; changing these values still
+    /// requires a process restart.
+    /// </summary>
+    public static IEnumerable<Client> GetClients(IConfiguration configuration, bool isDevelopment)
+    {
+        // Base URL of the Next.js web app (scheme + host, no trailing slash). The three
+        // webapp-client URLs are all derived from it because next-auth fixes their paths:
+        // basePath + /callback/ + provider id for the callback, and the app root for
+        // post-logout — see frontend/web-app/auth.ts.
+        var webAppBaseUrl =
+            (configuration["Clients:WebApp:BaseUrl"] ?? "http://localhost:3000").TrimEnd('/');
+
+        // The webapp client's secret. The committed default is the dev-only value
+        // (Requirements.md §6 — not an external-provider credential); production overrides via
+        // Clients__WebApp__Secret from a real secret store (Phase 9 Kubernetes Secrets).
+        var webAppSecret = configuration["Clients:WebApp:Secret"] ?? "webapp-dev-secret";
+
+        // Origins whose Scalar docs pages may run the browser-based PKCE login (each origin's
+        // redirect URI is fixed at {origin}/scalar — see the scalar client's own comment
+        // below). Defaults preserve the three dotnet-run dev origins; docker-compose overrides
+        // with the gateway's public origin (Clients__Scalar__Origins__0=...).
+        var scalarOrigins = configuration.GetSection("Clients:Scalar:Origins").Get<string[]>();
+        if (scalarOrigins is null || scalarOrigins.Length == 0)
         {
+            scalarOrigins =
+            [
+                "http://localhost:5054",
+                "http://localhost:6001",
+                "http://localhost:7003",
+            ];
+        }
+        scalarOrigins = [.. scalarOrigins.Select(o => o.TrimEnd('/'))];
+
+        List<Client> clients =
+        [
             // Requirements.md §3.4 "IdentityServer Clients": "Next.js web app (authorization
             // code flow via next-auth)". next-auth's OIDC provider exchanges the authorization
             // code server-side (inside the Next.js server, never in the browser), so this is a
@@ -80,18 +119,19 @@ public static class Config
             {
                 ClientId = "webapp",
                 ClientName = "ApexAutoBid Web App",
-                // Dev-only, committable secret (Requirements.md §6) — not an external-provider
-                // credential, so it's fine to commit like the MinIO/RabbitMQ dev credentials
-                // elsewhere in the repo.
-                ClientSecrets = { new Secret("webapp-dev-secret".Sha256()) },
+                // Dev-only, committable default secret (Requirements.md §6) — not an
+                // external-provider credential, so it's fine to commit like the MinIO/RabbitMQ
+                // dev credentials elsewhere in the repo. Overridable per environment (see
+                // webAppSecret above).
+                ClientSecrets = { new Secret(webAppSecret.Sha256()) },
 
                 AllowedGrantTypes = GrantTypes.Code,
                 // Duende defaults RequirePkce to true already; set explicitly for readability.
                 RequirePkce = true,
 
-                RedirectUris = { "http://localhost:3000/api/auth/callback/identityserver" },
-                FrontChannelLogoutUri = "http://localhost:3000/signout-oidc",
-                PostLogoutRedirectUris = { "http://localhost:3000" },
+                RedirectUris = { $"{webAppBaseUrl}/api/auth/callback/identityserver" },
+                FrontChannelLogoutUri = $"{webAppBaseUrl}/signout-oidc",
+                PostLogoutRedirectUris = { webAppBaseUrl },
 
                 // Lets a signed-in session refresh its access token without forcing the user
                 // back through the login page — a reasonable default for a persistent web app
@@ -151,12 +191,7 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code,
                 RequirePkce = true,
 
-                RedirectUris =
-                {
-                    "http://localhost:5054/scalar",
-                    "http://localhost:6001/scalar",
-                    "http://localhost:7003/scalar",
-                },
+                RedirectUris = [.. scalarOrigins.Select(o => $"{o}/scalar")],
 
                 // Task 13.2 / Phase 4 Task 7.3: Duende's InMemoryCorsPolicyService (swapped in
                 // automatically by AddInMemoryClients — verified via decompilation) allows an
@@ -168,12 +203,7 @@ public static class Config
                 // entire mechanism. All three origins are listed for the same reason all
                 // three redirect URIs are above — the browser-based code exchange can
                 // originate from any of the three docs pages.
-                AllowedCorsOrigins =
-                {
-                    "http://localhost:5054",
-                    "http://localhost:6001",
-                    "http://localhost:7003",
-                },
+                AllowedCorsOrigins = [.. scalarOrigins],
 
                 // No offline_access: a docs page doesn't need a long-lived session — each
                 // "Authorize" click is expected to mint a fresh token, unlike the webapp's
@@ -182,5 +212,41 @@ public static class Config
                 // (no shared constant is possible across independently deployable services).
                 AllowedScopes = { "openid", "profile", ApiScopeName },
             },
-        };
+        ];
+
+        // Phase 8 Task 6 — headless token client for the Bruno CLI (`bru run`) and similar
+        // dev/test tooling. The collection's authenticated requests need a token without a
+        // browser, and the seeded dev users only exist in Development, so this client uses
+        // the (deliberately legacy) resource-owner-password grant — Duende resolves the
+        // credentials through the same ASP.NET Identity stores via AddAspNetIdentity's
+        // ResourceOwnerPasswordValidator, and ProfileService adds the same
+        // username/email/email_verified/role access-token claims the webapp client gets.
+        //
+        // DEVELOPMENT ONLY, enforced here in code rather than by configuration: ROPC
+        // bypasses every browser-side protection (Turnstile, external login, future MFA),
+        // so a password-grant client must never exist in a production token service.
+        if (isDevelopment)
+        {
+            clients.Add(new Client
+            {
+                ClientId = "bruno",
+                ClientName = "ApexAutoBid API Test Tooling (Bruno CLI)",
+                // Dev-only committed secret, same rule as the webapp default above.
+                ClientSecrets = { new Secret("bruno-dev-secret".Sha256()) },
+
+                AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+                // offline_access so Bruno's auto_refresh_token works across long sessions.
+                AllowOfflineAccess = true,
+                AllowedScopes =
+                {
+                    "openid",
+                    "profile",
+                    "offline_access",
+                    ApiScopeName,
+                },
+            });
+        }
+
+        return clients;
+    }
 }

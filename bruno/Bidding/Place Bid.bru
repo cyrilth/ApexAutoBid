@@ -44,3 +44,8 @@ docs {
     AuctionCreated event) and falls back to a gRPC call to the Auction Service if the event
     hasn't arrived yet — so a freshly created auction is biddable immediately.
 }
+
+assert {
+  res.status: eq 200
+  res.body.bidStatus: isDefined
+}

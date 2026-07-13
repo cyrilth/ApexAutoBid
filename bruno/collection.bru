@@ -3,16 +3,14 @@ auth {
 }
 
 auth:oauth2 {
-  grant_type: authorization_code
-  callback_url: http://localhost:3000/api/auth/callback/identityserver
-  authorization_url: {{identity}}/connect/authorize
+  grant_type: password
   access_token_url: {{identity}}/connect/token
   refresh_token_url: {{identity}}/connect/token
-  client_id: webapp
-  client_secret: webapp-dev-secret
+  username: {{username}}
+  password: {{password}}
+  client_id: bruno
+  client_secret: bruno-dev-secret
   scope: openid profile apexautobid offline_access
-  state:
-  pkce: true
   credentials_placement: body
   credentials_id: credentials
   token_placement: header
@@ -22,17 +20,46 @@ auth:oauth2 {
 }
 
 docs {
-  # ApexAutoBid — local dev collection
+  # ApexAutoBid — dev API collection
 
-  Collection-level auth is the `webapp` confidential client (authorization code + PKCE,
-  dev-only committed secret — Requirements.md §6). Requests marked `auth: inherit` send
-  the access token as a Bearer header; clicking "Get Access Token" on any of them opens
-  the IdentityServer login page in Bruno's window.
+  Collection-level auth is the `bruno` DEV-ONLY password-grant client (IdentityService's
+  Config.cs registers it only in Development — Phase 8 Task 6): tokens are fetched
+  headlessly as {{username}}/{{password}} from the active environment, which makes the
+  whole collection runnable non-interactively by the Bruno CLI:
+
+      bru run -r --env Local --sandbox developer     # dotnet-run dev stack
+      bru run -r --env Docker --sandbox developer    # docker-compose stack
+
+  --sandbox developer is required: Create Upload URL's post-response script PUTs
+  binary JPEG bytes with axios, and the default "safe" QuickJS sandbox corrupts
+  binary request bodies (the PUT then fails the presigned signature check). Back-to-
+  back runs inside one minute can trip the gateway's mutating rate limit (10/60s
+  fixed window per client IP) — space full runs a minute apart.
+
+  The environments default to alice — deliberately NOT bob: the seeded {{auctionId}}
+  belongs to seller bob, and Place Bid must come from a non-seller to avoid the
+  seller-bid 400. Requests marked `auth: inherit` send the access token as a Bearer
+  header. The token carries the same username/email/email_verified/role claims the
+  webapp gets (same ProfileService).
 
   Seeded dev users (SeedData.cs): bob / alice / tom / admin — password `Pass123$`.
   All have confirmed emails; `admin` additionally has the `admin` role.
 
-  ## Prerequisites
+  ## Write-request chaining (CLI-safe, idempotent)
+  Create Auction saves its new id as the {{createdAuctionId}} runtime var; Update and
+  Delete target THAT auction, so a full run creates, mutates, and removes only its own
+  data and never destroys the seeded auctions. Create Upload URL likewise PUTs a tiny
+  JPEG to the presigned URL from a post-response script and saves {{uploadKey}} for
+  Generate Thumbnail.
+
+  ## Prerequisites — Docker environment
+  One command: docker compose -f docker/docker-compose.yml up -d --build
+  Requests go through Nginx (https://api.apexautobid.local / https://id.apexautobid.local),
+  so the machine running Bruno needs the /etc/hosts entries and the dev CA from the
+  compose file's header comment (or SSL verification disabled / NODE_EXTRA_CA_CERTS
+  pointed at the CA for the CLI).
+
+  ## Prerequisites — Local environment (host `dotnet run`)
   - Infra:    docker compose -f docker/docker-compose.infra.yml up -d
   - Identity: dotnet run --project backend/IdentityService                                  → https://localhost:5001
   - Auction:  SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs" \

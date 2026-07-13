@@ -19,3 +19,8 @@ docs {
   query param to get only auctions updated strictly after that UTC instant — this is the
   incremental-sync endpoint SearchService polls on startup.
 }
+
+assert {
+  res.status: eq 200
+  res.body[0].id: isDefined
+}

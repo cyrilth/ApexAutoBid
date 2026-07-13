@@ -33,7 +33,7 @@ services:
       # Host 5434 → container 5432. 5434 avoids clashing with pre-existing local
       # Postgres instances on this machine: the host's own on 5432 and another
       # project's container on 5433 (Architecture §8.1).
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -131,8 +131,8 @@ services:
     image: axllent/mailpit:latest
     container_name: apex-mailpit
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # web UI
+      - "127.0.0.1:1025:1025"  # SMTP
+      - "127.0.0.1:8025:8025"  # web UI
     networks:
       - apexautobid
 
@@ -145,8 +145,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # web console
+      - "127.0.0.1:9000:9000"  # S3 API
+      - "127.0.0.1:9001:9001"  # web console
     volumes:
       - miniodata:/data
     networks:

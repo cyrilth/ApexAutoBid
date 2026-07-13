@@ -174,9 +174,15 @@ builder.Services.AddAuthorizationBuilder()
 // limit should get an immediate 429, not one delayed until a queue slot frees up.
 //
 // GetClientIp (declared below, alongside GetPlatformVersion) reads Connection.RemoteIpAddress
-// directly rather than an X-Forwarded-For header: no reverse proxy/load balancer sits in front
-// of the gateway yet (Docker Compose/Kubernetes ingress are Phases 8/9) — ForwardedHeaders
-// middleware, plus whatever trusted-proxy list that topology requires, can be added then.
+// directly rather than an X-Forwarded-For header. When Nginx fronts the gateway (Phase 8's
+// docker-compose stack), that address is recovered from X-Forwarded-For by the framework's
+// auto-registered ForwardedHeadersMiddleware — enabled there via the standard
+// ASPNETCORE_FORWARDEDHEADERS_ENABLED=true container env var, which trusts ANY immediate
+// peer (empty KnownProxies/KnownNetworks). That unrestricted trust means a caller who can
+// reach the gateway WITHOUT going through Nginx (the compose stack's loopback-only
+// host-port 6001 convenience mapping) can spoof X-Forwarded-For and dodge per-IP rate
+// limiting — acceptable for a loopback-only dev port, but Phase 9 (Kubernetes) should pin
+// KnownProxies/KnownNetworks to the real ingress instead of using the blanket env var.
 builder.Services.AddRateLimiter(rateLimiterOptions =>
 {
     // 503 is RateLimiterOptions' own framework default; 429 is what Requirements §3.5/§13.1
@@ -410,13 +416,22 @@ app.MapScalarApiReference(options =>
 
     if (!string.IsNullOrWhiteSpace(identityServiceUrl))
     {
+        // Phase 8: the pinned redirect URI is derived from the gateway's public origin, which
+        // stopped being a constant once docker-compose put the gateway behind Nginx at
+        // https://api.apexautobid.local. Scalar:PublicOrigin defaults to the dotnet-run dev
+        // origin; whatever value is used must have a matching {origin}/scalar RedirectUris
+        // entry (and the origin itself in AllowedCorsOrigins) on IdentityService's `scalar`
+        // client — now also config-driven there (Config.GetClients's Clients:Scalar:Origins).
+        var scalarPublicOrigin =
+            (builder.Configuration["Scalar:PublicOrigin"] ?? "http://localhost:6001").TrimEnd('/');
+
         options.AddAuthorizationCodeFlow("OAuth2", flow =>
         {
             flow.WithAuthorizationUrl($"{identityServiceUrl}/connect/authorize")
                 .WithTokenUrl($"{identityServiceUrl}/connect/token")
                 .WithClientId("scalar")
                 .WithPkce(Pkce.Sha256)
-                .WithRedirectUri("http://localhost:6001/scalar")
+                .WithRedirectUri($"{scalarPublicOrigin}/scalar")
                 .WithSelectedScopes(["openid", "profile", "apexautobid"]);
         });
         options.AddPreferredSecuritySchemes("OAuth2");

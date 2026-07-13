@@ -5,13 +5,18 @@ meta {
 }
 
 delete {
-  url: {{auction}}/api/auctions/{{auctionId}}
+  url: {{auction}}/api/auctions/{{createdAuctionId}}
   body: none
   auth: inherit
 }
 
 docs {
-  Seller-only, like Update. Deleting also emits AuctionDeleted so SearchService drops the
-  document — verify with the Search request afterwards. (Re-seed by wiping the postgres
-  volume if you delete everything.)
+  Seller-only, like Update — and like Update it targets {{createdAuctionId}}, so a full
+  CLI run deletes only the auction it created itself. Deleting also emits AuctionDeleted
+  so SearchService drops the document — verify with the Search request afterwards.
+  (Re-seed by wiping the postgres volume if you delete everything.)
+}
+
+assert {
+  res.status: eq 200
 }

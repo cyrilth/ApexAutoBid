@@ -437,24 +437,42 @@ ApexAutoBid/
 
 ### 8.1 Local Development (Docker Compose)
 
-All services, databases, and infrastructure run in Docker Compose for local development.
+All services, databases, and infrastructure run in Docker Compose for local development
+(`docker/docker-compose.yml`, Phase 8). Nginx on 80/443 is the only public application
+entry point; every app service listens internally on container port 8080 (the .NET image
+default) and is reached by Docker DNS name, never a host port. Four dev domains — served
+by one generated wildcard dev certificate (the `devcerts` one-shot container; Let's
+Encrypt via acme-companion is production-profile-only since `.local` cannot be publicly
+issued) — front the stack, and the nginx container carries them as network aliases so
+containers and the browser share identical origins (one consistent IdentityServer
+issuer):
 
 ```
 docker-compose.yml
+├── nginx             (ports 80/443 — nginx-proxy + devcerts wildcard TLS; acme-companion under the `production` profile)
+│     ├── https://app.apexautobid.local      → web-app:3000
+│     ├── https://api.apexautobid.local      → gateway-svc:8080   (REST + SignalR)
+│     ├── https://id.apexautobid.local       → identity-svc:8080  (OIDC issuer)
+│     └── https://storage.apexautobid.local  → minio:9000         (images, presigned PUTs)
+├── web-app           (internal :3000)
+├── gateway-svc       (internal :8080; loopback host port 6001 as a dev/test convenience)
+├── identity-svc      (internal :8080; persistent signing keys in the identity-keys volume)
+├── auction-svc       (internal :8080 REST + :7054 gRPC/h2c)
+├── search-svc        (internal :8080)
+├── bid-svc           (internal :8080)
+├── notification-svc  (internal :8080)
 ├── postgres          (host port 5434 → container 5432; 5434 avoids clashing with pre-existing local Postgres instances on 5432/5433)
-├── mongodb           (port 27017)
-├── rabbitmq          (port 5672, mgmt 15672)
-├── auction-svc       (port 7001)
-├── search-svc        (port 7002)
-├── bid-svc           (port 7003)
-├── identity-svc      (port 5000)
-├── gateway-svc       (port 6001)
-├── notification-svc  (port 7004)
-├── web-app           (port 3000)
-├── mailpit           (SMTP 1025, web UI 8025 — dev email catcher)
-├── minio             (S3 API 9000, console 9001 — auction images; mc init container seeds the bucket)
-└── nginx             (ports 80/443, SSL via acme-companion)
+├── mongodb           (loopback host port 27017)
+├── rabbitmq          (loopback host ports 5672, mgmt 15672)
+├── mailpit           (SMTP 1025, web UI/API 8025 — dev email catcher)
+└── minio             (S3 API 9000, console 9001 — auction images; mc init container seeds the bucket)
 ```
+
+Browser machines resolve the four domains via the LAN's Pi-hole local DNS records
+(pointing at the docker host); machines not using that resolver — including Linux
+clients whose systemd-resolved treats `*.local` as mDNS-only and never queries DNS for
+it — add them to `/etc/hosts` instead. Optionally trust the generated dev CA — see the
+compose file's header comment for both.
 
 ### 8.2 Kubernetes (Production)
 

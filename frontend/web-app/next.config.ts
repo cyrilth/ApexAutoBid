@@ -21,12 +21,16 @@ const nextConfig: NextConfig = {
     // passes a custom `quality` prop.
     qualities: [75],
     // Next.js 16 refuses to optimize upstream images whose host resolves to
-    // a private/loopback IP (SSRF hardening). Dev MinIO lives at
-    // localhost:9000, so allow it exactly when the configured storage host
-    // IS a loopback address -- a real production host never enables this.
-    dangerouslyAllowLocalIP: ["localhost", "127.0.0.1"].includes(
-      new URL(IMAGE_STORAGE_URL).hostname
-    ),
+    // a private/loopback IP (SSRF hardening). Both local-dev shapes of this
+    // app hit that wall: dev MinIO lives at localhost:9000, and the Phase 8
+    // docker-compose stack serves images at storage.apexautobid.local -- a
+    // dev-only hostname that resolves to the Nginx container's private
+    // network IP. Allow exactly those two shapes (loopback, or a *.local
+    // dev domain, which can never be a real public host -- RFC 6762
+    // reserves .local); a real production host never enables this.
+    dangerouslyAllowLocalIP:
+      ["localhost", "127.0.0.1"].includes(new URL(IMAGE_STORAGE_URL).hostname) ||
+      new URL(IMAGE_STORAGE_URL).hostname.endsWith(".local"),
   },
 };
 

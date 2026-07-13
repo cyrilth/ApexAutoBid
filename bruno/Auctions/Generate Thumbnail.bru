@@ -27,3 +27,8 @@ docs {
   3. Run this request → thumbnail URL for the uploaded object.
   A GUID that parses but has no object behind it → 400 SourceNotFound.
 }
+
+assert {
+  res.status: eq 200
+  res.body.thumbnailUrl: isDefined
+}

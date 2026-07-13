@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { chromium } from "@playwright/test";
 import { signInViaIdentityServer } from "./fixtures/auth";
+import { chromiumLaunchArgs } from "./fixtures/dev-domains";
 import { AUTH_DIR, storageStatePath } from "./fixtures/storage-state";
 import { SEEDED_USERS } from "./fixtures/test-data";
 
@@ -32,7 +33,10 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
-  const browser = await chromium.launch();
+  // Plain launch() bypasses playwright.config.ts's `use.launchOptions`, so the
+  // docker-stack host-resolver mapping (e2e/fixtures/dev-domains.ts) must be
+  // passed explicitly here too.
+  const browser = await chromium.launch({ args: chromiumLaunchArgs });
   try {
     for (const user of [SEEDED_USERS.bob, SEEDED_USERS.alice, SEEDED_USERS.tom]) {
       const context = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });

@@ -1,4 +1,5 @@
 import { test, expect, baseURL } from "./fixtures/test";
+import { imageStorageOrigin } from "./fixtures/dev-domains";
 import { createTestJpeg, createTestPng } from "./fixtures/images";
 import { throttleMutation } from "./fixtures/mutation-throttle";
 import { storageStatePath } from "./fixtures/storage-state";
@@ -102,11 +103,16 @@ test.describe("image upload", () => {
     const redObjectUrl = decodeNextImageUrl(redManagerSrc!);
     const blueObjectUrl = decodeNextImageUrl(blueManagerSrc!);
 
-    // Both are real, distinct, MinIO-hosted objects (Requirements §3.1 -- `Images:PublicBaseUrl`/
-    // `Images:Bucket`, `localhost:9000/auction-images/{guid}`), proving the uploads actually
-    // landed in storage (not just a local blob: preview).
-    expect(redObjectUrl).toMatch(/^http:\/\/localhost:9000\/auction-images\/[0-9a-f-]{36}$/);
-    expect(blueObjectUrl).toMatch(/^http:\/\/localhost:9000\/auction-images\/[0-9a-f-]{36}$/);
+    // Both are real, distinct, storage-hosted objects (Requirements §3.1 -- the backend's
+    // `Images:PublicBaseUrl`/`Images:Bucket`), proving the uploads actually landed in storage
+    // (not just a local blob: preview). The expected origin follows the target stack
+    // (`imageStorageOrigin`): MinIO directly in the dev loop, the Nginx storage domain in the
+    // docker-compose stack.
+    const objectUrlPattern = new RegExp(
+      `^${imageStorageOrigin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/auction-images/[0-9a-f-]{36}$`,
+    );
+    expect(redObjectUrl).toMatch(objectUrlPattern);
+    expect(blueObjectUrl).toMatch(objectUrlPattern);
     expect(redObjectUrl).not.toBe(blueObjectUrl);
 
     await throttleMutation();

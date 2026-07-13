@@ -15,3 +15,9 @@ docs {
   (RFC 7807) if the id doesn't exist — try changing a digit of the GUID to see the global
   exception-handler shape.
 }
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{auctionId}}
+  res.body.images: isDefined
+}

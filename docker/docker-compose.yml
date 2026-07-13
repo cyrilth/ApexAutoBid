@@ -1,0 +1,666 @@
+# ApexAutoBid — full containerized stack (Phase 8).
+#
+# One command brings up infrastructure, all six backend services, the Next.js web
+# app, and an Nginx reverse proxy with TLS:
+#
+#   docker compose -f docker/docker-compose.yml up -d --build
+#
+# ── Public entry point ───────────────────────────────────────────────────────
+# Nginx (nginx-proxy) on :80/:443 is the ONLY public application entry
+# (Architecture.md §8.1); backend services are internal-network-only. Four dev
+# domains, all served by the same wildcard dev certificate (see the devcerts
+# service):
+#
+#   https://app.apexautobid.local      Next.js web app
+#   https://api.apexautobid.local      Gateway (YARP) — REST + SignalR
+#   https://id.apexautobid.local       IdentityServer (login/register pages, OIDC)
+#   https://storage.apexautobid.local  MinIO (auction images, presigned uploads)
+#
+# Name resolution — how a browser machine finds these domains:
+#   • LAN DNS (the configured setup): the network's Pi-hole carries local DNS
+#     records mapping all four domains to the docker host (pc3 / 192.168.1.75),
+#     so any machine using it as resolver just works — nothing to configure
+#     per client.
+#   • Fallback — /etc/hosts on the browsing machine (127.0.0.1 on the docker
+#     host itself, the host's LAN IP elsewhere):
+#       127.0.0.1 app.apexautobid.local api.apexautobid.local id.apexautobid.local storage.apexautobid.local
+#   • Caveat: Linux clients running systemd-resolved treat *.local as
+#     mDNS-only (RFC 6762) and never send those names to DNS, so the Pi-hole
+#     records are invisible to them — such machines need the /etc/hosts
+#     fallback. (The Playwright/Bruno tooling in this repo is unaffected: it
+#     pins resolution itself via --host-resolver-rules / --resolve / the
+#     Docker network's nginx aliases.)
+#
+# Browsers warn about the self-signed dev CA unless you import it — export with:
+#   docker compose -f docker/docker-compose.yml cp nginx:/etc/nginx/certs/ca/ca.crt .
+#
+# CONTAINERS resolve those same domains via network aliases on the nginx service
+# below — so the browser, the Next.js server, and every backend JWT consumer all
+# use ONE consistent identity origin (https://id.apexautobid.local), which keeps
+# Duende's request-derived issuer identical everywhere with no issuer overrides.
+# App containers trust the dev CA via SSL_CERT_FILE (.NET — REPLACES the root
+# store, so only set on services whose outbound TLS is exclusively these domains;
+# never on IdentityService, which must reach Cloudflare Turnstile) or
+# NODE_EXTRA_CA_CERTS (Node — additive).
+#
+# ── SSL / acme-companion ─────────────────────────────────────────────────────
+# Local dev uses the generated wildcard cert (Let's Encrypt cannot issue for the
+# reserved .local TLD). acme-companion ships under the `production` profile: a
+# real deployment sets real domains + LETSENCRYPT_HOST on the proxied services
+# and starts with `--profile production` for automatic Let's Encrypt issuance.
+#
+# ── Credentials ──────────────────────────────────────────────────────────────
+# Every credential below is a dev-only, throwaway value committed by design
+# (Requirements.md §6 — "Docker Compose: environment blocks inline, committed").
+# None grants access to any non-local resource. External-provider credentials
+# (Google OAuth, production SMTP/Turnstile/S3) are NEVER committed — supply via
+# real environment variables if needed.
+#
+# NOTE: this stack and docker/docker-compose.infra.yml (host `dotnet run` dev)
+# publish the same infra ports and reuse the same container names — stop one
+# before starting the other. Volumes are project-scoped, so each keeps its own
+# data.
+
+name: apexautobid
+
+services:
+  # ═══ Infrastructure (Task 1.1) — definitions mirror docker-compose.infra.yml ═══
+
+  # ── PostgreSQL — Auction + Identity services ────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: apex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+    ports:
+      # Host 5434 → container 5432 (avoids pre-existing local Postgres instances
+      # on 5432/5433 — Architecture.md §8.1). Published for host-side inspection
+      # only; containers use postgres:5432.
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── MongoDB — Search + Bidding services ─────────────────────────────────────
+  # Single-node replica set with in-container keyFile — required because the
+  # MassTransit Mongo outbox issues multi-document transactions, which a
+  # standalone mongod rejects. See docker-compose.infra.yml for the full
+  # keyFile/replica-set reasoning; this block is a copy of that design.
+  mongodb:
+    image: mongo:7
+    container_name: apex-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: mongopw
+    ports:
+      # Loopback-only: host-side inspection without exposing the dev instance to
+      # the LAN. Containers use mongodb:27017 (directConnection=true).
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodata:/data/db
+    entrypoint:
+      - bash
+      - -c
+      - >-
+        openssl rand -base64 756 > /data/keyfile &&
+        chown mongodb:mongodb /data/keyfile &&
+        chmod 400 /data/keyfile &&
+        exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/keyfile --bind_ip_all
+    healthcheck:
+      # Self-healing init: initiates the single-member replica set on the first
+      # tick if it has never been initiated (see docker-compose.infra.yml).
+      test: ["CMD-SHELL", "mongosh -u mongoadmin -p mongopw --quiet --eval \"try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]}).ok }\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── RabbitMQ — MassTransit broker ────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: apex-rabbitmq
+    restart: unless-stopped
+    ports:
+      # Loopback-only (rabbitmq.conf permits guest/guest over TCP — publishing on
+      # 0.0.0.0 would expose it to the LAN). Containers use rabbitmq:5672.
+      - "127.0.0.1:5672:5672"    # AMQP
+      - "127.0.0.1:15672:15672"  # management UI
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+      # loopback_users = none — lets guest/guest connect from the Docker network.
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── Mailpit — dev email catcher (SMTP :1025, web UI + API :8025) ─────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: apex-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"  # SMTP (host `dotnet run` parity; containers use mailpit:1025)
+      - "127.0.0.1:8025:8025"  # web UI + REST API (Playwright e2e polls this from the host)
+    healthcheck:
+      # Mailpit ships a dedicated healthcheck subcommand (the image has no shell).
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── MinIO — S3-compatible object storage ─────────────────────────────────────
+  # Browser-facing traffic (presigned PUT uploads, image GETs) goes through
+  # https://storage.apexautobid.local (nginx); the Auction Service uses that same
+  # public URL for its own S3 calls so the presigned URLs it signs carry a host
+  # the browser can actually reach.
+  minio:
+    image: minio/minio:latest
+    container_name: apex-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      # nginx-proxy: serve this container at the storage domain (S3 API port).
+      VIRTUAL_HOST: storage.apexautobid.local
+      VIRTUAL_PORT: "9000"
+    ports:
+      - "127.0.0.1:9000:9000"  # S3 API (host-side inspection/parity)
+      - "127.0.0.1:9001:9001"  # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - apexautobid
+
+  # ── MinIO init — one-shot: bucket + anonymous-read policy + least-privilege
+  #    service user + seed images (identical to docker-compose.infra.yml) ───────
+  minio-init:
+    image: minio/mc:latest
+    container_name: apex-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./seed-images:/seed-images:ro
+      - ./minio:/policy:ro
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'waiting for minio...'; sleep 1;
+      done;
+      mc mb --ignore-existing local/auction-images;
+      mc anonymous set download local/auction-images;
+      mc admin policy create local auction-svc-rw /policy/auction-svc-policy.json || true;
+      mc admin user add local auctionsvc auctionsvc-dev-secret || true;
+      mc admin policy attach local auction-svc-rw --user auctionsvc || true;
+      mc mirror --overwrite --exclude '*.md' --exclude '.gitkeep' /seed-images local/auction-images;
+      echo 'MinIO init complete';
+      exit 0;
+      "
+    networks:
+      - apexautobid
+
+  # ═══ Reverse proxy + TLS (Task 4) ═══════════════════════════════════════════
+
+  # ── devcerts — one-shot: dev CA + *.apexautobid.local wildcard cert into the
+  #    nginx-certs volume (see docker/devcerts/generate-certs.sh) ───────────────
+  devcerts:
+    image: alpine/openssl:latest
+    container_name: apex-devcerts
+    restart: "no"
+    entrypoint: ["/bin/sh", "/generate-certs.sh"]
+    volumes:
+      - nginx-certs:/certs
+      # Public CA cert only (no keys) — the volume app containers actually mount.
+      - ca-trust:/ca-trust
+      - ./devcerts/generate-certs.sh:/generate-certs.sh:ro
+    networks:
+      - apexautobid
+
+  # ── nginx — automated reverse proxy. Watches the Docker socket and generates
+  #    a vhost per container carrying VIRTUAL_HOST; WebSocket upgrades (SignalR
+  #    via the api domain) are handled by its stock template. ──────────────────
+  nginx:
+    image: nginxproxy/nginx-proxy:1.7
+    container_name: apex-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs:ro
+      # Per-vhost overrides (storage domain's client_max_body_size for direct
+      # presigned image uploads). acme-companion (production profile) also
+      # writes ACME-challenge includes here.
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+    depends_on:
+      devcerts:
+        condition: service_completed_successfully
+    networks:
+      apexautobid:
+        # Containers resolve the public dev domains to this proxy, so in-network
+        # server-side calls (Next.js -> IdentityServer, services -> JWKS,
+        # Auction -> MinIO) use the exact same origins as the browser.
+        aliases:
+          - app.apexautobid.local
+          - api.apexautobid.local
+          - id.apexautobid.local
+          - storage.apexautobid.local
+
+  # ── acme-companion — automatic Let's Encrypt issuance. PRODUCTION ONLY: the
+  #    .local dev domains are not publicly resolvable, so ACME issuance is
+  #    impossible locally (dev TLS comes from devcerts above). A real deployment
+  #    sets real domains + LETSENCRYPT_HOST on the proxied services and runs
+  #    `docker compose --profile production up`. ─────────────────────────────────
+  acme-companion:
+    image: nginxproxy/acme-companion:2.6
+    container_name: apex-acme-companion
+    restart: unless-stopped
+    profiles:
+      - production
+    environment:
+      NGINX_PROXY_CONTAINER: apex-nginx
+      # DEFAULT_EMAIL for expiry notices — set via a real env var in production.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx-certs:/etc/nginx/certs
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - nginx-html:/usr/share/nginx/html
+      - acme-state:/etc/acme.sh
+    networks:
+      - apexautobid
+
+  # ═══ Backend services (Tasks 1.2, 2, 3) ═════════════════════════════════════
+  #
+  # All run with ASPNETCORE_ENVIRONMENT=Development: this is the platform's dev
+  # stack — it seeds the four dev users (bob/alice/tom/admin, IdentityService's
+  # Program.cs gates seeding on Development) and the sample auctions, and keeps
+  # the committed dev Turnstile/rate-limit values from each service's
+  # appsettings.Development.json. Environment-specific keys below OVERRIDE the
+  # localhost values those files carry (env vars outrank JSON in .NET config).
+  # Every service listens on container port 8080 (Dockerfile default) and is
+  # probed via its /health/ready endpoint (Requirements.md §13.4, Task 1.4).
+
+  # ── IdentityService — Duende IdentityServer + ASP.NET Core Identity ─────────
+  identity-svc:
+    build:
+      context: ../backend
+      dockerfile: IdentityService/Dockerfile
+    container_name: apex-identity-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Recover the browser's real scheme/host from nginx's X-Forwarded-* so
+      # Duende derives https://id.apexautobid.local as issuer/base URL for
+      # discovery, endpoints, and email links.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Base appsettings restricts AllowedHosts to localhost (host-header
+      # injection guard); the container is addressed by the public domain (via
+      # nginx) and by its own healthcheck (localhost).
+      AllowedHosts: id.apexautobid.local;localhost
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=apexautobid_identity;Username=postgres;Password=postgrespw
+      # Mailpit (dev email catcher) — overrides the localhost dev values.
+      Smtp__Host: mailpit
+      Smtp__Port: "1025"
+      Smtp__UseSsl: "false"
+      # OIDC client URLs for this deployment shape (Config.GetClients).
+      Clients__WebApp__BaseUrl: https://app.apexautobid.local
+      Clients__Scalar__Origins__0: https://api.apexautobid.local
+      # nginx-proxy vhost.
+      VIRTUAL_HOST: id.apexautobid.local
+      VIRTUAL_PORT: "8080"
+      # NO SSL_CERT_FILE here — IdentityService calls Cloudflare's Turnstile
+      # siteverify endpoint and must keep the public root store.
+    volumes:
+      # Duende automatic key management persists its signing key to /app/keys —
+      # without this, every restart mints a new key and invalidates all
+      # outstanding tokens/sessions.
+      - identity-keys:/app/keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      # EF migrations run on startup with a Polly retry window (~27s worst case).
+      start_period: 60s
+    networks:
+      - apexautobid
+
+  # ── AuctionService — auctions CRUD, image pipeline, gRPC server ──────────────
+  auction-svc:
+    build:
+      context: ../backend
+      dockerfile: AuctionService/AuctionService.API/Dockerfile
+    container_name: apex-auction-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=apexautobid_auctions;Username=postgres;Password=postgrespw
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+      IdentityServiceUrl: https://id.apexautobid.local
+      # The dedicated HTTP/2 cleartext (h2c) gRPC endpoint lives only in
+      # appsettings.Development.json, bound to localhost — rebind BOTH endpoints
+      # to all interfaces so the gateway (8080) and BiddingService (7054, gRPC)
+      # can reach them over the Docker network (Task 2).
+      Kestrel__Endpoints__Http__Url: http://0.0.0.0:8080
+      Kestrel__Endpoints__Grpc__Url: http://0.0.0.0:7054
+      Kestrel__Endpoints__Grpc__Protocols: Http2
+      # Public storage origin for BOTH S3 calls and presigned-URL signing — the
+      # URLs this service signs must carry a host the browser can reach, and
+      # SigV4 covers the Host header, so service-side and browser-side traffic
+      # must use the same origin (nginx preserves Host on the way to MinIO).
+      Minio__ServiceUrl: https://storage.apexautobid.local
+      Minio__AccessKey: auctionsvc
+      Minio__SecretKey: auctionsvc-dev-secret
+      Images__PublicBaseUrl: https://storage.apexautobid.local
+      # Trust the dev CA for outbound TLS (id.apexautobid.local JWKS,
+      # storage.apexautobid.local S3). Replaces the root store — fine here, this
+      # service dials no public TLS endpoints.
+      SSL_CERT_FILE: /certs/ca/ca.crt
+    volumes:
+      # Public dev-CA cert only — deliberately NOT the nginx-certs volume, which
+      # also holds the CA/server private keys (a compromised app container must
+      # not be able to mint trusted certificates).
+      - ca-trust:/certs/ca:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      identity-svc:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+      devcerts:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - apexautobid
+
+  # ── SearchService — MongoDB read model, event consumers, HTTP resync ─────────
+  search-svc:
+    build:
+      context: ../backend
+      dockerfile: SearchService/SearchService.API/Dockerfile
+    container_name: apex-search-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MongoDbConnection: mongodb://mongoadmin:mongopw@mongodb:27017/?directConnection=true
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+      # HTTP polling-fallback sync source (REST endpoint, not the gRPC one).
+      AuctionServiceUrl: http://auction-svc:8080
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auction-svc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - apexautobid
+
+  # ── BiddingService — bids, auction finalization, gRPC client ─────────────────
+  bid-svc:
+    build:
+      context: ../backend
+      dockerfile: BiddingService/BiddingService.API/Dockerfile
+    container_name: apex-bid-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MongoDbConnection: mongodb://mongoadmin:mongopw@mongodb:27017/?directConnection=true
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+      IdentityServiceUrl: https://id.apexautobid.local
+      # AuctionService's dedicated cleartext-h2c gRPC endpoint (Task 2) —
+      # in-network, doesn't traverse nginx.
+      Grpc__AuctionServiceUrl: http://auction-svc:7054
+      SSL_CERT_FILE: /certs/ca/ca.crt
+    volumes:
+      # Public dev-CA cert only — deliberately NOT the nginx-certs volume, which
+      # also holds the CA/server private keys (a compromised app container must
+      # not be able to mint trusted certificates).
+      - ca-trust:/certs/ca:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auction-svc:
+        condition: service_healthy
+      identity-svc:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+      devcerts:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - apexautobid
+
+  # ── NotificationService — SignalR hub, event consumers ───────────────────────
+  notification-svc:
+    build:
+      context: ../backend
+      dockerfile: NotificationService/Dockerfile
+    container_name: apex-notification-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+      IdentityServiceUrl: https://id.apexautobid.local
+      SSL_CERT_FILE: /certs/ca/ca.crt
+    volumes:
+      # Public dev-CA cert only — deliberately NOT the nginx-certs volume, which
+      # also holds the CA/server private keys (a compromised app container must
+      # not be able to mint trusted certificates).
+      - ca-trust:/certs/ca:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      identity-svc:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+      devcerts:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - apexautobid
+
+  # ── GatewayService — YARP edge (Task 3: cluster addresses -> service DNS) ────
+  gateway-svc:
+    build:
+      context: ../backend
+      dockerfile: GatewayService/Dockerfile
+    container_name: apex-gateway-svc
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Behind nginx, Connection.RemoteIpAddress would otherwise be the proxy's
+      # IP — every client would share one rate-limit bucket (Program.cs's
+      # GetClientIp). X-Forwarded-For restores per-client partitioning.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      IdentityServiceUrl: https://id.apexautobid.local
+      Scalar__PublicOrigin: https://api.apexautobid.local
+      # The "general" limit is per client IP, and in this topology the web-app
+      # container is a single IP aggregating EVERY user's server-side fetches
+      # (plus Next's production prefetching, which multiplies page-data
+      # requests) — appsettings' end-user-sized 100/60s default starves it into
+      # 429s under modest load. The mutating "strict" policy keeps its default:
+      # mutations originate from real per-user browser traffic via nginx, which
+      # X-Forwarded-For partitions per client. Revisit in Phase 9 (k8s) — e.g.
+      # exempt or key the trusted web-app caller separately.
+      RateLimiting__General__PermitLimit: "1000"
+      ReverseProxy__Clusters__auction-cluster__Destinations__destination1__Address: http://auction-svc:8080
+      ReverseProxy__Clusters__search-cluster__Destinations__destination1__Address: http://search-svc:8080
+      ReverseProxy__Clusters__bidding-cluster__Destinations__destination1__Address: http://bid-svc:8080
+      ReverseProxy__Clusters__notification-cluster__Destinations__destination1__Address: http://notification-svc:8080
+      SSL_CERT_FILE: /certs/ca/ca.crt
+      VIRTUAL_HOST: api.apexautobid.local
+      VIRTUAL_PORT: "8080"
+    ports:
+      # Loopback-only dev/test convenience, mirroring the dotnet-run gateway port:
+      # lets host-side tooling (Playwright's API fixtures, Bruno, curl) hit the
+      # gateway without TLS or .local name resolution. Browsers still go through
+      # nginx at https://api.apexautobid.local.
+      - "127.0.0.1:6001:8080"
+    volumes:
+      # Public dev-CA cert only — deliberately NOT the nginx-certs volume, which
+      # also holds the CA/server private keys (a compromised app container must
+      # not be able to mint trusted certificates).
+      - ca-trust:/certs/ca:ro
+    depends_on:
+      identity-svc:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+      devcerts:
+        condition: service_completed_successfully
+    healthcheck:
+      # The gateway's readiness deliberately has no downstream fan-out
+      # (Requirements.md §13.4) — this only reports "process up".
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - apexautobid
+
+  # ═══ Frontend (Task 1.3) ═════════════════════════════════════════════════════
+
+  # ── web-app — Next.js (standalone production build) ──────────────────────────
+  web-app:
+    build:
+      context: ../frontend/web-app
+      # NEXT_PUBLIC_* values are inlined into the client JS bundle at build time
+      # (see frontend/web-app/Dockerfile) — they must be the BROWSER-facing
+      # origins, and changing them requires an image rebuild.
+      args:
+        NEXT_PUBLIC_GATEWAY_URL: https://api.apexautobid.local
+        NEXT_PUBLIC_IMAGE_STORAGE_URL: https://storage.apexautobid.local
+    container_name: apex-web-app
+    restart: unless-stopped
+    environment:
+      # next-auth session-cookie/JWT encryption secret — dev-only committed
+      # value (Requirements.md §6); any real deployment generates its own
+      # (`openssl rand -base64 33`) and supplies it as a real secret.
+      AUTH_SECRET: apexautobid-compose-dev-secret-not-for-production-4V2mYx
+      AUTH_URL: https://app.apexautobid.local
+      AUTH_TRUST_HOST: "true"
+      AUTH_IDENTITYSERVER_ISSUER: https://id.apexautobid.local
+      AUTH_IDENTITYSERVER_ID: webapp
+      AUTH_IDENTITYSERVER_SECRET: webapp-dev-secret
+      # Server-only Gateway base URL — in-network, skips nginx (the browser-facing
+      # counterpart is the NEXT_PUBLIC_GATEWAY_URL build arg above).
+      GATEWAY_URL: http://gateway-svc:8080
+      # Trust the dev CA for server-side fetches to https://id.apexautobid.local
+      # (token exchange) and https://storage.apexautobid.local (next/image
+      # optimizer). Additive — public roots stay trusted.
+      NODE_EXTRA_CA_CERTS: /certs/ca/ca.crt
+      VIRTUAL_HOST: app.apexautobid.local
+      VIRTUAL_PORT: "3000"
+    volumes:
+      # Public dev-CA cert only — deliberately NOT the nginx-certs volume, which
+      # also holds the CA/server private keys (a compromised app container must
+      # not be able to mint trusted certificates).
+      - ca-trust:/certs/ca:ro
+    depends_on:
+      gateway-svc:
+        condition: service_healthy
+      identity-svc:
+        condition: service_healthy
+      nginx:
+        condition: service_started
+      devcerts:
+        condition: service_completed_successfully
+    healthcheck:
+      # Dependency-free liveness route (app/api/health/route.ts, Requirements.md
+      # §13.4). node:22-alpine ships busybox wget (no curl).
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - apexautobid
+
+volumes:
+  pgdata:
+  mongodata:
+  rabbitmqdata:
+  miniodata:
+  identity-keys:
+  nginx-certs:
+  ca-trust:
+  nginx-html:
+  acme-state:
+
+networks:
+  apexautobid:
+    # Distinct from the infra compose's `apexautobid` network name — Docker
+    # refuses to reuse a network created under a different compose project.
+    name: apexautobid-stack
+    driver: bridge

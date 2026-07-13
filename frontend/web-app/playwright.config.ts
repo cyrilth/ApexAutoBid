@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { chromiumLaunchArgs, targetsDockerStack } from "./e2e/fixtures/dev-domains";
 
 /**
  * Phase 7 Task 14 — Playwright test project scaffold. Task 15 (18 subtasks,
@@ -85,6 +86,10 @@ export default defineConfig({
     // lib/dev-tls.ts documents for next-auth's own server-side token
     // exchange.
     ignoreHTTPSErrors: true,
+    // Phase 8 Task 7 -- resolves *.apexautobid.local to loopback when the
+    // suite targets the docker-compose stack; empty (no behavior change) for
+    // localhost runs. See e2e/fixtures/dev-domains.ts.
+    launchOptions: { args: chromiumLaunchArgs },
   },
 
   // Chromium only for now (Task 14 scope) -- add `webkit`/`firefox` projects
@@ -103,10 +108,21 @@ export default defineConfig({
   // attaches to it instead of spawning a second one. CI should NOT reuse a
   // stray server (`reuseExistingServer` is forced off there) so a fresh,
   // known-good build always backs the test run.
-  webServer: {
-    command: "npm run dev",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  //
+  // Omitted entirely when targeting the docker-compose stack (Phase 8 Task 7):
+  // the app is already served by the `web-app` container behind Nginx, and
+  // Playwright's own reachability probe for `url` runs in Node, which cannot
+  // resolve the *.apexautobid.local dev domains (only the browser gets the
+  // --host-resolver-rules mapping) -- it would wrongly conclude nothing is
+  // running and spawn a pointless `next dev`.
+  ...(targetsDockerStack
+    ? {}
+    : {
+        webServer: {
+          command: "npm run dev",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
 });
