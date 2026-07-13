@@ -111,7 +111,11 @@ export function BidHistory({ auctionId, canRemoveBids = false }: BidHistoryProps
               <Button
                 size="xs"
                 color="failure"
-                disabled={removingId === bid.id}
+                // Any in-flight removal disables EVERY row's button (not just its own):
+                // overlapping deletes on the same auction would race each other's high-bid
+                // recalculation server-side, and one-at-a-time matches the sequential UX of
+                // a moderation action anyway.
+                disabled={removingId !== null}
                 aria-label={`Remove bid by ${bid.bidder}`}
                 onClick={() => handleRemove(bid.id)}
               >
