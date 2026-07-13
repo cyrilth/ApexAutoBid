@@ -128,7 +128,7 @@ services:
 
   # ── Mailpit — dev email catcher (SMTP :1025, web UI :8025, no auth) ─────────
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.30.3
     container_name: apex-mailpit
     ports:
       - "127.0.0.1:1025:1025"  # SMTP
@@ -138,7 +138,7 @@ services:
 
   # ── MinIO — S3-compatible object storage (S3 API :9000, console :9001) ──────
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: apex-minio
     command: server /data --console-address ":9001"
     environment:
@@ -157,7 +157,7 @@ services:
   #    when done; does not stay running. Re-run on demand:
   #      docker compose -f docker/docker-compose.infra.yml up minio-init ───────
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: apex-minio-init
     depends_on:
       - minio

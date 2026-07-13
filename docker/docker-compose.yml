@@ -149,7 +149,7 @@ services:
 
   # ── Mailpit — dev email catcher (SMTP :1025, web UI + API :8025) ─────────────
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.30.3
     container_name: apex-mailpit
     restart: unless-stopped
     ports:
@@ -170,7 +170,7 @@ services:
   # public URL for its own S3 calls so the presigned URLs it signs carry a host
   # the browser can actually reach.
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: apex-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -196,7 +196,7 @@ services:
   # ── MinIO init — one-shot: bucket + anonymous-read policy + least-privilege
   #    service user + seed images (identical to docker-compose.infra.yml) ───────
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: apex-minio-init
     depends_on:
       minio:
@@ -226,7 +226,7 @@ services:
   # ── devcerts — one-shot: dev CA + *.apexautobid.local wildcard cert into the
   #    nginx-certs volume (see docker/devcerts/generate-certs.sh) ───────────────
   devcerts:
-    image: alpine/openssl:latest
+    image: alpine/openssl:3.5.7
     container_name: apex-devcerts
     restart: "no"
     entrypoint: ["/bin/sh", "/generate-certs.sh"]
