@@ -57,4 +57,26 @@ public sealed class AuctionRepository(MongoDbConnection mongo) : IAuctionReposit
 
         return documents.Select(d => d.Adapt<Auction>()).ToList();
     }
+
+    public async Task MarkFinishedAsync(Guid auctionId, CancellationToken cancellationToken)
+    {
+        // Unconditional set (see IAuctionRepository.MarkFinishedAsync's own remarks for why no
+        // compare-and-swap is needed here, unlike AuctionFinalizationUnitOfWork's conditional
+        // claim). A no-op — zero documents matched — when no local record exists for
+        // auctionId; UpdateOneAsync does not throw for that case.
+        var filter = Builders<AuctionDocument>.Filter.Eq(d => d.Id, auctionId);
+        var update = Builders<AuctionDocument>.Update.Set(d => d.Finished, true);
+
+        await mongo.Instance.Collection<AuctionDocument>()
+            .UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    public async Task UpdateAuctionEndAsync(Guid auctionId, DateTime auctionEnd, CancellationToken cancellationToken)
+    {
+        var filter = Builders<AuctionDocument>.Filter.Eq(d => d.Id, auctionId);
+        var update = Builders<AuctionDocument>.Update.Set(d => d.AuctionEnd, auctionEnd);
+
+        await mongo.Instance.Collection<AuctionDocument>()
+            .UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
 }

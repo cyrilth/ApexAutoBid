@@ -28,7 +28,8 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
  * signed-in user, and would blow well past 10/60s if each did its own login instead of reusing
  * one of these three files.
  *
- * `admin` is deliberately not signed in here -- no Batch C spec needs an admin session.
+ * `admin` (Phase 11 Task 10 -- the admin e2e specs) is signed in here too, alongside bob/alice/
+ * tom, for the exact same "one login per user, reused everywhere" reason.
  */
 export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
@@ -38,7 +39,7 @@ export default async function globalSetup(): Promise<void> {
   // passed explicitly here too.
   const browser = await chromium.launch({ args: chromiumLaunchArgs });
   try {
-    for (const user of [SEEDED_USERS.bob, SEEDED_USERS.alice, SEEDED_USERS.tom]) {
+    for (const user of [SEEDED_USERS.bob, SEEDED_USERS.alice, SEEDED_USERS.tom, SEEDED_USERS.admin]) {
       const context = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
       const page = await context.newPage();
       await signInViaIdentityServer(page, user);

@@ -40,7 +40,16 @@ internal static class TestJwt
     /// (<c>ValidTypes = ["at+jwt"]</c>) — matching the RFC 9068 access-token type Duende itself
     /// issues in production (see AuctionService.API/GatewayService's Program.cs comments).
     /// </summary>
-    public static string CreateAccessToken(string username, bool emailVerified = true)
+    /// <param name="roles">
+    /// Zero or more role names, stamped as short "role" claims — the exact wire claim type
+    /// IdentityService's ProfileService uses (JwtClaimTypes.Role = "role"). Omitted (the
+    /// default) for ordinary tokens; pass <c>["admin"]</c> to mint an admin token exercising the
+    /// gateway's "admin" AuthorizationPolicy (Program.cs's <c>RequireRole("admin")</c>, Phase 11
+    /// Task 7) — JwtBearerOptions' default MapInboundClaims=true auto-remaps "role" onto
+    /// ClaimTypes.Role before RequireRole/User.IsInRole ever inspect it (see Program.cs's own
+    /// "admin" policy comment for the full, decompile-verified reasoning).
+    /// </param>
+    public static string CreateAccessToken(string username, bool emailVerified = true, IReadOnlyCollection<string>? roles = null)
     {
         var credentials = new SigningCredentials(SigningKey, SecurityAlgorithms.HmacSha256);
 
@@ -49,16 +58,22 @@ internal static class TestJwt
             ["typ"] = "at+jwt",
         };
 
+        var claims = new List<Claim>
+        {
+            new("username", username),
+            // ClaimValueTypes.Boolean matches IdentityService's ProfileService, so the test
+            // token carries email_verified as a JSON boolean exactly like a real Duende one.
+            new("email_verified", emailVerified ? "true" : "false", ClaimValueTypes.Boolean),
+        };
+        if (roles is not null)
+        {
+            claims.AddRange(roles.Select(role => new Claim("role", role)));
+        }
+
         var payload = new JwtPayload(
             issuer: null,
             audience: Audience,
-            claims:
-            [
-                new Claim("username", username),
-                // ClaimValueTypes.Boolean matches IdentityService's ProfileService, so the test
-                // token carries email_verified as a JSON boolean exactly like a real Duende one.
-                new Claim("email_verified", emailVerified ? "true" : "false", ClaimValueTypes.Boolean),
-            ],
+            claims: claims,
             notBefore: DateTime.UtcNow,
             expires: DateTime.UtcNow.AddMinutes(5));
 

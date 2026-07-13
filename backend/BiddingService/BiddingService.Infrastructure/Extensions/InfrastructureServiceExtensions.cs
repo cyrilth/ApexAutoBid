@@ -66,6 +66,14 @@ public static class InfrastructureServiceExtensions
 
         services.AddScoped<IAuctionFinalizationUnitOfWork, AuctionFinalizationUnitOfWork>();
 
+        // Same requirement as the BidDocument/AuctionDocument registrations above, for
+        // BidRemovalUnitOfWork's own MongoDbContext.GetCollection<AuditEntryDocument>() call
+        // (Phase 11 Task 5.1/5.5 — admin bid removal's append-only AuditEntry).
+        services.AddScoped(sp =>
+            sp.GetRequiredService<IMongoDatabase>().GetCollection<AuditEntryDocument>("AuditEntries"));
+
+        services.AddScoped<IBidRemovalUnitOfWork, BidRemovalUnitOfWork>();
+
         // Grace-period setting (phase-end code review Critical 2) — bound here so the
         // Application layer (FinalizationOptions/AuctionFinalizationAppService) stays free of
         // any Microsoft.Extensions.Options wiring concerns, mirroring

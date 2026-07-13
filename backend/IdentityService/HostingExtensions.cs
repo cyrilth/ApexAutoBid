@@ -5,13 +5,16 @@ using Duende.IdentityServer;
 using IdentityService.Data;
 using IdentityService.Handlers;
 using IdentityService.Models;
+using IdentityService.OpenApi;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 namespace IdentityService;
 
@@ -347,6 +350,90 @@ internal static class HostingExtensions
                 name: "postgresql",
                 tags: ["ready"]);
 
+        // ── Admin user-management API (Phase 11 Task 2 / Requirements.md §10.1) ──────────
+        //
+        // Controllers/AdminUsersController.cs — a plain ASP.NET Core Web API surface living
+        // alongside this service's existing Razor Pages UI and Duende's own OIDC/OAuth protocol
+        // endpoints. AddControllers() is new here; nothing else in this service used MVC
+        // controllers before this task.
+        _ = builder.Services.AddControllers();
+
+        _ = builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+
+        // JWT bearer authentication against Duende IdentityServer — this service validates
+        // tokens against ITSELF (Authority = IdentityServiceUrl, its own base URL), since it IS
+        // the IdentityServer every other backend service already points its own AddJwtBearer
+        // Authority at. Registered via the bare AddAuthentication() overload (no default-scheme
+        // argument) — exactly the same pattern already used for Google external login above —
+        // so this does NOT touch AddIdentity()'s own DefaultScheme (the cookie scheme Razor
+        // Pages/MapRazorPages().RequireAuthorization() still relies on); AddJwtBearer registers
+        // under its own default scheme name ("Bearer"), used explicitly (not ambiently) by the
+        // "AdminOnly" policy below and by [Authorize(AuthenticationSchemes = ...)] on the
+        // controller.
+        //
+        // NameClaimType/ValidTypes/ValidAudience mirror AuctionService.API's identical
+        // AddJwtBearer wiring exactly (Config.UsernameClaimType = "username", "apexautobid",
+        // "at+jwt"). No RoleClaimType override, for the same reason documented there: the
+        // inbound "role" claim is auto-remapped to ClaimTypes.Role by JwtBearer's default legacy
+        // claim mapping, which is exactly what RequireRole/User.IsInRole already check.
+        _ = builder.Services.AddAuthentication()
+            .AddJwtBearer(options =>
+            {
+                options.Authority = builder.Configuration["IdentityServiceUrl"];
+                options.TokenValidationParameters.ValidAudience = Config.ApiScopeName;
+                options.TokenValidationParameters.NameClaimType = Config.UsernameClaimType;
+                options.TokenValidationParameters.ValidTypes = ["at+jwt"];
+
+                // Containerized deployments (docker-compose/k8s) can't fetch the discovery
+                // document from Authority: IdentityServiceUrl is the PUBLIC https://id.… domain,
+                // whose dev certificate chains to the compose stack's throwaway CA — and this is
+                // the one service that deliberately has no SSL_CERT_FILE (it must keep the public
+                // root store to reach Cloudflare's Turnstile siteverify, docker-compose.yml).
+                // JwtBearer:MetadataAddress lets those deployments point the metadata fetch at
+                // the container's own plain-http loopback listener instead (the same self-issued
+                // keys, no TLS involved). The loopback request carries no X-Forwarded-* headers,
+                // so the discovery document it returns advertises the loopback issuer — hence the
+                // explicit ValidIssuer: tokens are issued under the public IdentityServiceUrl
+                // (JwtBearerHandler APPENDS metadata's issuer to ValidIssuers rather than
+                // replacing ours, so both forms validate). Unset outside containers: local dev
+                // and the test hosts keep fetching metadata from Authority unchanged.
+                var metadataAddress = builder.Configuration["JwtBearer:MetadataAddress"];
+                if (!string.IsNullOrEmpty(metadataAddress))
+                {
+                    options.MetadataAddress = metadataAddress;
+                    // Required for an http:// MetadataAddress; safe here because the override is
+                    // only ever an in-container loopback address, never a network hop.
+                    options.RequireHttpsMetadata = false;
+                    options.TokenValidationParameters.ValidIssuer = builder.Configuration["IdentityServiceUrl"];
+                }
+            });
+
+        // "AdminOnly" — every AdminUsersController action requires this policy (Requirements.md
+        // §10: "every admin endpoint returns 403 for non-admin callers"). AddAuthenticationSchemes
+        // pins evaluation to the Bearer scheme specifically (not the ambient default/cookie
+        // scheme) so this policy's outcome depends only on the presented JWT, regardless of any
+        // unrelated browser cookie session. RequireAuthenticatedUser() is what actually produces
+        // the 401-vs-403 split (decompile-confirmed in AuctionService.API's identical policy
+        // comment: PolicyEvaluator.AuthorizeAsync challenges — 401 — when authentication itself
+        // fails, and only forbids — 403 — once a principal exists but RequireRole fails).
+        _ = builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("AdminOnly", policy => policy
+                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser()
+                .RequireRole("admin"));
+
+        // ── OpenAPI + Scalar for the admin API (Phase 11 Task 2.8) ───────────────────────
+        //
+        // AddOpenApi() only ever documents Controller/minimal-API endpoints (Razor Pages and
+        // Duende's own protocol endpoints are never part of the generated document), so this
+        // document is exactly, and only, AdminUsersController's operations.
+        _ = builder.Services.AddOpenApi(options =>
+        {
+            options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+            options.AddDocumentTransformer<OAuth2SecuritySchemeTransformer>();
+            options.AddOperationTransformer<AdminAuthorizeOperationTransformer>();
+        });
+
         return builder.Build();
     }
 
@@ -415,6 +502,50 @@ internal static class HostingExtensions
             .AllowAnonymous();
         _ = app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") })
             .AllowAnonymous();
+
+        // ── Admin user-management API (Phase 11 Task 2) ──────────────────────────────
+        //
+        // MapControllers() serves AdminUsersController; each of its actions carries its own
+        // [Authorize(AuthenticationSchemes = "Bearer", Policy = "AdminOnly")] (see the
+        // controller), independent of MapRazorPages()'s own RequireAuthorization() above (a
+        // Controller endpoint is never subject to that call — the two mapping calls are
+        // unrelated authorization chains).
+        _ = app.MapControllers();
+
+        // ── OpenAPI document + Scalar UI for the admin API (Phase 11 Task 2.8) ───────────
+        //
+        // Mapped unconditionally, matching AuctionService.API's/BiddingService.API's own
+        // standalone docs pages — not dev-only. MapOpenApi() serves the raw document at
+        // /openapi/v1.json (proxied by the Gateway at /openapi/identity/v1.json — see
+        // GatewayService's "openapi-identity" route/AddDocument("identity", ...) call);
+        // MapScalarApiReference() serves the interactive Scalar UI at /scalar.
+        //
+        // AddAuthorizationCodeFlow wires Scalar's "Authorize" button to the "OAuth2" security
+        // scheme (OAuth2SecuritySchemeTransformer) via the `scalar` client (Config.cs, which now
+        // also lists this service's own https://localhost:5001/scalar redirect URI). Matches
+        // AuctionService.API's identical wiring; WithRedirectUri/WithSelectedScopes must match
+        // that client's RedirectUris/AllowedScopes entries exactly.
+        var identityServiceUrl = app.Configuration["IdentityServiceUrl"];
+
+        _ = app.MapOpenApi();
+        _ = app.MapScalarApiReference(options =>
+        {
+            options.WithOpenApiRoutePattern("/openapi/{documentName}.json");
+
+            if (!string.IsNullOrWhiteSpace(identityServiceUrl))
+            {
+                options.AddAuthorizationCodeFlow("OAuth2", flow =>
+                {
+                    flow.WithAuthorizationUrl($"{identityServiceUrl}/connect/authorize")
+                        .WithTokenUrl($"{identityServiceUrl}/connect/token")
+                        .WithClientId("scalar")
+                        .WithPkce(Pkce.Sha256)
+                        .WithRedirectUri("https://localhost:5001/scalar")
+                        .WithSelectedScopes(["openid", "profile", "apexautobid"]);
+                });
+                options.AddPreferredSecuritySchemes("OAuth2");
+            }
+        });
 
         return app;
     }

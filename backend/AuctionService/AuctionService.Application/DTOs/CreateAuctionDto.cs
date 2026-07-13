@@ -47,7 +47,27 @@ public class CreateAuctionDto
     public required List<ImageDto> Images { get; init; }
 
     /// <summary>
-    /// When the auction closes. Must satisfy the platform's min/max duration bounds.
+    /// When the auction closes. For non-admin callers, must satisfy the platform's min/max
+    /// duration bounds (Phase 11 Task 3.4; resolution order: DB <c>PlatformSettings</c> →
+    /// <c>Auction:MinDuration</c>/<c>Auction:MaxDuration</c> config → defaults 1 hour–90 days).
+    /// Admin callers are exempt from these bounds.
     /// </summary>
     public DateTime AuctionEnd { get; init; }
+
+    /// <summary>
+    /// Optional explicit seller (Requirements §3.1/§10.2 — Phase 11 Task 3.1). Honored ONLY
+    /// when the caller is in the "admin" role — admins may create an auction on behalf of any
+    /// user, including themselves, by supplying their own username here. For every other
+    /// caller this field is silently IGNORED regardless of its value: the seller always stays
+    /// the caller's own <c>username</c> claim.
+    /// </summary>
+    public string? Seller { get; init; }
+
+    /// <summary>
+    /// Optional explicit seller email, paired with <see cref="Seller"/> for admin-created
+    /// auctions. Also ignored for non-admin callers. When an admin supplies <see cref="Seller"/>
+    /// without this field, <c>SellerEmail</c> is resolved to an empty string rather than
+    /// guessed — it is never inferred from <see cref="Seller"/>.
+    /// </summary>
+    public string? SellerEmail { get; init; }
 }

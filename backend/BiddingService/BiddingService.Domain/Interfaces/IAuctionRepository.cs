@@ -47,4 +47,37 @@ public interface IAuctionRepository
     /// <c>FinalizationOptions</c>'s remarks for the default's rationale.
     /// </remarks>
     Task<List<Auction>> GetExpiredUnfinalizedAsync(DateTime asOf, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Marks the local auction record <see cref="Auction.Finished"/> = <see langword="true"/>
+    /// (Phase 11 Task 5.2 — consuming <c>Contracts.AuctionCancelled</c>). A no-op (never throws)
+    /// when no local record exists for <paramref name="auctionId"/> — mirrors
+    /// <see cref="InsertIfNotExistsAsync"/>'s tolerance of out-of-order/missing local state.
+    /// </summary>
+    /// <remarks>
+    /// <b>Reuses <see cref="Auction.Finished"/> rather than a separate "Cancelled" flag:</b>
+    /// this service only ever needs to know "is bidding on this auction over" — both a normal
+    /// completion and an admin cancellation must (a) make <c>BidAppService.DetermineStatusAsync</c>
+    /// return <see cref="Enums.BidStatus.Finished"/> for any further bid, and (b) make
+    /// <see cref="GetExpiredUnfinalizedAsync"/>'s own <c>!Finished</c> filter permanently exclude
+    /// this auction from the background finalizer's candidate set, so it can never publish
+    /// <c>AuctionFinished</c> for it. <see cref="Auction.Finished"/> already satisfies both,
+    /// unconditionally — no compare-and-swap is needed here (unlike
+    /// <c>AuctionFinalizationUnitOfWork</c>'s conditional claim): this call never publishes an
+    /// event itself (the Auction Service already published <c>AuctionCancelled</c>), so there is
+    /// no "exactly once" race to guard against — setting the flag twice (redelivery) is a benign
+    /// no-op either way. Idempotent by construction.
+    /// </remarks>
+    Task MarkFinishedAsync(Guid auctionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates the local auction record's <see cref="Auction.AuctionEnd"/> (Phase 11 Task 5.3 —
+    /// consuming <c>Contracts.AuctionUpdated</c> when its <c>AuctionEnd</c> is non-null; this is
+    /// how an admin's "end now" — <c>POST api/admin/auctions/{id}/end</c>, which sets
+    /// <c>AuctionEnd = UtcNow</c> in the Auction Service — reaches this service's own background
+    /// finalizer). A no-op (never throws) when no local record exists for
+    /// <paramref name="auctionId"/>, mirroring <see cref="MarkFinishedAsync"/>'s tolerance.
+    /// Idempotent: redelivery of the same event sets the same value again, a genuine no-op.
+    /// </summary>
+    Task UpdateAuctionEndAsync(Guid auctionId, DateTime auctionEnd, CancellationToken cancellationToken);
 }

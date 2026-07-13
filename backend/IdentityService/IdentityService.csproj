@@ -8,6 +8,19 @@
          not pinned below latest like MassTransit/ImageSharp — no commercial-license gate on
          this line as of this version. -->
     <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="8.0.2" />
+    <!-- Phase 11 Task 2 — the admin API's JWT bearer authentication (Controllers/
+         AdminUsersController.cs). This service's own tokens are validated against itself
+         (Authority = IdentityServiceUrl, its own base URL). Version pinned to 10.0.9 to match
+         every other JwtBearer consumer in the platform (AuctionService.API, etc.). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <!-- Phase 11 Task 2.8 — OpenAPI + Scalar for the admin API, same versions as
+         AuctionService.API/BiddingService.API. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Security pin — see AuctionService.API.csproj's identical comment: Microsoft.AspNetCore.
+         OpenApi 10.0.9 pulls Microsoft.OpenApi 2.0.0 transitively, which has a high-severity
+         advisory (GHSA-v5pm-xwqc-g5wc). Overridden with the latest patched 2.x. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
     <!-- Phase 3 Task 18 — GET /health/ready's PostgreSQL check (Requirements.md §13.4: Identity's
          only readiness dependency — no RabbitMQ/MongoDB here). Same version pin as
          AuctionService.API.csproj's identical package, for consistency across services. -->

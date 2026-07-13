@@ -15,6 +15,17 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Microsoft.EntityFrameworkCore.Sqlite 10.0.9 pulls SQLitePCLRaw.lib.e_sqlite3 2.1.11
+         transitively, which carries a known high-severity advisory (GHSA-2m69-gcr7-jv3q) with no
+         patched 2.x release (checked 2026-07-13 — only a 2.1.12 PRE-release and an incompatible
+         3.x major line exist; SQLitePCLRaw.core/.provider/.bundle_e_sqlite3, which must stay
+         version-matched to .lib.e_sqlite3, only go up to 3.0.3, so pinning .lib.e_sqlite3 alone to
+         3.53.3 breaks restore). Unlike the Microsoft.OpenApi pin in AuctionService.API.csproj, no
+         safe override exists yet. Accepted here specifically because this is a TEST-ONLY
+         dependency (AdminUserServiceTestFixture.cs's in-memory SQLite fixture) that is never
+         restored into, or shipped from, any service's published/container output — revisit this
+         pin once SQLitePCLRaw ships a compatible patched release. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />

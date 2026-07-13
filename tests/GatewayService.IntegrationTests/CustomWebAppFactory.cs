@@ -15,10 +15,10 @@ namespace GatewayService.IntegrationTests;
 /// <c>CustomWebAppFactory</c>, no Testcontainers-backed database/broker is needed — the gateway
 /// itself has none (Requirements §13.4's "no downstream fan-out" — see its own
 /// <c>AddHealthChecks()</c> comment). Its only two external dependencies are (1) the Auction/
-/// Search Service YARP cluster destinations, stood in for by a real, loopback-socket
-/// <see cref="StubDownstreamServer"/> (see that type's remarks for why an in-memory
-/// <c>TestServer</c> can't be used here), and (2) IdentityServer's JWKS/discovery document for
-/// JwtBearer validation, replaced with a static in-memory configuration carrying
+/// Search/Identity/Bidding Service YARP cluster destinations, stood in for by a real,
+/// loopback-socket <see cref="StubDownstreamServer"/> (see that type's remarks for why an
+/// in-memory <c>TestServer</c> can't be used here), and (2) IdentityServer's JWKS/discovery
+/// document for JwtBearer validation, replaced with a static in-memory configuration carrying
 /// <see cref="TestJwt.SigningKey"/> (see <see cref="TestJwt"/>'s remarks) so no live
 /// IdentityServer is required either.
 /// </summary>
@@ -41,13 +41,17 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // Redirects the auction/search clusters (appsettings.Development.json's
-                // localhost:5054/5055 dev addresses) at the real stub socket instead — YARP
-                // route MATCHING (paths/methods/policies in appsettings.json) is left
-                // completely untouched; only the cluster DESTINATION address changes, exactly
-                // like a real deployment's environment-specific override would.
+                // Redirects the auction/search/identity/bidding clusters (appsettings.
+                // Development.json's localhost:5054/5055/5001/7003 dev addresses) at the real
+                // stub socket instead — YARP route MATCHING (paths/methods/policies in
+                // appsettings.json) is left completely untouched; only the cluster DESTINATION
+                // address changes, exactly like a real deployment's environment-specific
+                // override would. identity-cluster/bidding-cluster were added for Phase 11 Task
+                // 7's admin-routing tests (AdminRoutingTests.cs).
                 ["ReverseProxy:Clusters:auction-cluster:Destinations:destination1:Address"] = downstream.BaseUrl,
                 ["ReverseProxy:Clusters:search-cluster:Destinations:destination1:Address"] = downstream.BaseUrl,
+                ["ReverseProxy:Clusters:identity-cluster:Destinations:destination1:Address"] = downstream.BaseUrl,
+                ["ReverseProxy:Clusters:bidding-cluster:Destinations:destination1:Address"] = downstream.BaseUrl,
 
                 // Never dialed over the network in this test host (see the JwtBearerOptions
                 // PostConfigure below) — kept as an obviously-fake placeholder purely so

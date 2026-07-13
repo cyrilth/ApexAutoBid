@@ -17,6 +17,12 @@ namespace BiddingService.IntegrationTests;
 /// JWT bearer scheme in the integration host so tests can act as a specific user, verified or
 /// not, without an IdentityServer.
 /// </summary>
+/// <remarks>
+/// Phase 11 Task 5.1/5.4 addition: an optional <c>X-Test-Role</c> header stamps a
+/// <see cref="ClaimTypes.Role"/> claim so tests can exercise <c>[Authorize(Roles = "admin")]</c>
+/// on <c>AdminBidsController</c> — absent by default, so every pre-existing test (none of which
+/// sets this header) is unaffected.
+/// </remarks>
 public class TestAuthHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -25,6 +31,7 @@ public class TestAuthHandler(
     public const string SchemeName = "TestScheme";
     public const string UserHeader = "X-Test-User";
     public const string EmailVerifiedHeader = "X-Test-EmailVerified";
+    public const string RoleHeader = "X-Test-Role";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -44,12 +51,21 @@ public class TestAuthHandler(
             ? evValues.ToString()
             : "true";
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Email, $"{username}@apexautobid.local"),
-            new Claim("email_verified", emailVerified),
+            new(ClaimTypes.Name, username),
+            new(ClaimTypes.Email, $"{username}@apexautobid.local"),
+            new("email_verified", emailVerified),
         };
+
+        // Absent by default — an authenticated caller with no role claim at all is exactly what
+        // [Authorize(Roles = "admin")] must Forbid() (403), same as a real token missing the
+        // "role" claim.
+        if (Request.Headers.TryGetValue(RoleHeader, out var roleValues) &&
+            !string.IsNullOrWhiteSpace(roleValues.ToString()))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, roleValues.ToString()));
+        }
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         var ticket = new AuthenticationTicket(principal, SchemeName);

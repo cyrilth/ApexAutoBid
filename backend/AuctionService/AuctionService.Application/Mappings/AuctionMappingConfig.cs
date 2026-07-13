@@ -156,6 +156,11 @@ public class AuctionMappingConfig : IRegister
         // naive property copy. The service layer checks dto.Images != null and
         // performs the swap explicitly against the DbContext. The Item navigation
         // itself is also ignored here — the service maps dto → item directly (4b).
+        //
+        // AuctionEnd (Phase 11 Task 3.4): NOT ignored — dto.AuctionEnd maps by convention
+        // when non-null (IgnoreNullValues(true) leaves it untouched when null). Duration-bounds
+        // validation happens in AuctionAppService BEFORE this mapping runs, so only an
+        // already-validated value ever reaches the tracked entity here.
 
         config.NewConfig<UpdateAuctionDto, Auction>()
             .IgnoreNullValues(true)
@@ -169,7 +174,6 @@ public class AuctionMappingConfig : IRegister
             .Ignore(dest => dest.CurrentHighBid!) // nullable int?
             .Ignore(dest => dest.CreatedAt)
             .Ignore(dest => dest.UpdatedAt)
-            .Ignore(dest => dest.AuctionEnd)
             .Ignore(dest => dest.ReservePrice)
             .Ignore(dest => dest.Item);
 

@@ -36,6 +36,16 @@ builder.Services.AddOptions<MinioOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+// AuctionDurationOptions (Phase 11 Task 3.4) has no DataAnnotations to validate (TimeSpan has
+// no built-in [Range]-style attribute) — a cross-field .Validate() predicate plus
+// ValidateOnStart catches a misconfigured Auction:MinDuration/MaxDuration the same way the
+// options above do (fail fast at startup rather than at the first create/update request).
+builder.Services.AddOptions<AuctionDurationOptions>()
+    .Validate(
+        o => o.MinDuration > TimeSpan.Zero && o.MaxDuration > o.MinDuration,
+        "Auction:MinDuration must be positive and strictly less than Auction:MaxDuration.")
+    .ValidateOnStart();
+
 // ── Application services (Mapster + IAuctionService) ─────────────────────────
 
 builder.Services.AddApplicationServices();
@@ -226,10 +236,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // that the 401-vs-403 split is actually driven by whether AUTHENTICATION itself succeeded,
 // independent of the policy's own requirements, so this isn't strictly load-bearing for that
 // split, but it makes the policy's intent explicit without relying on that framework subtlety.
+// "AdminOnly" policy (Phase 11 Task 3) — gates every api/admin/* endpoint added in this task
+// (auction moderation, banner CRUD, duration settings). RequireRole("admin") checks
+// User.IsInRole("admin") under the hood, which is already confirmed working with no
+// RoleClaimType override (see the AddJwtBearer remarks above) — the same mechanism the
+// CreateAuction/UpdateAuction/DeleteAuction endpoints already use via the raw
+// User.IsInRole("admin") call. Framework behavior for a Roles-based policy failure is the
+// same 401-vs-403 split as "EmailVerified": unauthenticated -> Challenge (401), authenticated
+// but missing the role -> Forbid (403).
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("EmailVerified", policy => policy
         .RequireAuthenticatedUser()
-        .RequireClaim("email_verified", "true"));
+        .RequireClaim("email_verified", "true"))
+    .AddPolicy("AdminOnly", policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole("admin"));
 
 // Phase 3 Task 19 follow-up — restores the Warning-level rejection logging every ad-hoc check
 // used to do, lost when enforcement moved into the policy above. Decompiled end-to-end

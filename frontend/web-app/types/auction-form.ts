@@ -32,6 +32,14 @@ export interface CreateAuctionPayload {
   images: AuctionImageInput[];
   /** ISO 8601 UTC instant -- must satisfy the platform's min/max auction duration. */
   auctionEnd: string;
+  /**
+   * Optional explicit seller (Phase 11 Task 3.1/8.4) -- honored ONLY for admin callers, who may
+   * create an auction on behalf of any user. Silently ignored by the backend for every other
+   * caller (the seller always stays the caller's own username).
+   */
+  seller?: string;
+  /** Paired with `seller`, also admin-only; ignored otherwise. */
+  sellerEmail?: string;
 }
 
 /**

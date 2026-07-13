@@ -31,7 +31,16 @@
  * be substantially more machinery than a dev-only rate-limit budget warrants.
  */
 const WINDOW_MS = 60_000;
-const LIMIT = 8;
+/**
+ * Was 8 through Phase 8; lowered to 6 with Phase 11's admin specs. Their three extra paced
+ * auction creations (admin-auctions.spec.ts) run alphabetically FIRST, front-loading the
+ * suite's mutation timeline enough that full-suite runs started clipping the server's fixed
+ * window (two isolated 429s observed — one POST create, one PUT edit — both at paced call
+ * sites, i.e. the old 2-request margin no longer absorbed the requests this process doesn't
+ * pace, like the dev server's own SSR-triggered calls sharing the client IP). 6 restores a
+ * 4-request margin; it only slows suites that issue >6 mutations inside one 60s span.
+ */
+const LIMIT = 6;
 /** Past the server's own window boundary, so this pacer's retry never races the exact reset instant. */
 const RESET_BUFFER_MS = 500;
 

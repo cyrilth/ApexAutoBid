@@ -43,6 +43,11 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<IBidService, BidAppService>();
 
+        // Admin bid-moderation endpoints (Phase 11 Task 5.1/5.4 — DELETE api/admin/bids/{id},
+        // GET api/admin/bids/stats). IBidRemovalUnitOfWork is registered in Infrastructure's
+        // InfrastructureServiceExtensions, mirroring IBidPlacementUnitOfWork's identical split.
+        services.AddScoped<IAdminBidService, AdminBidAppService>();
+
         // Background auction finalizer (Phase 5 Tasks 11/12) — the API-layer hosted service
         // (AuctionFinalizerHostedService) resolves this per tick; see
         // IAuctionFinalizationService's own remarks.

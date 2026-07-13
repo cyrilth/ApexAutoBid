@@ -52,13 +52,22 @@ public class PostSaleContactExchangeTests
         MaxPerAuction = 10
     };
 
+    private static IPlatformSettingsService BuildDurationSettings()
+    {
+        var settings = Substitute.For<IPlatformSettingsService>();
+        settings.GetEffectiveDurationBoundsAsync()
+            .Returns((TimeSpan.FromMinutes(1), TimeSpan.FromDays(365)));
+        return settings;
+    }
+
     private static AuctionAppService BuildSut(IAuctionRepository repository) =>
         new(
             repository,
             BuildMapper(),
             Substitute.For<IPublishEndpoint>(),
             Substitute.For<IImageStorage>(),
-            Options.Create(SampleImagesOptions()));
+            Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
     private static Auction SoldAuction() => new()
     {

@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "flowbite-react";
 import { formatCurrency } from "@/lib/format";
+import { removeBid as removeBidAction } from "@/lib/admin-bids-actions";
+import { toastActionError, toastSuccess } from "@/lib/toast";
 import { BidStatusBadge } from "@/components/BidStatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { useBidStore } from "@/components/BidStoreProvider";
@@ -13,6 +17,10 @@ function formatBidTime(bidTime: string): string {
 interface BidHistoryProps {
   /** This auction's id -- passed straight to `useLiveBids` to filter the platform-wide "BidPlaced" broadcast down to just this page's auction. */
   auctionId: string;
+  /** Shows a per-bid "Remove" button (Phase 11 Task 8.4) -- `true` only for admins, computed
+   * server-side (`app/auctions/[id]/page.tsx`); the `DELETE api/admin/bids/{id}` endpoint
+   * itself remains the real authority regardless. */
+  canRemoveBids?: boolean;
 }
 
 /**
@@ -37,12 +45,28 @@ interface BidHistoryProps {
  * matches the server-rendered HTML -- no layout shift, no hydration
  * mismatch.
  */
-export function BidHistory({ auctionId }: BidHistoryProps) {
+export function BidHistory({ auctionId, canRemoveBids = false }: BidHistoryProps) {
   useLiveBids(auctionId);
 
   const bids = useBidStore((state) => state.bids);
   const latestLiveBidId = useBidStore((state) => state.latestLiveBidId);
   const clearLatestLiveBid = useBidStore((state) => state.clearLatestLiveBid);
+  const removeBidFromStore = useBidStore((state) => state.removeBid);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  async function handleRemove(bidId: string) {
+    setRemovingId(bidId);
+    const result = await removeBidAction(bidId);
+    setRemovingId(null);
+
+    if (!result.success) {
+      toastActionError(result.error);
+      return;
+    }
+
+    removeBidFromStore(bidId);
+    toastSuccess("Bid removed.");
+  }
 
   if (bids.length === 0) {
     return <EmptyState message="No bids yet -- be the first to bid." />;
@@ -77,6 +101,17 @@ export function BidHistory({ auctionId }: BidHistoryProps) {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-slate-900">{formatCurrency(bid.amount)}</p>
             <BidStatusBadge status={bid.bidStatus} />
+            {canRemoveBids && (
+              <Button
+                size="xs"
+                color="failure"
+                disabled={removingId === bid.id}
+                aria-label={`Remove bid by ${bid.bidder}`}
+                onClick={() => handleRemove(bid.id)}
+              >
+                {removingId === bid.id ? "Removing…" : "Remove"}
+              </Button>
+            )}
           </div>
         </li>
       ))}

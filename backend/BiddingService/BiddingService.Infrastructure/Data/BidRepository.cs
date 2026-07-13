@@ -72,4 +72,7 @@ public sealed class BidRepository(MongoDbConnection mongo) : IBidRepository
 
         return top is null ? null : BidDocumentMapper.ToDomain(top);
     }
+
+    public Task<long> CountAsync(CancellationToken cancellationToken) =>
+        mongo.Instance.CountAsync<BidDocument>(cancellationToken);
 }

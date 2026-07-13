@@ -11,10 +11,16 @@ namespace AuctionService.IntegrationTests;
 /// header and produces an authenticated principal with that username, a matching seed-style
 /// email, and (Phase 3 Task 19) an <c>email_verified</c> claim controlled by the optional
 /// <c>X-Test-EmailVerified</c> header — defaulting to <c>"true"</c> when absent, so every
-/// pre-existing test (none of which sets this header) is unaffected. Requests with no
+/// pre-existing test (none of which sets this header) is unaffected. An optional
+/// <c>X-Test-Admin</c> header ("true"/anything else, Phase 11 Task 3) adds a
+/// <see cref="ClaimTypes.Role"/> "admin" claim — mirroring the real pipeline's end state after
+/// JwtBearer's default inbound-claim mapping remaps Duende's "role" claim (Program.cs's own
+/// remarks), so <c>User.IsInRole("admin")</c>/<c>[Authorize(Roles = "admin")]</c> behave
+/// identically to production without needing a real token. Requests with no
 /// <c>X-Test-User</c> header are treated as anonymous (so [Authorize]/[Authorize(Policy=...)]
 /// endpoints return 401). This replaces the real JWT bearer scheme in the integration host so
-/// tests can act as a specific seeded user, verified or not, without an IdentityServer.
+/// tests can act as a specific seeded user, verified or not, admin or not, without an
+/// IdentityServer.
 /// </summary>
 public class TestAuthHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -24,6 +30,7 @@ public class TestAuthHandler(
     public const string SchemeName = "TestScheme";
     public const string UserHeader = "X-Test-User";
     public const string EmailVerifiedHeader = "X-Test-EmailVerified";
+    public const string AdminHeader = "X-Test-Admin";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -45,12 +52,20 @@ public class TestAuthHandler(
             ? evValues.ToString()
             : "true";
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Email, $"{username}@apexautobid.local"),
-            new Claim("email_verified", emailVerified),
+            new(ClaimTypes.Name, username),
+            new(ClaimTypes.Email, $"{username}@apexautobid.local"),
+            new("email_verified", emailVerified),
         };
+
+        // Defaults to absent (not admin) — every pre-existing test (none of which sets this
+        // header) is unaffected.
+        if (Request.Headers.TryGetValue(AdminHeader, out var adminValues) &&
+            adminValues.ToString().Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "admin"));
+        }
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         var ticket = new AuthenticationTicket(principal, SchemeName);

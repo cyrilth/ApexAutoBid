@@ -19,9 +19,12 @@ interface NotificationProviderProps {
 /**
  * Owns the app's single SignalR connection to NotificationHub (Phase 7 Task 8.2/8.3) and the
  * GLOBAL event handlers that apply on every page (Docs/DesignGuide.md §8's "noticeable without
- * being noisy" ethos): "AuctionWon"/"AuctionSellerResult" (targeted -- only reach this
- * connection when it's authenticated as the relevant username, see the backend's
- * `UsernameUserIdProvider`) and "AuctionCreated" (broadcast, deliberately low-noise).
+ * being noisy" ethos): "AuctionWon"/"AuctionSellerResult"/"AuctionCancelledForSeller" (targeted
+ * -- only reach this connection when it's authenticated as the relevant username, see the
+ * backend's `UsernameUserIdProvider`) and "AuctionCreated" (broadcast, deliberately low-noise).
+ * The broadcast "AuctionCancelled" variant (Phase 11 Task 8.6) is handled per-page instead, by
+ * `hooks/useAuctionCancelledRefresh.ts` -- see its own remarks for why (mirrors "BidPlaced"
+ * below).
  *
  * "BidPlaced" and "AuctionFinished" have NO handler here, on purpose:
  *   - "BidPlaced" only matters to whichever single auction detail page is currently open --
@@ -122,6 +125,16 @@ function NotificationHubConnector({ isSignedIn, username, children }: Notificati
       toastInfo(`New auction: ${payload.year} ${payload.make} ${payload.model}`);
     }
 
+    // Targeted send (Clients.User(seller), Phase 11 Task 3.3/6) -- reaches this connection only
+    // when it's authenticated as the affected seller, so no extra filtering is needed here
+    // (contrast handleAuctionCreated's broadcast, which needs the `usernameRef` check above).
+    // No auction make/model on this payload (Contracts/AuctionCancelled.cs carries only
+    // `AuctionId`/`Seller`) -- whoever is on that auction's own detail page already gets the
+    // specifics from `useAuctionCancelledRefresh`'s page-scoped handling instead.
+    function handleAuctionCancelledForSeller(): void {
+      toastWarning("One of your auctions was cancelled by an admin.");
+    }
+
     async function connect() {
       // Dynamic import -- see this component's doc comment, point 1: keeps
       // "@microsoft/signalr" (and its browser-only environment detection) out of the
@@ -133,6 +146,7 @@ function NotificationHubConnector({ isSignedIn, username, children }: Notificati
       conn.on("AuctionWon", handleAuctionWon);
       conn.on("AuctionSellerResult", handleAuctionSellerResult);
       conn.on("AuctionCreated", handleAuctionCreated);
+      conn.on("AuctionCancelledForSeller", handleAuctionCancelledForSeller);
 
       setConnection(conn);
 
@@ -151,6 +165,7 @@ function NotificationHubConnector({ isSignedIn, username, children }: Notificati
         conn.off("AuctionWon", handleAuctionWon);
         conn.off("AuctionSellerResult", handleAuctionSellerResult);
         conn.off("AuctionCreated", handleAuctionCreated);
+        conn.off("AuctionCancelledForSeller", handleAuctionCancelledForSeller);
         // Fire-and-forget -- React's cleanup can't await, and stopping a connection that's
         // still mid-`start()` or already stopped both resolve harmlessly either way.
         void conn.stop();

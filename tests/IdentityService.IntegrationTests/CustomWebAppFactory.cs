@@ -1,4 +1,5 @@
 using Duende.IdentityServer.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -77,6 +78,23 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
                 // even necessary here (any non-empty values satisfy [Required]).
                 ["Turnstile:SiteKey"] = "1x00000000000000000000AA",
                 ["Turnstile:SecretKey"] = "1x0000000000000000000000000000000AA",
+
+                // Phase 11 Task 2 — the admin API's JwtBearer Authority (HostingExtensions.cs)
+                // is this SAME service's own base URL, since it validates tokens it issued
+                // itself. MUST be "http://localhost" — exactly WebApplicationFactory's own
+                // default HttpClient.BaseAddress (CreateClient()) — NOT the real dev value
+                // (https://localhost:5001): Duende dynamically derives the `iss` claim from
+                // each individual request's own Host header/scheme (no fixed issuer setting
+                // exists), so the token-request call (RequestPasswordGrantTokenAsync, a relative
+                // "/connect/token" POST resolved against that same default BaseAddress) and the
+                // discovery/JWKS backchannel call the PostConfigure<JwtBearerOptions> handler
+                // below redirects into this SAME TestServer must present as the SAME host for
+                // Duende to compute the SAME issuer value both times — otherwise JwtBearer
+                // rejects a genuinely valid token with "the issuer '...' is invalid" (verified
+                // live while building this test: https://localhost:5001 produced exactly that
+                // mismatch, since the metadata fetch and the token request otherwise disagreed
+                // on scheme/port).
+                ["IdentityServiceUrl"] = "http://localhost",
             });
         });
 
@@ -123,7 +141,55 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetim
             };
 
             services.AddSingleton<IEnumerable<Client>>(testClients);
+
+            // Phase 11 Task 2 — AdminUsersController's "AdminOnly" policy runs the REAL
+            // JwtBearer handler (HostingExtensions.cs), whose Authority (IdentityServiceUrl,
+            // just configured above) is this SAME service's own base URL — this service
+            // validates tokens it issued itself. In production that Authority is a real,
+            // reachable HTTP(S) endpoint; here, WebApplicationFactory's TestServer is in-memory
+            // only and never actually listens on that address. PostConfigure swaps in a
+            // DelegatingHandler (DeferredTestServerHandler, below) that redirects JwtBearer's
+            // OIDC discovery/JWKS backchannel calls straight into THIS SAME TestServer's
+            // in-memory pipeline instead of attempting a real socket connection — the handler
+            // resolves `Server` lazily (only on the first actual backchannel call, well after
+            // WebApplicationFactory has finished building/starting the host) since `Server`
+            // itself is not yet available while ConfigureWebHost is still running.
+            //
+            // Configure (NOT PostConfigure): the framework's OWN JwtBearerPostConfigureOptions
+            // (registered internally by AddJwtBearer) validates RequireHttpsMetadata as an
+            // IPostConfigureOptions<JwtBearerOptions> specifically so it runs AFTER every
+            // Configure-time customization has merged — meaning a PostConfigure call here would
+            // run too LATE to relax RequireHttpsMetadata before that framework check throws
+            // (verified live while building this test). Configure<T> runs before ALL
+            // PostConfigure<T> callbacks regardless of registration order, which is what's needed
+            // here.
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.BackchannelHttpHandler = new DeferredTestServerHandler(() => Server);
+                // IdentityServiceUrl above is "http://localhost" (not https) for this test host
+                // specifically — see that config value's own remarks — so the app's own
+                // (production-appropriate) RequireHttpsMetadata=true default is relaxed here,
+                // test-only, to match.
+                options.RequireHttpsMetadata = false;
+            });
         });
+    }
+
+    /// <summary>
+    /// Lazily forwards HTTP calls into a <see cref="TestServer"/>'s own in-memory handler,
+    /// resolved on first use rather than at construction time — see the
+    /// <c>PostConfigure&lt;JwtBearerOptions&gt;</c> call above for why this indirection is
+    /// needed (the real <see cref="TestServer"/> instance doesn't exist yet while
+    /// <see cref="ConfigureWebHost"/> is still building the host).
+    /// </summary>
+    private sealed class DeferredTestServerHandler(Func<TestServer> serverAccessor) : DelegatingHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            InnerHandler ??= serverAccessor().CreateHandler();
+            return await base.SendAsync(request, cancellationToken);
+        }
     }
 
     // xUnit v3's IAsyncLifetime inherits IAsyncDisposable, so teardown is a ValueTask-returning

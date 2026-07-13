@@ -22,7 +22,14 @@ public enum AuctionWriteResult
     /// index). The referenced objects are left untouched: the create/update is simply rejected,
     /// never deleted, because the server can't prove the caller owns a referenced object key.
     /// </summary>
-    InvalidImages
+    InvalidImages,
+
+    /// <summary>
+    /// The submitted <c>AuctionEnd</c> falls outside the platform's configured min/max auction
+    /// duration bounds (Phase 11 Task 3.4). Only enforced for non-admin callers — an admin
+    /// caller's <c>AuctionEnd</c> is never rejected on this basis, on either create or update.
+    /// </summary>
+    InvalidDuration
 }
 
 /// <summary>
@@ -83,4 +90,12 @@ public interface IAuctionService
     /// is stamped onto that record and does not otherwise affect deletion.
     /// </summary>
     Task<AuctionWriteResult> DeleteAuctionAsync(Guid id, string requestingUser, bool isAdmin);
+
+    /// <summary>
+    /// Returns the platform's currently-effective auction duration bounds (Phase 11 Task 3.8)
+    /// — the same bounds <see cref="CreateAuctionAsync"/>/<see cref="UpdateAuctionAsync"/>
+    /// validate a non-admin caller's <c>AuctionEnd</c> against. Backs the anonymous
+    /// <c>GET api/auctions/duration-limits</c> endpoint.
+    /// </summary>
+    Task<DurationLimitsDto> GetDurationLimitsAsync();
 }

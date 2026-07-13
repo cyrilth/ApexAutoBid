@@ -67,4 +67,10 @@ public interface IBidRepository
     /// (see that method's remarks for why a genuine tie can no longer arise going forward).
     /// </remarks>
     Task<Bid?> GetHighestAcceptedBidAsync(Guid auctionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Total number of bids ever recorded, across every auction and every
+    /// <see cref="Enums.BidStatus"/> (Phase 11 Task 5.4 — <c>GET api/admin/bids/stats</c>).
+    /// </summary>
+    Task<long> CountAsync(CancellationToken cancellationToken);
 }

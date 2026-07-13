@@ -57,6 +57,13 @@ export interface BidActions {
   addLiveBid: (bid: Bid) => void;
   /** Clears the pulse target once its animation has played (`BidHistory`'s `onAnimationEnd`). */
   clearLatestLiveBid: () => void;
+  /**
+   * Drops one bid from local state after an admin's `DELETE api/admin/bids/{id}` succeeds
+   * (Phase 11 Task 8.4) -- lets `BidHistory` reflect the removal instantly without a full page
+   * reload, mirroring how `prependBid`/`addLiveBid` already keep this store in sync with the
+   * backend without one.
+   */
+  removeBid: (bidId: string) => void;
 }
 
 export type BidStore = BidState & BidActions;
@@ -81,5 +88,6 @@ export const createBidStore = (initialBids: Bid[] = []) => {
         return { bids: [bid, ...state.bids], latestLiveBidId: bid.id };
       }),
     clearLatestLiveBid: () => set({ latestLiveBidId: null }),
+    removeBid: (bidId) => set((state) => ({ bids: state.bids.filter((bid) => bid.id !== bidId) })),
   }));
 };
