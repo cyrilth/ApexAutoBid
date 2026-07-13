@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import withFlowbiteReact from "flowbite-react/plugin/nextjs";
 import { IMAGE_STORAGE_URL } from "./lib/image-config";
 
+const imageStorageHostname = new URL(IMAGE_STORAGE_URL).hostname;
+
 const nextConfig: NextConfig = {
   // Phase 7 Task 13: emits a self-contained `.next/standalone` build (a minimal
   // `server.js` plus only the `node_modules` files actually traced as needed at
@@ -25,12 +27,13 @@ const nextConfig: NextConfig = {
     // app hit that wall: dev MinIO lives at localhost:9000, and the Phase 8
     // docker-compose stack serves images at storage.apexautobid.local -- a
     // dev-only hostname that resolves to the Nginx container's private
-    // network IP. Allow exactly those two shapes (loopback, or a *.local
-    // dev domain, which can never be a real public host -- RFC 6762
-    // reserves .local); a real production host never enables this.
+    // network IP. Allow exactly those two shapes (loopback, or a
+    // *.apexautobid.local compose-stack domain -- deliberately narrower than
+    // all of .local, so a misconfigured IMAGE_STORAGE_URL can't quietly
+    // reopen the SSRF door); a real production host never enables this.
     dangerouslyAllowLocalIP:
-      ["localhost", "127.0.0.1"].includes(new URL(IMAGE_STORAGE_URL).hostname) ||
-      new URL(IMAGE_STORAGE_URL).hostname.endsWith(".local"),
+      ["localhost", "127.0.0.1"].includes(imageStorageHostname) ||
+      imageStorageHostname.endsWith(".apexautobid.local"),
   },
 };
 
