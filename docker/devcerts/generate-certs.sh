@@ -45,7 +45,13 @@ CA_DIR="$CERT_DIR/ca"
 TRUST_DIR=/ca-trust
 DOMAIN=apexautobid.local
 
-if [ -f "$CERT_DIR/$DOMAIN.crt" ] && [ -f "$CA_DIR/ca.crt" ] && [ -f "$TRUST_DIR/ca.crt" ]; then
+# The material is one atomic set: nginx needs the wildcard cert AND its key, and
+# future signing needs the CA key. If ANY piece is missing (partial cleanup,
+# interrupted first run), fall through and regenerate everything — a stale public
+# cert without its key would otherwise leave nginx unable to serve TLS.
+if [ -f "$CERT_DIR/$DOMAIN.crt" ] && [ -f "$CERT_DIR/$DOMAIN.key" ] \
+    && [ -f "$CA_DIR/ca.crt" ] && [ -f "$CA_DIR/ca.key" ] \
+    && [ -f "$TRUST_DIR/ca.crt" ]; then
     echo "devcerts: existing certificate material found, nothing to do"
     exit 0
 fi
