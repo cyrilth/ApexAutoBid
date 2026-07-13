@@ -53,4 +53,17 @@ public class AuctionCancelledConsumerTests
 
         await repository.Received(2).MarkFinishedAsync(auctionId, Arg.Any<CancellationToken>());
     }
+
+    // ── A malformed AuctionId is poison, not transient — logged and dropped, never thrown ───
+
+    [Fact]
+    public async Task Consume_WhenAuctionIdIsUnparsable_SkipsWithoutThrowingOrTouchingTheRepository()
+    {
+        var repository = Substitute.For<IAuctionRepository>();
+        var consumer = new AuctionCancelledConsumer(repository, NullLogger<AuctionCancelledConsumer>.Instance);
+
+        await consumer.Consume(BuildContext(new AuctionCancelled("not-a-guid", "bob")));
+
+        await repository.DidNotReceive().MarkFinishedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
 }

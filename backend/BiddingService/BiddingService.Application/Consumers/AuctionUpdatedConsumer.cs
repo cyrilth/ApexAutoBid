@@ -40,7 +40,16 @@ public class AuctionUpdatedConsumer(
             return;
         }
 
-        var auctionId = Guid.Parse(message.Id);
+        // A malformed Id is a poison-message scenario, not a transient failure — log and
+        // return rather than throwing, so the broker does not redeliver it forever (same
+        // pattern as every SearchService consumer).
+        if (!Guid.TryParse(message.Id, out var auctionId))
+        {
+            logger.LogWarning(
+                "AuctionUpdated message had an unparsable Id {AuctionId} — skipping",
+                message.Id);
+            return;
+        }
 
         await repository.UpdateAuctionEndAsync(auctionId, message.AuctionEnd.Value, context.CancellationToken);
 

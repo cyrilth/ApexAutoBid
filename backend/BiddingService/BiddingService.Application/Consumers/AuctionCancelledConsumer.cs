@@ -27,7 +27,17 @@ public class AuctionCancelledConsumer(
     public async Task Consume(ConsumeContext<AuctionCancelled> context)
     {
         var message = context.Message;
-        var auctionId = Guid.Parse(message.AuctionId);
+
+        // A malformed AuctionId is a poison-message scenario, not a transient failure — log
+        // and return rather than throwing, so the broker does not redeliver it forever (same
+        // pattern as every SearchService consumer).
+        if (!Guid.TryParse(message.AuctionId, out var auctionId))
+        {
+            logger.LogWarning(
+                "AuctionCancelled message had an unparsable AuctionId {AuctionId} — skipping",
+                message.AuctionId);
+            return;
+        }
 
         await repository.MarkFinishedAsync(auctionId, context.CancellationToken);
 

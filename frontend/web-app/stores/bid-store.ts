@@ -88,6 +88,12 @@ export const createBidStore = (initialBids: Bid[] = []) => {
         return { bids: [bid, ...state.bids], latestLiveBidId: bid.id };
       }),
     clearLatestLiveBid: () => set({ latestLiveBidId: null }),
-    removeBid: (bidId) => set((state) => ({ bids: state.bids.filter((bid) => bid.id !== bidId) })),
+    removeBid: (bidId) =>
+      set((state) => ({
+        bids: state.bids.filter((bid) => bid.id !== bidId),
+        // If the removed bid was the current pulse target, its row unmounts and BidHistory's
+        // onAnimationEnd never fires for it -- clear the target here so it can't go stale.
+        latestLiveBidId: state.latestLiveBidId === bidId ? null : state.latestLiveBidId,
+      })),
   }));
 };

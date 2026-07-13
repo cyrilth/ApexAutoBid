@@ -56,16 +56,22 @@ export function BidHistory({ auctionId, canRemoveBids = false }: BidHistoryProps
 
   async function handleRemove(bidId: string) {
     setRemovingId(bidId);
-    const result = await removeBidAction(bidId);
-    setRemovingId(null);
+    // finally (not inline after the await): if the action itself throws -- network failure
+    // reaching the Next server, aborted action -- `removingId` must still reset, or this
+    // bid's Remove button stays disabled until a full page reload.
+    try {
+      const result = await removeBidAction(bidId);
 
-    if (!result.success) {
-      toastActionError(result.error);
-      return;
+      if (!result.success) {
+        toastActionError(result.error);
+        return;
+      }
+
+      removeBidFromStore(bidId);
+      toastSuccess("Bid removed.");
+    } finally {
+      setRemovingId(null);
     }
-
-    removeBidFromStore(bidId);
-    toastSuccess("Bid removed.");
   }
 
   if (bids.length === 0) {

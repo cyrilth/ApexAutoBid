@@ -64,4 +64,18 @@ public class AuctionUpdatedConsumerTests
         await repository.DidNotReceive().UpdateAuctionEndAsync(
             Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
     }
+
+    // ── A malformed Id is poison, not transient — logged and dropped, never thrown ──────────
+
+    [Fact]
+    public async Task Consume_WhenIdIsUnparsable_SkipsWithoutThrowingOrTouchingTheRepository()
+    {
+        var repository = Substitute.For<IAuctionRepository>();
+        var consumer = new AuctionUpdatedConsumer(repository, NullLogger<AuctionUpdatedConsumer>.Instance);
+
+        await consumer.Consume(BuildContext(SampleMessage("not-a-guid", DateTime.UtcNow)));
+
+        await repository.DidNotReceive().UpdateAuctionEndAsync(
+            Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+    }
 }
