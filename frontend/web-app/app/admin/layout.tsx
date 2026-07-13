@@ -10,8 +10,10 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
  * `auth.ts`'s callbacks (see `types/next-auth.d.ts`) -- nothing new needed there.
  *
  *  - Anonymous / a session whose background token refresh has given up: sent to sign in,
- *    returning to whichever `/admin/*` page was requested (mirrors
- *    `app/auctions/create/page.tsx`'s identical gate).
+ *    returning to the admin dashboard (`/admin`) afterwards -- a fixed callbackUrl, because a
+ *    layout has no reliable server-side view of which child path was requested; landing on the
+ *    dashboard one click from any admin page is fine for a UX nicety. (Same gate shape as
+ *    `app/auctions/create/page.tsx`, which CAN use its own exact path.)
  *  - Signed in but not an admin: redirected home rather than shown a 403 page -- the "admin"
  *    nav link is also never shown to these users (see `app/page.tsx`), so reaching here at all
  *    means they typed the URL directly.
