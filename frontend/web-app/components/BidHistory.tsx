@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "flowbite-react";
 import { formatCurrency } from "@/lib/format";
+import { removeBid as removeBidAction } from "@/lib/admin-bids-actions";
+import { toastActionError, toastSuccess } from "@/lib/toast";
 import { BidStatusBadge } from "@/components/BidStatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { useBidStore } from "@/components/BidStoreProvider";
@@ -13,6 +17,10 @@ function formatBidTime(bidTime: string): string {
 interface BidHistoryProps {
   /** This auction's id -- passed straight to `useLiveBids` to filter the platform-wide "BidPlaced" broadcast down to just this page's auction. */
   auctionId: string;
+  /** Shows a per-bid "Remove" button (Phase 11 Task 8.4) -- `true` only for admins, computed
+   * server-side (`app/auctions/[id]/page.tsx`); the `DELETE api/admin/bids/{id}` endpoint
+   * itself remains the real authority regardless. */
+  canRemoveBids?: boolean;
 }
 
 /**
@@ -37,12 +45,34 @@ interface BidHistoryProps {
  * matches the server-rendered HTML -- no layout shift, no hydration
  * mismatch.
  */
-export function BidHistory({ auctionId }: BidHistoryProps) {
+export function BidHistory({ auctionId, canRemoveBids = false }: BidHistoryProps) {
   useLiveBids(auctionId);
 
   const bids = useBidStore((state) => state.bids);
   const latestLiveBidId = useBidStore((state) => state.latestLiveBidId);
   const clearLatestLiveBid = useBidStore((state) => state.clearLatestLiveBid);
+  const removeBidFromStore = useBidStore((state) => state.removeBid);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  async function handleRemove(bidId: string) {
+    setRemovingId(bidId);
+    // finally (not inline after the await): if the action itself throws -- network failure
+    // reaching the Next server, aborted action -- `removingId` must still reset, or this
+    // bid's Remove button stays disabled until a full page reload.
+    try {
+      const result = await removeBidAction(bidId);
+
+      if (!result.success) {
+        toastActionError(result.error);
+        return;
+      }
+
+      removeBidFromStore(bidId);
+      toastSuccess("Bid removed.");
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   if (bids.length === 0) {
     return <EmptyState message="No bids yet -- be the first to bid." />;
@@ -77,6 +107,21 @@ export function BidHistory({ auctionId }: BidHistoryProps) {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-slate-900">{formatCurrency(bid.amount)}</p>
             <BidStatusBadge status={bid.bidStatus} />
+            {canRemoveBids && (
+              <Button
+                size="xs"
+                color="failure"
+                // Any in-flight removal disables EVERY row's button (not just its own):
+                // overlapping deletes on the same auction would race each other's high-bid
+                // recalculation server-side, and one-at-a-time matches the sequential UX of
+                // a moderation action anyway.
+                disabled={removingId !== null}
+                aria-label={`Remove bid by ${bid.bidder}`}
+                onClick={() => handleRemove(bid.id)}
+              >
+                {removingId === bid.id ? "Removing…" : "Remove"}
+              </Button>
+            )}
           </div>
         </li>
       ))}

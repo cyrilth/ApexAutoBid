@@ -61,4 +61,11 @@ public interface IAuctionRepository
     /// or <see cref="HighBidUpdateResult.AuctionNotFound"/> when no auction with that id exists.
     /// </summary>
     Task<HighBidUpdateResult> TryRaiseHighBidAsync(Guid auctionId, int amount);
+
+    /// <summary>
+    /// Returns the number of auctions in each <see cref="Status"/> value (Phase 11 Task 3.7 —
+    /// <c>GET api/admin/auctions/stats</c>). A status with zero auctions is simply absent from
+    /// the returned dictionary; the caller fills in zero for any status not present.
+    /// </summary>
+    Task<Dictionary<Status, int>> GetStatusCountsAsync();
 }

@@ -44,6 +44,17 @@ public class GalleryEnforcementTests
         AuctionEnd = DateTime.UtcNow.AddDays(7),
     };
 
+    // Wide-open bounds (well outside the sample DTOs' AuctionEnd = UtcNow.AddDays(7)) so none
+    // of these gallery-focused tests are affected by the duration validation AuctionAppService
+    // now also performs (Phase 11 Task 3.4) — this class is only exercising the gallery path.
+    private static IPlatformSettingsService BuildDurationSettings()
+    {
+        var settings = Substitute.For<IPlatformSettingsService>();
+        settings.GetEffectiveDurationBoundsAsync()
+            .Returns((TimeSpan.FromMinutes(1), TimeSpan.FromDays(365)));
+        return settings;
+    }
+
     private static List<ImageDto> ExternalImages(int count) =>
         Enumerable.Range(0, count)
             .Select(_ => new ImageDto { Url = "http://ext/img.jpg", SortOrder = 0 })
@@ -59,7 +70,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var result = await sut.CreateAuctionAsync(SampleDto([]), "bob", "bob@x", isAdmin: false);
 
@@ -79,7 +91,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var result = await sut.CreateAuctionAsync(SampleDto(ExternalImages(11)), "bob", "bob@x", isAdmin: false);
 
@@ -97,7 +110,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         // Two platform-hosted images both claiming SortOrder 0 would trip the unique
         // (ItemId, SortOrder) index at SaveChanges — reject up front as a clean 400,
@@ -125,7 +139,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var images = new List<ImageDto> { new() { Url = "http://ext/img.jpg", SortOrder = -1 } };
 
@@ -145,7 +160,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         // No SortOrder 0 means no primary image — the listing/search projection expects one.
         var images = new List<ImageDto>
@@ -172,7 +188,8 @@ public class GalleryEnforcementTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
         var storage = Substitute.For<IImageStorage>();
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var images = new List<ImageDto>
         {
@@ -198,7 +215,8 @@ public class GalleryEnforcementTests
         var storage = Substitute.For<IImageStorage>();
         storage.TryGetObjectSizeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((long?)null);
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var key = Guid.NewGuid().ToString();
         var images = new List<ImageDto>
@@ -224,7 +242,8 @@ public class GalleryEnforcementTests
         storage.TryGetObjectSizeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(6L * 1024 * 1024);
         var sut = new AuctionAppService(
-            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()));
+            repository, mapper, publishEndpoint, storage, Options.Create(SampleImagesOptions()),
+            BuildDurationSettings());
 
         var key = Guid.NewGuid().ToString();
         var images = new List<ImageDto>

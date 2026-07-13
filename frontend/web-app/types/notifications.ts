@@ -54,3 +54,28 @@ export interface AuctionFinishedPayload {
   seller: string;
   amount?: number | null;
 }
+
+/**
+ * Mirrors `Contracts.AuctionCancelled` (Phase 11 Task 3.3/6) -- the "AuctionCancelled"
+ * broadcast (`Clients.All`) AND the "AuctionCancelledForSeller" targeted send
+ * (`Clients.User(seller)`); both carry the exact same shape
+ * (`NotificationService.Consumers.AuctionCancelledConsumer` sends the one message to both).
+ */
+export interface AuctionCancelledPayload {
+  auctionId: string;
+  seller: string;
+}
+
+/**
+ * Mirrors `Contracts.BannerPublished` (Phase 11 Task 3.5/6) -- the "BannerPublished" broadcast
+ * (`Clients.All`), sent whenever an admin creates or updates a banner
+ * (`components/LiveBanners.tsx`).
+ */
+export interface BannerPublishedPayload {
+  id: string;
+  message: string;
+  scope: string;
+  auctionId?: string | null;
+  activeFrom: string;
+  activeUntil: string;
+}

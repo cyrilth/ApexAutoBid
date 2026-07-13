@@ -27,6 +27,8 @@ public static class InfrastructureServiceExtensions
             opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IAuctionRepository, AuctionRepository>();
+        services.AddScoped<IBannerRepository, BannerRepository>();
+        services.AddScoped<IPlatformSettingsRepository, PlatformSettingsRepository>();
 
         // ── Image storage (Phase 1 Task 18) ──────────────────────────────────────
         //
@@ -37,6 +39,10 @@ public static class InfrastructureServiceExtensions
 
         services.Configure<ImagesOptions>(configuration.GetSection(ImagesOptions.SectionName));
         services.Configure<MinioOptions>(configuration.GetSection(MinioOptions.SectionName));
+
+        // Auction duration bounds (Phase 11 Task 3.4) — the config/env layer of the
+        // resolution order; DB PlatformSettings (read per-request) takes priority over this.
+        services.Configure<AuctionDurationOptions>(configuration.GetSection(AuctionDurationOptions.SectionName));
 
         // IAmazonS3 is registered as a singleton (the AWS SDK client is thread-safe
         // and expensive to construct) using the Auction Service's dedicated,

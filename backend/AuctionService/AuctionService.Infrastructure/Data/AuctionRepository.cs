@@ -88,4 +88,12 @@ public class AuctionRepository(AuctionDbContext dbContext) : IAuctionRepository
         var exists = await dbContext.Auctions.AnyAsync(a => a.Id == auctionId);
         return exists ? HighBidUpdateResult.NotRaised : HighBidUpdateResult.AuctionNotFound;
     }
+
+    public async Task<Dictionary<Status, int>> GetStatusCountsAsync()
+    {
+        return await dbContext.Auctions
+            .GroupBy(a => a.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count);
+    }
 }

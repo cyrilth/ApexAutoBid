@@ -90,7 +90,7 @@ public static class Config
 
         // Origins whose Scalar docs pages may run the browser-based PKCE login (each origin's
         // redirect URI is fixed at {origin}/scalar — see the scalar client's own comment
-        // below). Defaults preserve the three dotnet-run dev origins; docker-compose overrides
+        // below). Defaults preserve the four dotnet-run dev origins; docker-compose overrides
         // with the gateway's public origin (Clients__Scalar__Origins__0=...).
         var scalarOrigins = configuration.GetSection("Clients:Scalar:Origins").Get<string[]>();
         if (scalarOrigins is null || scalarOrigins.Length == 0)
@@ -100,6 +100,12 @@ public static class Config
                 "http://localhost:5054",
                 "http://localhost:6001",
                 "http://localhost:7003",
+                // Phase 11 Task 2.8 — this service's OWN standalone admin-API Scalar docs page
+                // (https://localhost:5001/scalar in dev), same as the other three services'
+                // standalone/aggregated docs pages above. Note: https, not http — IdentityService
+                // itself (unlike Auction/Bidding/Gateway) is only ever reachable over TLS in dev
+                // (launchSettings.json's applicationUrl is https://localhost:5001).
+                "https://localhost:5001",
             ];
         }
         scalarOrigins = [.. scalarOrigins.Select(o => o.TrimEnd('/'))];

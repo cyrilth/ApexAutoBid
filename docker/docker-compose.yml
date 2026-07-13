@@ -329,6 +329,14 @@ services:
       # OIDC client URLs for this deployment shape (Config.GetClients).
       Clients__WebApp__BaseUrl: https://app.apexautobid.local
       Clients__Scalar__Origins__0: https://api.apexautobid.local
+      # The admin API's JwtBearer (Phase 11 Task 2) validates this service's OWN
+      # tokens. IdentityServiceUrl is the issuer those tokens carry (the public
+      # domain, same value every other service uses); the metadata fetch itself
+      # can't use that https domain from THIS container — no SSL_CERT_FILE here,
+      # see below — so it's pointed at the container's own plain-http loopback
+      # listener instead (HostingExtensions.cs documents the pairing).
+      IdentityServiceUrl: https://id.apexautobid.local
+      JwtBearer__MetadataAddress: http://localhost:8080/.well-known/openid-configuration
       # nginx-proxy vhost.
       VIRTUAL_HOST: id.apexautobid.local
       VIRTUAL_PORT: "8080"
@@ -370,6 +378,9 @@ services:
       RabbitMq__Username: guest
       RabbitMq__Password: guest
       IdentityServiceUrl: https://id.apexautobid.local
+      # Dev/Docker minimum auction duration (Phase 11 Task 3.4 — Requirements §3.1): lets a
+      # 1-minute auction be created for local end-to-end testing of the full lifecycle.
+      Auction__MinDuration: "00:01:00"
       # The dedicated HTTP/2 cleartext (h2c) gRPC endpoint lives only in
       # appsettings.Development.json, bound to localhost — rebind BOTH endpoints
       # to all interfaces so the gateway (8080) and BiddingService (7054, gRPC)
@@ -557,6 +568,13 @@ services:
       ReverseProxy__Clusters__search-cluster__Destinations__destination1__Address: http://search-svc:8080
       ReverseProxy__Clusters__bidding-cluster__Destinations__destination1__Address: http://bid-svc:8080
       ReverseProxy__Clusters__notification-cluster__Destinations__destination1__Address: http://notification-svc:8080
+      # identity-cluster (admin-users* routes, Phase 11 Task 7) goes through nginx
+      # by its public name, NOT http://identity-svc:8080 like the four above:
+      # IdentityService's AllowedHosts guard only admits id.apexautobid.local (and
+      # its own loopback healthcheck), and YARP sets the upstream Host header from
+      # the destination address. The dev-CA https hop is fine from here — this
+      # container trusts it via SSL_CERT_FILE below.
+      ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address: https://id.apexautobid.local
       SSL_CERT_FILE: /certs/ca/ca.crt
       VIRTUAL_HOST: api.apexautobid.local
       VIRTUAL_PORT: "8080"

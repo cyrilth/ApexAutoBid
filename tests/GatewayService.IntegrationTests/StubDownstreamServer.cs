@@ -13,9 +13,10 @@ namespace GatewayService.IntegrationTests;
 /// normal in-memory <c>TestServer</c> transport is only reachable through that factory's own
 /// <see cref="System.Net.Http.HttpMessageHandler"/>, never by another process/host dialing a
 /// URL, so a genuine socket is required here (see this task's own framing). One stub instance
-/// answers for BOTH the auction and search clusters (distinguished purely by request path, same
-/// as the real services would be) — nothing here asserts cross-service isolation, so a single
-/// process is simplest.
+/// answers for the auction, search, identity, AND bidding clusters (distinguished purely by
+/// request path, same as the real services would be) — nothing here asserts cross-service
+/// isolation, so a single process is simplest. Identity/bidding admin routes were added for
+/// Phase 11 Task 7's admin routing tests.
 /// </summary>
 internal sealed class StubDownstreamServer : IAsyncDisposable
 {
@@ -75,12 +76,66 @@ internal sealed class StubDownstreamServer : IAsyncDisposable
             });
         });
 
+        // GET api/auctions/duration-limits — Phase 11 Task 3.8's new public, anonymous
+        // create-form limits endpoint; proves it's already reachable through the EXISTING
+        // "auctions-read-catchall" route (no gateway config change needed for it, Task 7).
+        app.MapGet("/api/auctions/duration-limits", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "auction-duration-limits";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "auction-stub", method = "GET" });
+        });
+
+        // GET api/banners — Phase 11 Task 3.5/7's new public, anonymous banner list.
+        app.MapGet("/api/banners", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "banners-get";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "auction-stub", method = "GET" });
+        });
+
         // ── Search Service stand-in ───────────────────────────────────────────────
         app.MapGet("/api/search", async context =>
         {
             context.Response.Headers["X-Stub-Hit"] = "search-get";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsJsonAsync(new { source = "search-stub", method = "GET" });
+        });
+
+        // ── Identity Service admin API stand-in (Phase 11 Task 7) ────────────────
+        app.MapGet("/api/admin/users", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "identity-admin-users";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "identity-stub", method = "GET" });
+        });
+
+        // ── Auction Service admin API stand-in (Phase 11 Task 7) ─────────────────
+        app.MapGet("/api/admin/auctions", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "auction-admin-auctions";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "auction-stub", method = "GET" });
+        });
+        app.MapGet("/api/admin/banners", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "auction-admin-banners";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "auction-stub", method = "GET" });
+        });
+        app.MapGet("/api/admin/settings/duration", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "auction-admin-settings";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "auction-stub", method = "GET" });
+        });
+
+        // ── Bidding Service admin API stand-in (Phase 11 Task 7) ─────────────────
+        app.MapGet("/api/admin/bids", async context =>
+        {
+            context.Response.Headers["X-Stub-Hit"] = "bidding-admin-bids";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsJsonAsync(new { source = "bidding-stub", method = "GET" });
         });
 
         await app.StartAsync();

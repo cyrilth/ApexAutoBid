@@ -16,8 +16,8 @@
 | 8. Docker Compose Deployment | 11 | 11 | Done |
 | 9. Kubernetes Local Deployment | 0 | 18 | Not started |
 | 10. CI/CD & Cloud Deployment | 0 | 16 | Not started |
-| 11. Admin Dashboard | 0 | 52 | Not started |
-| **Overall** | **285** | **371** | **In progress** |
+| 11. Admin Dashboard | 52 | 52 | Done |
+| **Overall** | **337** | **371** | **In progress** |
 
 Status values: `Not started` · `In progress` · `Done`
 
@@ -551,55 +551,55 @@ Status values: `Not started` · `In progress` · `Done`
 
 ### Tasks
 
-- [ ] 1. Extend the `Contracts` project: `AuctionCancelled`, `BidRemoved`, `BannerPublished`; add `AuctionEnd?` to `AuctionUpdated` (see `Requirements.md` §10.5) — `dotnet-service-builder`
-- [ ] 2. Identity Service admin API (`Requirements.md` §10.1) — `dotnet-service-builder`
-  - [ ] 2.1. `GET api/admin/users` — list/search users (paged) — `dotnet-service-builder`
-  - [ ] 2.2. `POST api/admin/users` — create user (optionally pre-confirmed) — `dotnet-service-builder`
-  - [ ] 2.3. `POST api/admin/users/{id}/reset-password` — temp password or email reset link — `dotnet-service-builder`
-  - [ ] 2.4. `POST api/admin/users/{id}/resend-confirmation` — generate a new email-validation link — `dotnet-service-builder`
-  - [ ] 2.5. `PUT api/admin/users/{id}/roles` — assign/remove roles — `dotnet-service-builder`
-  - [ ] 2.6. `PUT api/admin/users/{id}/lock` — lock/unlock account — `dotnet-service-builder`
-  - [ ] 2.7. `GET api/admin/users/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
-  - [ ] 2.8. Document the admin API with OpenAPI + Scalar (Bearer, admin role noted) and add it to the gateway's aggregated docs — `dotnet-service-builder`
-  - [ ] 2.9. Write `AuditEntry` records for all admin user-management actions (see `Requirements.md` §13.3) — `dotnet-service-builder`
-- [ ] 3. Auction Service admin features (`Requirements.md` §10.2–10.3) — `dotnet-service-builder`
-  - [ ] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
-  - [ ] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
-  - [ ] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
-  - [ ] 3.4. Auction duration validation on create/update — resolution order: DB `PlatformSettings` → env vars (`Auction__MinDuration`/`Auction__MaxDuration`) → defaults 1 hour–90 days; dev sets min to 1 minute (`appsettings.Development.json` / compose); admins exempt — `dotnet-service-builder`
-  - [ ] 3.5. `Banner` entity + admin CRUD (`GET/POST api/admin/banners`, `PUT/DELETE api/admin/banners/{id}`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
-  - [ ] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
-  - [ ] 3.7. `GET api/admin/auctions/stats` — auction counts by status — `dotnet-service-builder`
-  - [ ] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
-  - [ ] 3.9. Write `AuditEntry` records for admin auction moderation (end/cancel), banner CRUD, and settings changes (see `Requirements.md` §13.3) — `dotnet-service-builder`
-- [ ] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
-- [ ] 5. Bidding Service admin features — `dotnet-service-builder`
-  - [ ] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
-  - [ ] 5.2. Consume `AuctionCancelled` — mark local auction finished; refuse further bids; never emit `AuctionFinished` — `dotnet-service-builder`
-  - [ ] 5.3. Apply `AuctionUpdated.AuctionEnd` to local auction records — `dotnet-service-builder`
-  - [ ] 5.4. `GET api/admin/bids/stats` — total bid count — `dotnet-service-builder`
-  - [ ] 5.5. Write an `AuditEntry` for admin bid removal capturing the removed bid (see `Requirements.md` §13.3) — `dotnet-service-builder`
-- [ ] 6. Notification Service: consume `AuctionCancelled` (broadcast + targeted to seller) and `BannerPublished` (broadcast) — `dotnet-service-builder`
-- [ ] 7. Gateway: route `api/admin/*` paths by resource segment, matching the base collection path as well as child paths (`users*` → Identity, `auctions*`/`banners*`/`settings*` → Auction, `bids*` → Bidding) and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
-- [ ] 8. Frontend admin area (`/admin`, role-gated) — `frontend-builder`
-  - [ ] 8.1. Role-based route protection (role claim from the session; non-admins redirected) — `frontend-builder`
-  - [ ] 8.2. Dashboard page — stats cards from the per-service stats endpoints (`api/admin/users/stats`, `api/admin/auctions/stats`, `api/admin/bids/stats`) — `frontend-builder`
-  - [ ] 8.3. Users page — list/search, create, reset password, resend confirmation, roles, lock — `frontend-builder`
-  - [ ] 8.4. Auctions page — create with seller assignment, end now, cancel, remove bid from the bid history — `frontend-builder`
-  - [ ] 8.5. Banners page — CRUD with scope (global/home/auction) and active window — `frontend-builder`
-  - [ ] 8.6. Render active banners on the home page and auction detail pages, live-updating on `BannerPublished` — `frontend-builder`
-  - [ ] 8.7. Settings page — edit the platform min/max auction duration (`PUT api/admin/settings/duration`) — `frontend-builder`
-- [ ] 9. Write unit tests — `dotnet-service-builder`
-  - [ ] 9.1. Admin endpoints return 403 for non-admin callers (each service) — `dotnet-service-builder`
-  - [ ] 9.2. RemoveBid — recalculates the high bid and emits `BidRemoved` — `dotnet-service-builder`
-  - [ ] 9.3. PlaceBid — cancelled auction refuses bids — `dotnet-service-builder`
-  - [ ] 9.4. CreateAuction — `AuctionEnd` outside the configured duration bounds returns 400 (non-admin) — `dotnet-service-builder`
-  - [ ] 9.5. CreateAuction — non-admin passing an explicit `Seller` is ignored/rejected — `dotnet-service-builder`
-  - [ ] 9.6. Admin moderation actions write `AuditEntry` records (each auditing service) — `dotnet-service-builder`
-- [ ] 10. Write Playwright admin e2e tests — `frontend-builder`, run with `playwright-tester`
-  - [ ] 10.1. Admin sees `/admin`; a regular user is redirected away — `frontend-builder`
-  - [ ] 10.2. Create a user and reset their password — `frontend-builder`
-  - [ ] 10.3. Create an auction with an assigned seller — `frontend-builder`
-  - [ ] 10.4. End an auction now; cancel an auction — `frontend-builder`
-  - [ ] 10.5. Publish a banner — it appears on the home page without a refresh — `frontend-builder`
-- [ ] 11. Verify end-to-end admin flows (moderation events propagate to Search/Bidding/Notification) — `test-runner`
+- [x] 1. Extend the `Contracts` project: `AuctionCancelled`, `BidRemoved`, `BannerPublished`; add `AuctionEnd?` to `AuctionUpdated` (see `Requirements.md` §10.5) — `dotnet-service-builder`
+- [x] 2. Identity Service admin API (`Requirements.md` §10.1) — `dotnet-service-builder`
+  - [x] 2.1. `GET api/admin/users` — list/search users (paged) — `dotnet-service-builder`
+  - [x] 2.2. `POST api/admin/users` — create user (optionally pre-confirmed) — `dotnet-service-builder`
+  - [x] 2.3. `POST api/admin/users/{id}/reset-password` — temp password or email reset link — `dotnet-service-builder`
+  - [x] 2.4. `POST api/admin/users/{id}/resend-confirmation` — generate a new email-validation link — `dotnet-service-builder`
+  - [x] 2.5. `PUT api/admin/users/{id}/roles` — assign/remove roles — `dotnet-service-builder`
+  - [x] 2.6. `PUT api/admin/users/{id}/lock` — lock/unlock account — `dotnet-service-builder`
+  - [x] 2.7. `GET api/admin/users/stats` — user counts (total, confirmed, locked) — `dotnet-service-builder`
+  - [x] 2.8. Document the admin API with OpenAPI + Scalar (Bearer, admin role noted) and add it to the gateway's aggregated docs — `dotnet-service-builder`
+  - [x] 2.9. Write `AuditEntry` records for all admin user-management actions (see `Requirements.md` §13.3) — `dotnet-service-builder`
+- [x] 3. Auction Service admin features (`Requirements.md` §10.2–10.3) — `dotnet-service-builder`
+  - [x] 3.1. Honor an explicit `Seller` on `POST api/auctions` for admin callers only — `dotnet-service-builder`
+  - [x] 3.2. `POST api/admin/auctions/{id}/end` — set `AuctionEnd = UtcNow`, emit `AuctionUpdated` with `AuctionEnd` — `dotnet-service-builder`
+  - [x] 3.3. `POST api/admin/auctions/{id}/cancel` — status `Cancelled`, emit `AuctionCancelled` — `dotnet-service-builder`
+  - [x] 3.4. Auction duration validation on create/update — resolution order: DB `PlatformSettings` → env vars (`Auction__MinDuration`/`Auction__MaxDuration`) → defaults 1 hour–90 days; dev sets min to 1 minute (`appsettings.Development.json` / compose); admins exempt — `dotnet-service-builder`
+  - [x] 3.5. `Banner` entity + admin CRUD (`GET/POST api/admin/banners`, `PUT/DELETE api/admin/banners/{id}`) + public `GET api/banners` (Anon); emit `BannerPublished` — `dotnet-service-builder`
+  - [x] 3.6. Consume `BidRemoved` — refresh `CurrentHighBid` — `dotnet-service-builder`
+  - [x] 3.7. `GET api/admin/auctions/stats` — auction counts by status — `dotnet-service-builder`
+  - [x] 3.8. `PlatformSettings` entity + `GET/PUT api/admin/settings/duration` (DB-backed min/max, takes effect immediately) + anon `GET api/auctions/duration-limits` for the create form — `dotnet-service-builder`
+  - [x] 3.9. Write `AuditEntry` records for admin auction moderation (end/cancel), banner CRUD, and settings changes (see `Requirements.md` §13.3) — `dotnet-service-builder`
+- [x] 4. Search Service: consume `AuctionCancelled` (status) and `BidRemoved` (CurrentHighBid); include `cancelled` in status filtering — `dotnet-service-builder`
+- [x] 5. Bidding Service admin features — `dotnet-service-builder`
+  - [x] 5.1. `DELETE api/admin/bids/{id}` — remove bid, recalculate high bid, emit `BidRemoved` — `dotnet-service-builder`
+  - [x] 5.2. Consume `AuctionCancelled` — mark local auction finished; refuse further bids; never emit `AuctionFinished` — `dotnet-service-builder`
+  - [x] 5.3. Apply `AuctionUpdated.AuctionEnd` to local auction records — `dotnet-service-builder`
+  - [x] 5.4. `GET api/admin/bids/stats` — total bid count — `dotnet-service-builder`
+  - [x] 5.5. Write an `AuditEntry` for admin bid removal capturing the removed bid (see `Requirements.md` §13.3) — `dotnet-service-builder`
+- [x] 6. Notification Service: consume `AuctionCancelled` (broadcast + targeted to seller) and `BannerPublished` (broadcast) — `dotnet-service-builder`
+- [x] 7. Gateway: route `api/admin/*` paths by resource segment, matching the base collection path as well as child paths (`users*` → Identity, `auctions*`/`banners*`/`settings*` → Auction, `bids*` → Bidding) and require the `admin` role claim at the edge (defense in depth — services still enforce it) — `dotnet-service-builder`
+- [x] 8. Frontend admin area (`/admin`, role-gated) — `frontend-builder`
+  - [x] 8.1. Role-based route protection (role claim from the session; non-admins redirected) — `frontend-builder`
+  - [x] 8.2. Dashboard page — stats cards from the per-service stats endpoints (`api/admin/users/stats`, `api/admin/auctions/stats`, `api/admin/bids/stats`) — `frontend-builder`
+  - [x] 8.3. Users page — list/search, create, reset password, resend confirmation, roles, lock — `frontend-builder`
+  - [x] 8.4. Auctions page — create with seller assignment, end now, cancel, remove bid from the bid history — `frontend-builder`
+  - [x] 8.5. Banners page — CRUD with scope (global/home/auction) and active window — `frontend-builder`
+  - [x] 8.6. Render active banners on the home page and auction detail pages, live-updating on `BannerPublished` — `frontend-builder`
+  - [x] 8.7. Settings page — edit the platform min/max auction duration (`PUT api/admin/settings/duration`) — `frontend-builder`
+- [x] 9. Write unit tests — `dotnet-service-builder`
+  - [x] 9.1. Admin endpoints return 403 for non-admin callers (each service) — `dotnet-service-builder`
+  - [x] 9.2. RemoveBid — recalculates the high bid and emits `BidRemoved` — `dotnet-service-builder`
+  - [x] 9.3. PlaceBid — cancelled auction refuses bids — `dotnet-service-builder`
+  - [x] 9.4. CreateAuction — `AuctionEnd` outside the configured duration bounds returns 400 (non-admin) — `dotnet-service-builder`
+  - [x] 9.5. CreateAuction — non-admin passing an explicit `Seller` is ignored/rejected — `dotnet-service-builder`
+  - [x] 9.6. Admin moderation actions write `AuditEntry` records (each auditing service) — `dotnet-service-builder`
+- [x] 10. Write Playwright admin e2e tests — `frontend-builder`, run with `playwright-tester`
+  - [x] 10.1. Admin sees `/admin`; a regular user is redirected away — `frontend-builder`
+  - [x] 10.2. Create a user and reset their password — `frontend-builder`
+  - [x] 10.3. Create an auction with an assigned seller — `frontend-builder`
+  - [x] 10.4. End an auction now; cancel an auction — `frontend-builder`
+  - [x] 10.5. Publish a banner — it appears on the home page without a refresh — `frontend-builder`
+- [x] 11. Verify end-to-end admin flows (moderation events propagate to Search/Bidding/Notification) — `test-runner`

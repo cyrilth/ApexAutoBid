@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AuctionForm } from "@/components/AuctionForm";
+import { getDurationLimits } from "@/lib/auction-service";
+import { hasAdminRole } from "@/lib/roles";
+import type { DurationLimits } from "@/types/admin";
 
 export const metadata: Metadata = {
   title: "Create auction | ApexAutoBid",
@@ -34,6 +37,18 @@ export default async function CreateAuctionPage() {
     redirect("/auth/signin?callbackUrl=%2Fauctions%2Fcreate");
   }
 
+  const isAdmin = hasAdminRole(session.user.role);
+
+  // Anonymous, and never load-bearing to the page itself -- degrades to no client-side
+  // constraint (the backend still enforces its own bounds either way) rather than failing the
+  // whole page if the Auction Service is briefly unreachable.
+  let durationLimits: DurationLimits | undefined;
+  try {
+    durationLimits = await getDurationLimits();
+  } catch {
+    durationLimits = undefined;
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 sm:px-6">
       <div>
@@ -52,7 +67,7 @@ export default async function CreateAuctionPage() {
         </div>
       )}
 
-      <AuctionForm mode="create" />
+      <AuctionForm mode="create" isAdmin={isAdmin} durationLimits={durationLimits} />
     </div>
   );
 }

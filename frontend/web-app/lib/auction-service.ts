@@ -1,6 +1,7 @@
 import "server-only";
 import { getAccessToken } from "@/lib/auth-token";
 import type { AuctionDetail } from "@/types/auction";
+import type { DurationLimits } from "@/types/admin";
 
 /**
  * Dev default matches backend/GatewayService/Properties/launchSettings.json's
@@ -47,4 +48,22 @@ export async function getAuctionById(id: string): Promise<AuctionDetail | null> 
   }
 
   return (await res.json()) as AuctionDetail;
+}
+
+/**
+ * `GET api/auctions/duration-limits` via the Gateway (anonymous, Phase 11 Task 3.8) -- the
+ * platform's currently-effective auction duration bounds, used to constrain the create form's
+ * `AuctionEnd` datepicker (`components/AuctionForm.tsx`).
+ */
+export async function getDurationLimits(): Promise<DurationLimits> {
+  const res = await fetch(`${GATEWAY_URL}/api/auctions/duration-limits`, {
+    // Admin-configurable (Task 8.7) -- never serve a stale cached response.
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Duration limits request failed with status ${res.status}`);
+  }
+
+  return (await res.json()) as DurationLimits;
 }

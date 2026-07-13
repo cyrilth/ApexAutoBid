@@ -144,15 +144,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// A single "authenticated" policy, referenced by name from the mutating-route entries in
-// appsettings.json's ReverseProxy:Routes (AuthorizationPolicy: "authenticated") — YARP applies
-// it to those routes' endpoints exactly like an [Authorize("authenticated")] attribute would
-// (see Yarp.ReverseProxy.Routing.ProxyEndpointFactory). Read routes instead set
-// AuthorizationPolicy: "anonymous" — YARP's own reserved value (matched case-insensitively),
-// which adds [AllowAnonymous] and explicitly bypasses any ambient fallback authorization
-// policy, rather than referencing a policy defined here.
+// Two named policies, each referenced by name from route entries in appsettings.json's
+// ReverseProxy:Routes (AuthorizationPolicy: "authenticated" / "admin") — YARP applies them to
+// those routes' endpoints exactly like an [Authorize("...")] attribute would (see
+// Yarp.ReverseProxy.Routing.ProxyEndpointFactory). Read routes instead set AuthorizationPolicy:
+// "anonymous" — YARP's own reserved value (matched case-insensitively), which adds
+// [AllowAnonymous] and explicitly bypasses any ambient fallback authorization policy, rather
+// than referencing a policy defined here.
+//
+// "admin" (Phase 11 Task 7) additionally requires the "admin" role claim, gating every
+// api/admin/* route at the edge as defense in depth — each owning service (Identity, Auction,
+// Bidding) still enforces the same requirement itself. RequireRole checks the AUTHENTICATED
+// user's default RoleClaimType (ClaimTypes.Role) — no RoleClaimType override is configured (or
+// needed) on the JwtBearerOptions above, for the exact reason AuctionService.API's Program.cs
+// documents in detail (decompile-verified there): JwtBearerOptions' default token handler sets
+// MapInboundClaims = true, which auto-remaps the inbound short "role" claim IdentityService's
+// ProfileService stamps (JwtClaimTypes.Role, i.e. "role") onto the long ClaimTypes.Role URI —
+// exactly what RequireRole/User.IsInRole already check by default. A caller without the
+// "admin" role who IS authenticated fails this policy (not the "authenticated" one above), so
+// AuthorizationMiddleware calls ForbidAsync, which is what actually drives JwtBearerEvents.
+// OnForbidden's ProblemDetails 403 above — an anonymous caller instead fails at the
+// authentication stage first (OnChallenge's 401), since RequireRole implicitly also requires an
+// authenticated user.
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("authenticated", policy => policy.RequireAuthenticatedUser());
+    .AddPolicy("authenticated", policy => policy.RequireAuthenticatedUser())
+    .AddPolicy("admin", policy => policy.RequireRole("admin"));
 
 // ── Rate limiting at the edge (Task 8/8.1) ───────────────────────────────────
 //
@@ -395,6 +411,14 @@ app.MapScalarApiReference(options =>
     // Phase 5 Task 18 — same "openapi/{svc}/v1.json" proxied-path convention as the two
     // documents above (the "openapi-bidding" route, appsettings.json).
     options.AddDocument("bidding", "Bidding Service");
+    // Phase 11 Task 2.8/7.4 — Identity Service's admin API document (api/admin/users*), same
+    // proxied-path convention (the "openapi-identity" route, appsettings.json). Its operations
+    // are gated by the "admin" role at both this gateway's edge (the "admin"/"admin-users"*
+    // routes above) and IdentityService itself; Scalar's shared OAuth2 "Authorize" flow below
+    // still covers "try it" against them the same way it covers every other aggregated
+    // document — no per-document security-scheme wiring is needed here for that to work,
+    // provided the underlying token carries the "admin" role (Phase 3's seeded admin user).
+    options.AddDocument("identity", "Identity Service (Admin)");
 
     // ── Route "try it" through the gateway itself, not the downstream service (small fix) ──
     //

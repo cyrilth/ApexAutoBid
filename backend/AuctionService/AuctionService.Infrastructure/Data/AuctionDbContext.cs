@@ -9,6 +9,8 @@ public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbCo
 {
     public DbSet<Auction> Auctions => Set<Auction>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<Banner> Banners => Set<Banner>();
+    public DbSet<PlatformSettings> PlatformSettings => Set<PlatformSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +80,30 @@ public class AuctionDbContext(DbContextOptions<AuctionDbContext> options) : DbCo
 
             // JSON payload summary stored as text — no fixed schema, never queried directly.
             audit.Property(a => a.Data).IsRequired();
+        });
+
+        modelBuilder.Entity<Banner>(banner =>
+        {
+            banner.HasKey(b => b.Id);
+
+            banner.Property(b => b.Message).IsRequired();
+            banner.Property(b => b.CreatedBy).IsRequired();
+
+            // Stored as its string name, same rationale as Auction.Status above.
+            banner.Property(b => b.Scope)
+                .HasConversion<string>()
+                .IsRequired();
+
+            // AuctionId is a plain nullable scalar reference (only meaningful when
+            // Scope = Auction), not a modeled FK relationship — a banner has no navigation
+            // to Auction and its lifecycle is independent of the auction it references.
+        });
+
+        modelBuilder.Entity<PlatformSettings>(settings =>
+        {
+            settings.HasKey(s => s.Id);
+
+            settings.Property(s => s.UpdatedBy).IsRequired();
         });
 
         // MassTransit transactional Outbox / Inbox tables.

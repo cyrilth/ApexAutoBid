@@ -4,14 +4,17 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { AuctionCountdown } from "@/components/AuctionCountdown";
 import { AuctionGallery } from "@/components/AuctionGallery";
+import { AuctionLiveStatusWatcher } from "@/components/AuctionLiveStatusWatcher";
 import { AuctionStatusBadge } from "@/components/AuctionStatusBadge";
 import { BidHistory } from "@/components/BidHistory";
 import { BidPanel } from "@/components/BidPanel";
 import { BidStoreProvider } from "@/components/BidStoreProvider";
 import { DeleteAuctionButton } from "@/components/DeleteAuctionButton";
 import { DetailedSpecs } from "@/components/DetailedSpecs";
+import { LiveBanners } from "@/components/LiveBanners";
 import { PostSaleContact } from "@/components/PostSaleContact";
 import { ShareButtons } from "@/components/ShareButtons";
+import { getActiveBanners } from "@/lib/admin-banners-service";
 import { summarizeAuction } from "@/lib/auction-copy";
 import { getAuctionById } from "@/lib/auction-service";
 import { getBidsForAuction } from "@/lib/bid-service";
@@ -19,6 +22,8 @@ import { formatCurrency } from "@/lib/format";
 import { hasAdminRole } from "@/lib/roles";
 import { getSiteUrl } from "@/lib/site-url";
 import type { Bid } from "@/types/bid";
+
+const AUCTION_BANNER_SCOPES = ["Global", "Auction"] as const;
 
 interface AuctionDetailPageProps {
   params: Promise<{ id: string }>;
@@ -108,8 +113,27 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   const shareUrl = `${getSiteUrl()}/auctions/${auction.id}`;
   const shareText = summarizeAuction(auction);
 
+  // Anonymous, and never load-bearing to the page itself (Task 8.6) -- degrades to no banner
+  // rather than failing the whole page if the Auction Service is briefly unreachable.
+  //
+  // Deliberately fetched with NO `scope`/`auctionId` filter: the backend's `auctionId` filter
+  // (`BannerRepository.GetActiveAsync`) matches it against EVERY banner regardless of scope,
+  // which would incorrectly exclude Global banners (whose `AuctionId` is always null) from
+  // this page. Fetching every currently-active banner and filtering client-side
+  // (`LiveBanners`'s `scopes`/`auctionId` props) is what actually reproduces "Global + this
+  // auction's own Auction-scoped banners".
+  let banners: Awaited<ReturnType<typeof getActiveBanners>> = [];
+  try {
+    banners = await getActiveBanners();
+  } catch {
+    banners = [];
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+      <LiveBanners initialBanners={banners} scopes={AUCTION_BANNER_SCOPES} auctionId={auction.id} />
+      <AuctionLiveStatusWatcher auctionId={auction.id} />
+
       <Link
         href="/"
         className="text-sm font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-400"
@@ -189,7 +213,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
                   </p>
                 </div>
               ) : (
-                <BidHistory auctionId={auction.id} />
+                <BidHistory auctionId={auction.id} canRemoveBids={isSignedIn && hasAdminRole(session!.user.role)} />
               )}
             </div>
           </div>

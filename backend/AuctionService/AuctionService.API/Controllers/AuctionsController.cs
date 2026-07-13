@@ -54,6 +54,23 @@ public class AuctionsController(
         return Ok(auctions);
     }
 
+    // ── 3.8  GET api/auctions/duration-limits ────────────────────────────────
+    //
+    // Anonymous. Returns the platform's currently-effective auction duration bounds so the
+    // create-auction form can constrain its datepicker.
+    //
+    // WATCH ROUTING: this literal segment is declared BEFORE GetAuctionById below for reading
+    // clarity, but ordering isn't actually load-bearing here — GetAuctionById's route carries
+    // a `{id:guid}` constraint, and "duration-limits" can never satisfy it, so ASP.NET Core's
+    // routing can only ever dispatch a GET to THIS action regardless of declaration order.
+
+    [HttpGet("duration-limits")]
+    public async Task<ActionResult<DurationLimitsDto>> GetDurationLimits()
+    {
+        var limits = await service.GetDurationLimitsAsync();
+        return Ok(limits);
+    }
+
     // ── 8.2 / 19.1  GET api/auctions/{id} ────────────────────────────────────
     //
     // Returns the full auction including the complete image gallery. 404 if the auction does
@@ -133,6 +150,14 @@ public class AuctionsController(
             });
         }
 
+        if (result.Status == AuctionWriteResult.InvalidDuration)
+        {
+            logger.LogWarning(
+                "CreateAuction: AuctionEnd outside the platform's duration bounds for seller {Seller}", seller);
+
+            return InvalidDurationProblem();
+        }
+
         logger.LogError("CreateAuction: save failed for seller {Seller}", seller);
 
         return BadRequest(new ProblemDetails
@@ -176,6 +201,7 @@ public class AuctionsController(
                          "and that no platform-hosted image exceeds the configured size limit.",
                 Status = StatusCodes.Status400BadRequest
             }),
+            AuctionWriteResult.InvalidDuration => InvalidDurationProblem(),
             AuctionWriteResult.SaveFailed => BadRequest(new ProblemDetails
             {
                 Title = "Could not save changes",
@@ -184,6 +210,20 @@ public class AuctionsController(
             }),
             _ => Ok()
         };
+    }
+
+    // ── 3.4  Duration-bounds violation → 400 ValidationProblemDetails ────────
+    //
+    // Shared by CreateAuction and UpdateAuction. Uses the framework's ValidationProblem()
+    // (not a handcrafted ProblemDetails, unlike this controller's other 400s) because Task 3.4
+    // explicitly calls for a ValidationProblemDetails response for this specific violation.
+
+    private ActionResult InvalidDurationProblem()
+    {
+        ModelState.AddModelError("AuctionEnd",
+            "AuctionEnd must lie within the platform's currently-configured min/max auction " +
+            "duration. See GET api/auctions/duration-limits for the current bounds.");
+        return ValidationProblem(ModelState);
     }
 
     // ── 8.6  DELETE api/auctions/{id} ─────────────────────────────────────────

@@ -21,7 +21,8 @@ public class AuctionAppService(
     IMapper mapper,
     IPublishEndpoint publishEndpoint,
     IImageStorage storage,
-    IOptions<ImagesOptions> imagesOptions) : IAuctionService
+    IOptions<ImagesOptions> imagesOptions,
+    IPlatformSettingsService durationSettings) : IAuctionService
 {
     public async Task<List<AuctionDto>> GetAuctionsAsync(DateTime? updatedAfter)
     {
@@ -76,6 +77,13 @@ public class AuctionAppService(
         if (galleryError is not null)
             return new AuctionCreateResult(galleryError.Value, null);
 
+        // Duration-bounds enforcement (Phase 11 Task 3.4) — admins are exempt; non-admins must
+        // fall within the platform's effective Min/Max duration (DB PlatformSettings -> config
+        // -> defaults). Runs before any DB write, same as the gallery check above.
+        var durationError = await ValidateDurationAsync(dto.AuctionEnd, isAdmin);
+        if (durationError is not null)
+            return new AuctionCreateResult(durationError.Value, null);
+
         // mapper.Map (not the raw dto.Adapt<Auction>() extension method) is required here:
         // AddApplicationServices() registers AuctionMappingConfig on a fresh, DI-scoped
         // TypeAdapterConfig rather than the static TypeAdapterConfig.GlobalSettings, so the
@@ -84,8 +92,26 @@ public class AuctionAppService(
         // nested Item mapping, which has no like-named source property to fall back to by
         // convention) and leave Auction.Item null.
         var auction = mapper.Map<Auction>(dto);
-        auction.Seller = seller;
-        auction.SellerEmail = sellerEmail;
+
+        // Seller stamping (Phase 11 Task 3.1 / Requirements §10.2): an explicit dto.Seller is
+        // honored ONLY for admin callers — they may create an auction on behalf of any user,
+        // including themselves. For every other caller, dto.Seller/dto.SellerEmail are
+        // silently ignored regardless of their value: Seller/SellerEmail always stay the
+        // caller's own username/email claims (the `seller`/`sellerEmail` parameters).
+        if (isAdmin && !string.IsNullOrWhiteSpace(dto.Seller))
+        {
+            auction.Seller = dto.Seller;
+            // Resolved sensibly rather than guessed: an admin-supplied SellerEmail is honored
+            // verbatim; when omitted, SellerEmail is left empty (Auction.SellerEmail is a
+            // required non-nullable string, so string.Empty — never null — satisfies it) —
+            // it is NOT inferred from dto.Seller.
+            auction.SellerEmail = dto.SellerEmail ?? string.Empty;
+        }
+        else
+        {
+            auction.Seller = seller;
+            auction.SellerEmail = sellerEmail;
+        }
 
         repository.Add(auction);
 
@@ -137,7 +163,12 @@ public class AuctionAppService(
         if (auction is null)
             return AuctionWriteResult.NotFound;
 
-        if (auction.Seller != requestingUser)
+        // Ownership check: a non-admin caller may only update their own auction. Admins
+        // bypass this check entirely (Phase 11 Task 3.4 / Requirements §10.2) so they can
+        // adjust ANY auction's duration (or other fields) through this same endpoint —
+        // isAdmin was already accepted here (for audit stamping) before this task; this is
+        // the first place it also affects authorization.
+        if (auction.Seller != requestingUser && !isAdmin)
             return AuctionWriteResult.Forbidden;
 
         // Gallery enforcement (Task 18.6): validated before any change is applied to the
@@ -147,6 +178,16 @@ public class AuctionAppService(
             var galleryError = await ValidateGalleryAsync(dto.Images, CancellationToken.None);
             if (galleryError is not null)
                 return galleryError.Value;
+        }
+
+        // Duration-bounds enforcement (Phase 11 Task 3.4): only when the caller actually
+        // submits a new AuctionEnd. Admins are exempt and may shorten or extend AuctionEnd on
+        // a live auction; non-admins must fall within the platform's effective Min/Max.
+        if (dto.AuctionEnd is not null)
+        {
+            var durationError = await ValidateDurationAsync(dto.AuctionEnd.Value, isAdmin);
+            if (durationError is not null)
+                return durationError.Value;
         }
 
         // Apply Auction-level partial update (IgnoreNullValues configured in mapping).
@@ -245,6 +286,34 @@ public class AuctionAppService(
         return await repository.SaveChangesAsync()
             ? AuctionWriteResult.Success
             : AuctionWriteResult.SaveFailed;
+    }
+
+    public async Task<DurationLimitsDto> GetDurationLimitsAsync()
+    {
+        var (min, max) = await durationSettings.GetEffectiveDurationBoundsAsync();
+        return new DurationLimitsDto { MinDuration = min, MaxDuration = max };
+    }
+
+    /// <summary>
+    /// Server-side auction-duration enforcement (Phase 11 Task 3.4): admins are exempt outright;
+    /// for every other caller, <paramref name="auctionEnd"/> must fall within the platform's
+    /// currently-effective Min/Max duration (relative to <see cref="DateTime.UtcNow"/>).
+    /// </summary>
+    /// <returns>
+    /// <see cref="AuctionWriteResult.InvalidDuration"/> when out of bounds, otherwise
+    /// <see langword="null"/>.
+    /// </returns>
+    private async Task<AuctionWriteResult?> ValidateDurationAsync(DateTime auctionEnd, bool isAdmin)
+    {
+        if (isAdmin)
+            return null;
+
+        var (min, max) = await durationSettings.GetEffectiveDurationBoundsAsync();
+        var duration = auctionEnd - DateTime.UtcNow;
+
+        return duration < min || duration > max
+            ? AuctionWriteResult.InvalidDuration
+            : null;
     }
 
     /// <summary>

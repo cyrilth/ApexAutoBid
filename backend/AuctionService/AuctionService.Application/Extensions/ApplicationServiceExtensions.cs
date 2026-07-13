@@ -33,6 +33,11 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IAuctionService, AuctionAppService>();
         services.AddScoped<IAuctionImageService, AuctionImageAppService>();
 
+        // Admin features (Phase 11 Task 3) — auction moderation, banners, duration settings.
+        services.AddScoped<IAdminAuctionService, AdminAuctionAppService>();
+        services.AddScoped<IBannerService, BannerAppService>();
+        services.AddScoped<IPlatformSettingsService, PlatformSettingsAppService>();
+
         return services;
     }
 }

@@ -9,7 +9,9 @@ import { Button, HelperText, Label, TextInput } from "flowbite-react";
 import { AuctionImageManager, imagesToPayload, type ManagedImage } from "@/components/AuctionImageManager";
 import { createAuction, updateAuction } from "@/lib/auction-actions";
 import { toastActionError } from "@/lib/toast";
+import { parseTimeSpanMs } from "@/lib/timespan";
 import type { AuctionDetail } from "@/types/auction";
+import type { DurationLimits } from "@/types/admin";
 
 interface AuctionFormValues {
   make: string;
@@ -20,12 +22,25 @@ interface AuctionFormValues {
   reservePrice: number;
   auctionEnd: Date | null;
   images: ManagedImage[];
+  /** Admin-only "create auction for any seller" fields (Phase 11 Task 3.1/8.4) -- always
+   * present on the form's values, but only ever sent to the backend (and only ever rendered)
+   * when `isAdmin` is true; ignored server-side for every other caller regardless. */
+  seller: string;
+  sellerEmail: string;
 }
 
 interface AuctionFormProps {
   mode: "create" | "edit";
   /** Required (and only used) in edit mode -- the auction being edited. */
   auction?: AuctionDetail;
+  /** Shows the seller-assignment fields (create mode only) and exempts the AuctionEnd picker
+   * from the platform's duration bounds, mirroring the backend's own admin exemption (Phase 11
+   * Task 3.1/3.4). `false`/omitted for every non-admin caller. */
+  isAdmin?: boolean;
+  /** The platform's currently-effective auction duration bounds (`GET api/auctions/duration-limits`,
+   * anonymous) -- constrains the create form's `AuctionEnd` picker (Phase 11 Task 3.8). Ignored
+   * for admins, who are exempt from these bounds server-side. */
+  durationLimits?: DurationLimits;
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -56,7 +71,7 @@ function initialImagesFrom(auction?: AuctionDetail): ManagedImage[] {
  * create only -- `UpdateAuctionDto` has no `auctionEnd`, so regular sellers
  * can't change it once set; see `types/auction-form.ts`).
  */
-export function AuctionForm({ mode, auction }: AuctionFormProps) {
+export function AuctionForm({ mode, auction, isAdmin = false, durationLimits }: AuctionFormProps) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<{ title: string; detail?: string } | null>(null);
 
@@ -75,8 +90,26 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
       reservePrice: auction?.reservePrice ?? 0,
       auctionEnd: null,
       images: initialImagesFrom(auction),
+      seller: "",
+      sellerEmail: "",
     },
   });
+
+  // Admins are exempt from the platform's duration bounds server-side (Task 3.1/3.4), so the
+  // picker only constrains non-admin sellers -- an admin sees no min/max at all. Computed once
+  // via `useState`'s lazy initializer (same "create on first render, never again" idiom
+  // `components/BidStoreProvider.tsx` uses) rather than as a plain render-body `const` -- a
+  // bare `new Date(Date.now() + ...)` assigned directly in the component body is an impure
+  // call the React Compiler refuses to memoize (`react-hooks/purity`); a lazy initializer is
+  // the sanctioned way to run an impure computation exactly once per mount instead.
+  const minDurationMs = durationLimits ? parseTimeSpanMs(durationLimits.minDuration) : null;
+  const maxDurationMs = durationLimits ? parseTimeSpanMs(durationLimits.maxDuration) : null;
+  const [minEndDate] = useState<Date>(() =>
+    !isAdmin && minDurationMs != null ? new Date(Date.now() + minDurationMs) : new Date()
+  );
+  const [maxEndDate] = useState<Date | undefined>(() =>
+    !isAdmin && maxDurationMs != null ? new Date(Date.now() + maxDurationMs) : undefined
+  );
 
   async function onSubmit(values: AuctionFormValues) {
     setSubmitError(null);
@@ -100,6 +133,9 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
         reservePrice: Number(values.reservePrice),
         images,
         auctionEnd: values.auctionEnd.toISOString(),
+        // Only ever sent (and only ever rendered as fields, see the admin-only block below)
+        // when isAdmin -- the backend ignores these for every other caller regardless.
+        ...(isAdmin && values.seller.trim() ? { seller: values.seller.trim(), sellerEmail: values.sellerEmail.trim() } : {}),
       });
 
       if (!result.success) {
@@ -223,6 +259,23 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
         </div>
       </div>
 
+      {mode === "create" && isAdmin && (
+        <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <p className="text-sm font-medium text-slate-900">Create for another seller (optional)</p>
+            <HelperText>Leave blank to list this auction under your own account instead.</HelperText>
+          </div>
+          <div>
+            <Label htmlFor="seller">Seller username</Label>
+            <TextInput id="seller" disabled={isSubmitting} {...register("seller")} />
+          </div>
+          <div>
+            <Label htmlFor="sellerEmail">Seller email</Label>
+            <TextInput id="sellerEmail" type="email" disabled={isSubmitting} {...register("sellerEmail")} />
+          </div>
+        </div>
+      )}
+
       {mode === "create" ? (
         <div>
           <Label htmlFor="auctionEnd">Auction end</Label>
@@ -231,7 +284,12 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
             name="auctionEnd"
             rules={{
               required: "Choose when the auction should close.",
-              validate: (value) => !value || value.getTime() > Date.now() || "Auction end must be in the future.",
+              validate: (value) =>
+                !value ||
+                (value.getTime() > Date.now() &&
+                  (isAdmin || value.getTime() >= minEndDate.getTime()) &&
+                  (isAdmin || !maxEndDate || value.getTime() <= maxEndDate.getTime())) ||
+                "Auction end must be in the future and within the platform's allowed duration.",
             }}
             render={({ field }) => (
               <DatePicker
@@ -241,7 +299,8 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
                 disabled={isSubmitting}
                 showTimeSelect
                 timeIntervals={15}
-                minDate={new Date()}
+                minDate={minEndDate}
+                maxDate={maxEndDate}
                 dateFormat="MMM d, yyyy h:mm aa"
                 placeholderText="Select a date and time"
                 wrapperClassName="w-full"
@@ -250,6 +309,11 @@ export function AuctionForm({ mode, auction }: AuctionFormProps) {
             )}
           />
           {errors.auctionEnd && <p className="mt-1 text-sm text-red-600">{errors.auctionEnd.message}</p>}
+          {!isAdmin && durationLimits && (
+            <HelperText>
+              Must be between {minEndDate.toLocaleString()} and {maxEndDate?.toLocaleString()}.
+            </HelperText>
+          )}
         </div>
       ) : (
         auction && (

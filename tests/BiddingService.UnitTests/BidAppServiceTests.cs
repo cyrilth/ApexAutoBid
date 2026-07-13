@@ -222,6 +222,37 @@ public class BidAppServiceTests
         Assert.Equal("Finished", bid!.BidStatus);
     }
 
+    // ── 9.3 — a cancelled auction (AuctionCancelledConsumer sets Finished = true) refuses bids ──
+    //
+    // Cancellation is represented locally by exactly the same Auction.Finished flag a normal
+    // auction end sets (see AuctionCancelledConsumer's own remarks for why no separate
+    // "Cancelled" state is needed) — so this is mechanically identical to
+    // PlaceBidAsync_WhenAuctionAlreadyMarkedFinished_ReturnsFinishedRegardlessOfAmount above;
+    // kept as its own named test for Task 9.3's traceability.
+
+    [Fact]
+    public async Task PlaceBidAsync_WhenTheAuctionWasCancelled_ReturnsFinishedAndRecordsNoAcceptedBid()
+    {
+        // AuctionCancelledConsumer.Consume calls IAuctionRepository.MarkFinishedAsync, which is
+        // exactly Auction.Finished = true from BidAppService's point of view — it has no
+        // separate notion of "cancelled" at all.
+        var auction = SampleAuction(reservePrice: 20000, finished: true);
+        var auctionProvider = ProviderReturning(auction);
+        var bidRepository = RepositoryWithCurrentHighBid(auction.Id, currentHighBid: null);
+        var placementUnitOfWork = Substitute.For<IBidPlacementUnitOfWork>();
+        var sut = BuildSut(bidRepository, auctionProvider, placementUnitOfWork);
+        var dto = new PlaceBidDto { AuctionId = auction.Id, Amount = 30000 };
+
+        var (outcome, bid) = await sut.PlaceBidAsync(dto, "alice", "alice@apexautobid.local", CancellationToken.None);
+
+        Assert.Equal(BidOutcome.Placed, outcome);
+        Assert.Equal("Finished", bid!.BidStatus);
+        await placementUnitOfWork.Received(1).SaveAsync(
+            Arg.Is<Bid>(b => b.BidStatus == BidStatus.Finished),
+            null, // never published — a Finished bid is recorded but never broadcast
+            Arg.Any<CancellationToken>());
+    }
+
     // ── 15.5 — bidder is the seller → the 400 path (BidOutcome.SellerCannotBid) ──
 
     [Fact]
