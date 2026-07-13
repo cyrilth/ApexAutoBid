@@ -1,0 +1,21 @@
+# Per-vhost Nginx config for the MinIO storage domain (nginx-proxy convention:
+# a file named exactly like the vhost in /etc/nginx/vhost.d is included inside
+# that vhost's `server` block).
+#
+# Browsers PUT auction images STRAIGHT to MinIO via presigned URLs (Requirements
+# §3.2 — the bytes never pass through the Auction Service), so this vhost must
+# accept request bodies up to the platform's image limit. Nginx's default
+# client_max_body_size is 1m, which would 413 every upload. Images:MaxSizeMB is
+# 5 — 10m leaves headroom without being an open door.
+client_max_body_size 10m;
+
+# Only S3 bucket flows are served through this vhost: anonymous image GETs,
+# presigned PUTs, and the Auction Service's own S3 calls all use path-style
+# bucket paths (/auction-images/...). MinIO's management API (/minio/admin/...)
+# and its health/metrics endpoints have no consumer on this route — don't proxy
+# them to the network; MinIO's own auth would otherwise be the only protection
+# layer. The mc init container and the compose healthcheck are unaffected (they
+# hit minio:9000 directly, not this vhost).
+location /minio/ {
+    return 403;
+}

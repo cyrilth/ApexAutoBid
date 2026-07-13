@@ -15,3 +15,9 @@ docs {
   authorization/token/userinfo/end-session endpoints, supported scopes, grant types,
   response types, and signing algorithms. Everything else in this folder is listed here.
 }
+
+assert {
+  res.status: eq 200
+  res.body.issuer: eq {{identity}}
+  res.body.token_endpoint: isDefined
+}

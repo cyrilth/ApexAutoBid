@@ -89,7 +89,7 @@ internal static class HostingExtensions
             .AddInMemoryIdentityResources(Config.IdentityResources)
             .AddInMemoryApiScopes(Config.ApiScopes)
             .AddInMemoryApiResources(Config.ApiResources)
-            .AddInMemoryClients(Config.Clients)
+            .AddInMemoryClients(Config.GetClients(builder.Configuration, builder.Environment.IsDevelopment()))
             .AddAspNetIdentity<ApplicationUser>()
             // Replaces AddAspNetIdentity's default IProfileService registration with
             // Services/ProfileService.cs, which adds the username/email/email_verified/role
@@ -253,11 +253,14 @@ internal static class HostingExtensions
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
             {
                 // Client IP is the standard partition key for this kind of limiter.
-                // IdentityService is reached directly today — no reverse proxy in front of it
-                // yet. Once the Gateway (Phase 4/8) sits in front of it, every request will
-                // appear to come from the gateway's own IP (sharing one bucket for every real
-                // client) unless UseForwardedHeaders() is wired first to recover the real
-                // client IP from X-Forwarded-For — deferred; out of this task's scope.
+                // Reached directly under `dotnet run`; behind Nginx (Phase 8's docker-compose
+                // stack) the real client IP is recovered from X-Forwarded-For by the
+                // framework's auto-registered ForwardedHeadersMiddleware
+                // (ASPNETCORE_FORWARDEDHEADERS_ENABLED=true in docker-compose.yml — also what
+                // lets Duende derive the https public origin as issuer). That env var trusts
+                // any immediate peer; fine here because this service has NO direct host port
+                // in that topology (Nginx is the only path in). Phase 9 should still pin
+                // KnownProxies/KnownNetworks to the real ingress.
                 var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                 // Scoped to POST only — GET requests to these pages (viewing the form) aren't

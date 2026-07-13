@@ -26,6 +26,14 @@ RUN dotnet publish IdentityService/IdentityService.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# curl is used by the docker-compose healthchecks (docker/docker-compose.yml probes
+# /health/live and /health/ready from inside the container) -- the aspnet base image
+# ships neither curl nor wget. Installed while this stage is still root; the
+# USER $APP_UID switch below is unaffected.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # JSON console logging in the container (Requirements.md §13.5): the built-in
 # JsonConsoleFormatter, enabled by configuration so platform log collectors can
 # parse structured fields. Overridable per-environment via compose / k8s.

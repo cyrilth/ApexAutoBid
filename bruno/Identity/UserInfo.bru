@@ -19,3 +19,8 @@ docs {
   jwt.io): username, email, email_verified, role come from ProfileService.cs because the
   apexautobid ApiResource declares them as UserClaims.
 }
+
+assert {
+  res.status: eq 200
+  res.body.sub: isDefined
+}

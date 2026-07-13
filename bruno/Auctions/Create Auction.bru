@@ -50,3 +50,17 @@ docs {
   - After a 201: run Search → the new auction appears there via the AuctionCreated event
     through RabbitMQ (watch the exchange on http://localhost:15672, guest/guest).
 }
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.seller: eq {{username}}
+}
+
+script:post-response {
+  // Chain the freshly created auction into Update/Delete (see collection docs) so a
+  // CLI run only ever mutates its own data, never the seeded auctions.
+  if (res.getStatus() === 201) {
+    bru.setVar("createdAuctionId", res.getBody().id);
+  }
+}

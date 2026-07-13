@@ -15,3 +15,8 @@ docs {
   middleware downloads from the Authority at startup to validate access-token signatures —
   the backchannel half of the trust relationship between services.
 }
+
+assert {
+  res.status: eq 200
+  res.body.keys[0].kid: isDefined
+}

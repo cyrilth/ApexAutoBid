@@ -18,3 +18,7 @@ docs {
   collection under the auction, not the auction resource itself. `{auctionId}` must be a
   well-formed GUID; a non-GUID segment doesn't match the route and returns 404 from routing.
 }
+
+assert {
+  res.status: eq 200
+}

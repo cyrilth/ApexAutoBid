@@ -21,3 +21,8 @@ docs {
   ({{gateway}} → http://localhost:6001). Run the Gateway with:
   dotnet run --project backend/GatewayService
 }
+
+assert {
+  res.status: eq 200
+  res.body.version: isDefined
+}

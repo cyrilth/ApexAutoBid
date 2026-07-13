@@ -26,3 +26,9 @@ docs {
   pageSize=0 or 999 → 400 ProblemDetails (in-range type, out-of-range value);
   pageNumber=abc → ASP.NET's automatic ValidationProblemDetails (never reaches the service).
 }
+
+assert {
+  res.status: eq 200
+  res.body.results: isDefined
+  res.body.totalCount: isDefined
+}

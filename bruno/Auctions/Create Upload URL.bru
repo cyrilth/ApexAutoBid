@@ -13,11 +13,16 @@ post {
 body:json {
   {
     "contentType": "image/jpeg",
-    "sizeBytes": 500000
+    "sizeBytes": 415
   }
 }
 
 docs {
+  sizeBytes MUST equal the exact byte count of what gets PUT: the presigned URL
+  signs Content-Length (and Content-Type), so a mismatched upload fails with 403
+  SignatureDoesNotMatch. The value above is the exact size of the tiny JPEG the
+  post-response script uploads.
+
   Returns a presigned MinIO PUT URL + a GUID object key + expiry. Upload flow:
   1) call this, 2) PUT the raw image bytes to the returned URL (no auth header —
   the signature is in the URL), 3) pass the key to Generate Thumbnail, 4) reference
@@ -25,4 +30,26 @@ docs {
 
   Negative cases: contentType "application/pdf" → 400; sizeBytes over the configured
   limit → 400; no token → 401.
+}
+
+assert {
+  res.status: eq 200
+  res.body.key: isDefined
+  res.body.uploadUrl: isDefined
+  res.body.objectUrl: isDefined
+}
+
+script:post-response {
+  // Complete step 2 of the upload flow right here so Generate Thumbnail (seq 7) has a
+  // real object to work on in a headless CLI run: PUT a minimal 1x1 JPEG to the
+  // presigned URL. Content-Type must be exactly the image/jpeg the presign request
+  // declared — SigV4 signs it.
+  if (res.getStatus() === 200) {
+    bru.setVar("uploadKey", res.getBody().key);
+    const axios = require("axios");
+    const tinyJpeg = Buffer.from("/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==", "base64");
+    await axios.put(res.getBody().uploadUrl, tinyJpeg, {
+      headers: { "Content-Type": "image/jpeg" },
+    });
+  }
 }
